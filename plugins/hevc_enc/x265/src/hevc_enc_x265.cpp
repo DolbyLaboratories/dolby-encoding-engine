@@ -58,7 +58,7 @@ property_info_t hevc_enc_x265_info[] =
     ,{"tune", PROPERTY_TYPE_STRING, "Tune the settings for a particular type of source or situation.", "none", "none:psnr:ssim:grain:fastdecode:zerolatency", 0, 1, ACCESS_TYPE_USER}
     ,{"open_gop", PROPERTY_TYPE_BOOLEAN, "Allows I-slices to be non-IDR.", "false", NULL, 0, 1, ACCESS_TYPE_USER}
     ,{"max_intra_period", PROPERTY_TYPE_INTEGER, "Max intra period in frames.", "25", "1:65535", 0, 1, ACCESS_TYPE_USER}
-    ,{"min_intra_period", PROPERTY_TYPE_INTEGER, "Min intra period in frames (0 = auto).", "0:65535", NULL, 0, 1, ACCESS_TYPE_USER}
+    ,{"min_intra_period", PROPERTY_TYPE_INTEGER, "Min intra period in frames (0 = auto).", "0", "0:65535", 0, 1, ACCESS_TYPE_USER}
     ,{"intra_refresh", PROPERTY_TYPE_BOOLEAN, "Enables Periodic Intra Refresh(PIR) instead of keyframe insertion.", "false", NULL, 0, 1, ACCESS_TYPE_USER}
     ,{"max_bframes", PROPERTY_TYPE_INTEGER, "Maximum number of consecutive b-frames.", "4", "0:16", 0, 1, ACCESS_TYPE_USER}
     ,{"scenecut", PROPERTY_TYPE_INTEGER, "Defines how aggressively I-frames need to be inserted. The higher the threshold value, the more aggressive the I-frame placement. Value 0 disables adaptive I frame placement", "40", NULL, 0, 1, ACCESS_TYPE_USER}
