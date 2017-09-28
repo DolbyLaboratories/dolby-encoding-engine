@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<job_config>
+    <input>
+        <video>
+            <mxf>
+                <file_name>FILE_NAME</file_name>
+                <storage>
+                    <local>
+                        <path>PATH</path>
+                    </local>
+                </storage>
+            </mxf>
+        </video>
+    </input>
+    <filter>
+        <video>
+            <dv_encode_profile_5>
+                <encode_start>0</encode_start>
+                <encode_end>0</encode_end>
+                <metadata_offset>0</metadata_offset>
+                <active_area_offset_top>0</active_area_offset_top>
+                <active_area_offset_bottom>0</active_area_offset_bottom>
+                <active_area_offset_left>0</active_area_offset_left>
+                <active_area_offset_right>0</active_area_offset_right>
+                <target_width>0</target_width>
+                <target_height>0</target_height>
+                <max_scene_frames>256</max_scene_frames>
+                <data_rate>16000</data_rate>
+                <max_vbv_data_rate>16000</max_vbv_data_rate>
+                <vbv_buffer_size>32000</vbv_buffer_size>
+                <encode_pass_num>2</encode_pass_num>
+                <disable_md_postproc>false</disable_md_postproc>
+                <j2k_dec>
+                    <base/>
+                </j2k_dec>
+                <scaling>
+                    <base/>
+                </scaling>
+                <noise>
+                    <base>
+                        <strength>0</strength>
+                    </base>
+                </noise>
+                <hevc_enc>
+                  <ffmpeg>
+                    <!-- Element 'command_line' for each pass has to be provided. In this case 'encode_pass_num' is 2 so, 2 elements are required.
+                         If multi-resolution encoding feature is used, number of 'command_line' elements would be RESOLUTION_NUM x encode_pass_num.
+                         Provided command-line has to map datat rate values to specific encoder parameters. -->
+                    <command_line>-c:v libx265 -x265-params "aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:bitrate=16000:vbv-maxrate=16000:vbv-bufsize=32000"</command_line>
+                    <command_line>-c:v libx265 -x265-params "aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:bitrate=16000:vbv-maxrate=16000:vbv-bufsize=32000"</command_line>
+                  </ffmpeg>
+                </hevc_enc>
+            </dv_encode_profile_5>
+        </video>
+    </filter>
+    <output>
+        <hevc>
+            <file_name>FILE_NAME</file_name>
+            <storage>
+                <local>
+                    <path>PATH</path>
+                </local>
+            </storage>
+        </hevc>
+    </output>
+    <misc>
+        <temp_dir>
+            <clean_temp>true</clean_temp>
+            <path>PATH</path>
+        </temp_dir>
+    </misc>
+</job_config>

@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<ItemGroup>
+<Filter Include="code">
+<UniqueIdentifier>{cf162038-ec02-32ca-94b6-8c927f3cfc25}</UniqueIdentifier></Filter>
+<Filter Include="code\common">
+<UniqueIdentifier>{58e986a2-7e7e-314b-93a5-53c87fc426e3}</UniqueIdentifier></Filter>
+<Filter Include="code\scaling">
+<UniqueIdentifier>{579a71ee-3919-39a1-af72-606b82e16ab9}</UniqueIdentifier></Filter>
+<Filter Include="code\scaling\scaling_example">
+<UniqueIdentifier>{c3fa5ca0-e225-3b22-9087-bfa86e18bf53}</UniqueIdentifier></Filter>
+<Filter Include="code\scaling\scaling_example\src">
+<UniqueIdentifier>{1c5ccb61-0821-3b08-a09b-a1a72f67d552}</UniqueIdentifier></Filter></ItemGroup>
+<ItemGroup>
+<ClCompile Include="..\..\..\src\scaling_example.cpp">
+<Filter>code\scaling\scaling_example\src</Filter></ClCompile></ItemGroup>
+<ItemGroup>
+<ClInclude Include="..\..\..\..\..\common\common.h">
+<Filter>code\common</Filter></ClInclude>
+<ClInclude Include="..\..\..\..\scaling_flt_api.h">
+<Filter>code\scaling</Filter></ClInclude></ItemGroup>
+<ItemGroup />
+<ItemGroup />
+<ItemGroup />
+<ItemGroup /></Project>
