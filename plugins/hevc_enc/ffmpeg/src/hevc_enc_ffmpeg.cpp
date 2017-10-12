@@ -120,7 +120,7 @@ ffmpeg_init
     }
 
     // frame rate
-    ffmpeg_call += " -r " + state->data->frame_rate;
+    ffmpeg_call += " -framerate " + state->data->frame_rate;
 
     // INPUT
     ffmpeg_call += " -i ";
