@@ -46,8 +46,8 @@
                     <!-- Element 'command_line' for each pass has to be provided. In this case 'encode_pass_num' is 2 so, 2 elements are required.
                          If multi-resolution encoding feature is used, number of 'command_line' elements would be RESOLUTION_NUM x encode_pass_num.
                          Provided command-line has to map datat rate values to specific encoder parameters. -->
-                    <command_line>-c:v libx265 -x265-params "aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:bitrate=16000:vbv-maxrate=16000:vbv-bufsize=32000"</command_line>
-                    <command_line>-c:v libx265 -x265-params "aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:bitrate=16000:vbv-maxrate=16000:vbv-bufsize=32000"</command_line>
+                    <command_line>-c:v libx265 -x265-params "pass=1:aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:bitrate=16000:vbv-maxrate=16000:vbv-bufsize=32000"</command_line>
+                    <command_line>-c:v libx265 -x265-params "pass=2:aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:bitrate=16000:vbv-maxrate=16000:vbv-bufsize=32000"</command_line>
                   </ffmpeg>
                 </hevc_enc>
             </dv_encode_profile_5>
