@@ -154,6 +154,12 @@ ffmpeg_close
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
 
+    for (int i = 0; i < state->data->nalus.size(); i++)
+    {
+        free(state->data->nalus[i].payload);
+    }
+    state->data->nalus.clear();
+
     close_pipes(state->data);
     delete state->data;
 
@@ -212,12 +218,16 @@ ffmpeg_process
     }
     state->data->out_buffer_mutex.unlock();
 
-    std::vector<hevc_enc_nal_t> nalus;
-    if (get_aud_from_bytestream(state->data->output_bytestream, nalus, false, state->data->max_output_data) == true)
+    for (int i = 0; i < state->data->nalus.size(); i++)
     {
-        output->nal = (hevc_enc_nal_t*)malloc(sizeof(hevc_enc_nal_t) * nalus.size());
-        output->nal_num = nalus.size();
-        memcpy(output->nal, nalus.data(), sizeof(hevc_enc_nal_t) * nalus.size());
+        free(state->data->nalus[i].payload);
+    }
+    state->data->nalus.clear();
+
+    if (get_aud_from_bytestream(state->data->output_bytestream, state->data->nalus, false, state->data->max_output_data) == true)
+    {
+        output->nal = state->data->nalus.data();
+        output->nal_num = state->data->nalus.size();
     }
     else
     {
@@ -246,6 +256,8 @@ ffmpeg_flush
     state->data->stop_reading_thread = true;
     state->data->reader_thread.join();
 
+    *is_empty = 0;
+
     while (state->data->out_buffer.size() > 0)
     {
         BufferBlob* out_blob = state->data->out_buffer.front();
@@ -254,26 +266,30 @@ ffmpeg_flush
         state->data->out_buffer.pop_front();
     }
 
-    std::vector<hevc_enc_nal_t> nalus;
-    bool exctracted_aud = get_aud_from_bytestream(state->data->output_bytestream, nalus, true, state->data->max_output_data);
+    for (int i = 0; i < state->data->nalus.size(); i++)
+    {
+        free(state->data->nalus[i].payload);
+    }
+    state->data->nalus.clear();
+    
+    bool exctracted_aud = get_aud_from_bytestream(state->data->output_bytestream, state->data->nalus, true, state->data->max_output_data);
     while (exctracted_aud == true)
     {
-        exctracted_aud = get_aud_from_bytestream(state->data->output_bytestream, nalus, true, state->data->max_output_data);
+        exctracted_aud = get_aud_from_bytestream(state->data->output_bytestream, state->data->nalus, true, state->data->max_output_data);
     }
 
-    if (nalus.size() > 0)
+    if (state->data->nalus.size() > 0)
     {
-        output->nal = (hevc_enc_nal_t*)malloc(sizeof(hevc_enc_nal_t) * nalus.size());
-        output->nal_num = nalus.size();
-        memcpy(output->nal, nalus.data(), sizeof(hevc_enc_nal_t) * nalus.size());
+        output->nal = state->data->nalus.data();
+        output->nal_num = state->data->nalus.size();
     }
     else
     {
         output->nal = NULL;
         output->nal_num = 0;
+        *is_empty = 1;
     }
     
-    *is_empty = 1;
 
     return STATUS_OK;
 }

@@ -76,6 +76,51 @@ typedef struct
     int                         vbv_buffer_size;
     std::vector<std::string>    command_line;
     std::vector<char>           output_bytestream;
+    std::vector<hevc_enc_nal_t> nalus;
+
+    std::thread                 writer_thread;
+    std::thread                 reader_thread;
+    std::thread                 ffmpeg_thread;
+    std::list<BufferBlob*>      in_buffer;
+    std::list<BufferBlob*>      out_buffer;
+    std::mutex                  in_buffer_mutex;
+    std::mutex                  out_buffer_mutex;
+    bool                        stop_writing_thread;
+    bool                        stop_reading_thread;
+
+
+    std::vector<std::string>    temp_file;
+    std::string                 ffmpeg_bin;
+#ifdef WIN32
+    HANDLE                      in_pipe;
+    HANDLE                      out_pipe;
+#else
+    int                         in_pipe;
+    int                         out_pipe;
+#endif
+} hevc_enc_ffmpeg_data_t;
+
+typedef struct
+{
+    hevc_enc_ffmpeg_data_t* data;
+    bool                    lib_initialized;
+} hevc_enc_ffmpeg_t;
+
+void init_defaults(hevc_enc_ffmpeg_t* state);
+
+bool get_aud_from_bytestream(std::vector<char> &bitstream, std::vector<hevc_enc_nal_t> &nalus, bool flush, size_t max_data);
+
+bool parse_init_params(hevc_enc_ffmpeg_t* state, const hevc_enc_init_params_t* init_params);
+
+void writer_thread_func(hevc_enc_ffmpeg_data_t* data);
+
+void reader_thread_func(hevc_enc_ffmpeg_data_t* data);
+
+void run_cmd_thread_func(std::string cmd);
+
+bool create_pipes(hevc_enc_ffmpeg_data_t* data);
+
+bool close_pipes(hevc_enc_ffmpeg_data_t* data); 
 
     std::thread                 writer_thread;
     std::thread                 reader_thread;
