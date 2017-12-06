@@ -6,6 +6,10 @@ Build tools:
 - gcc 4.8.5
 
 Prerequisites:
+- x265 HEVC Encoder Library API requirements:
+	It is mandatory to build x256 library with at least 10-bit API.
+	Recommended way is to build x265 library containing 8/10/12-bit API.
+	multilib.sh script can be used to build combined library.
 - Libraries "libx265.lib" and "libx265.dll" on Windows
 - Library "libx265.so" on Linux
 - Folder "include" with headers: "x265.h" and "x265_config.h"
