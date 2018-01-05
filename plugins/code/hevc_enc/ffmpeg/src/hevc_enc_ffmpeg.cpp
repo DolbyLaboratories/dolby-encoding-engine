@@ -33,6 +33,8 @@
 #include "hevc_enc_api.h"
 #include "hevc_enc_ffmpeg_utils.h"
 
+#define MAX_BUFFERED_PLANES 12
+
 static
 const
 property_info_t hevc_enc_ffmpeg_info[] =
@@ -201,11 +203,19 @@ ffmpeg_process
             return STATUS_ERROR;
         }
 
-        state->data->in_buffer_mutex.lock();
-        state->data->in_buffer.push_back(new BufferBlob(current_pic.plane[0], plane_0_size)); 
-        state->data->in_buffer.push_back(new BufferBlob(current_pic.plane[1], plane_1_size));
-        state->data->in_buffer.push_back(new BufferBlob(current_pic.plane[2], plane_2_size));
-        state->data->in_buffer_mutex.unlock();
+        bool picture_written_flag = false;
+        while (state->data->ffmpeg_thread.joinable() && picture_written_flag == false)
+        {
+            state->data->in_buffer_mutex.lock();
+            if (state->data->in_buffer.size() < MAX_BUFFERED_PLANES)
+            {
+                state->data->in_buffer.push_back(new BufferBlob(current_pic.plane[0], plane_0_size));
+                state->data->in_buffer.push_back(new BufferBlob(current_pic.plane[1], plane_1_size));
+                state->data->in_buffer.push_back(new BufferBlob(current_pic.plane[2], plane_2_size));
+                picture_written_flag = true;
+            }
+            state->data->in_buffer_mutex.unlock();
+        }
     }
     
     state->data->out_buffer_mutex.lock();
