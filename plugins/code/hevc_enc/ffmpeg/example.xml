@@ -14,7 +14,7 @@
     </input>
     <filter>
         <video>
-            <dv_encode_profile_5>
+            <dv_mezz_to_dv_profile_5>
                 <encode_start>0</encode_start>
                 <encode_end>0</encode_end>
                 <metadata_offset>0</metadata_offset>
@@ -22,6 +22,8 @@
                 <active_area_offset_bottom>0</active_area_offset_bottom>
                 <active_area_offset_left>0</active_area_offset_left>
                 <active_area_offset_right>0</active_area_offset_right>
+                <j2k_parallel_frames>1</j2k_parallel_frames>
+                <prepend_frames>0</prepend_frames>
                 <target_width>0</target_width>
                 <target_height>0</target_height>
                 <max_scene_frames>256</max_scene_frames>
@@ -30,6 +32,8 @@
                 <vbv_buffer_size>32000</vbv_buffer_size>
                 <encode_pass_num>2</encode_pass_num>
                 <disable_md_postproc>false</disable_md_postproc>
+                <max_cll>-1</max_cll>
+                <max_fall>-1</max_fall>
                 <j2k_dec>
                     <base/>
                 </j2k_dec>
@@ -42,15 +46,12 @@
                     </base>
                 </noise>
                 <hevc_enc>
-                  <ffmpeg>
-                    <!-- Element 'command_line' for each pass has to be provided. In this case 'encode_pass_num' is 2 so, 2 elements are required.
-                         If multi-resolution encoding feature is used, number of 'command_line' elements would be RESOLUTION_NUM x encode_pass_num.
-                         Provided command-line has to map datat rate values to specific encoder parameters. -->
-                    <command_line>-c:v libx265 -x265-params "pass=1:aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:bitrate=16000:vbv-maxrate=16000:vbv-bufsize=32000"</command_line>
-                    <command_line>-c:v libx265 -x265-params "pass=2:aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:bitrate=16000:vbv-maxrate=16000:vbv-bufsize=32000"</command_line>
-                  </ffmpeg>
+                    <ffmpeg>
+                        <ffmpeg_bin>/absolute/path/to/ffmpeg</ffmpeg_bin>
+                        <cmd_gen>/absolute/path/to/cmd_gen_x265.py</cmd_gen>
+                    </ffmpeg>
                 </hevc_enc>
-            </dv_encode_profile_5>
+            </dv_mezz_to_dv_profile_5>
         </video>
     </filter>
     <output>

@@ -32,6 +32,7 @@
 
 #include "hevc_enc_api.h"
 #include "hevc_enc_ffmpeg_utils.h"
+#include <fstream>
 
 #define MAX_BUFFERED_PLANES 12
 
@@ -45,17 +46,43 @@ property_info_t hevc_enc_ffmpeg_info[] =
     , { "width", PROPERTY_TYPE_INTEGER, NULL, NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
     , { "height", PROPERTY_TYPE_INTEGER, NULL, NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
     , { "color_space", PROPERTY_TYPE_STRING, NULL, "i420", "i400:i420:i422:i444", 0, 1, ACCESS_TYPE_WRITE_INIT }
-    , { "frame_rate", PROPERTY_TYPE_DECIMAL, NULL, NULL, "23.976:24:25:29.97:30:59.94:60", 1, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "frame_rate", PROPERTY_TYPE_DECIMAL, NULL, NULL, "23.976:24:25:29.97:30:48:50:59.94:60", 1, 1, ACCESS_TYPE_WRITE_INIT }
     , { "data_rate", PROPERTY_TYPE_INTEGER, "Average data rate in kbps.", "15000", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT }
     , { "max_vbv_data_rate", PROPERTY_TYPE_INTEGER, "Max VBV data rate in kbps.", "15000", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT }
     , { "vbv_buffer_size", PROPERTY_TYPE_INTEGER, "VBV buffer size in kb.", "30000", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT }
     , { "range", PROPERTY_TYPE_STRING, NULL, "full", "limited:full", 0, 1, ACCESS_TYPE_WRITE_INIT }
     , { "absolute_pass_num", PROPERTY_TYPE_INTEGER, NULL, "0", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT }
-    , { "temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "2", NULL, 0, 1, ACCESS_TYPE_READ}
+    , { "stats_file", PROPERTY_TYPE_STRING, NULL, NULL, NULL, 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "multi_pass", PROPERTY_TYPE_STRING, NULL, "off", "off:1st:nth:last", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "3", NULL, 0, 1, ACCESS_TYPE_READ}
     , { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, 2, 2, ACCESS_TYPE_WRITE_INIT }
+
+    // generate_vui_param_videosignaltype
+    , { "color_primaries", PROPERTY_TYPE_STRING, NULL, "unspecified", "unspecified:bt_709:bt_601_625:bt_601_525:bt_2020", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "transfer_characteristics", PROPERTY_TYPE_STRING, NULL, "unspecified", "unspecified:bt_709:bt_601_625:bt_601_525:smpte_st_2084:std_b67", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "matrix_coefficients", PROPERTY_TYPE_STRING, NULL, "unspecified", "unspecified:bt_709:bt_601_625:bt_601_525:bt_2020", 0, 1, ACCESS_TYPE_WRITE_INIT }
+
+    // generate_mastering_display_color_volume_sei
+    , { "mastering_display_sei_x1", PROPERTY_TYPE_INTEGER, "First primary x.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "mastering_display_sei_y1", PROPERTY_TYPE_INTEGER, "First primary y.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "mastering_display_sei_x2", PROPERTY_TYPE_INTEGER, "Second primary x.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "mastering_display_sei_y2", PROPERTY_TYPE_INTEGER, "Second primary y.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "mastering_display_sei_x3", PROPERTY_TYPE_INTEGER, "Third primary x.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "mastering_display_sei_y3", PROPERTY_TYPE_INTEGER, "Third primary y.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "mastering_display_sei_wx", PROPERTY_TYPE_INTEGER, "White point x.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "mastering_display_sei_wy", PROPERTY_TYPE_INTEGER, "White point y.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "mastering_display_sei_max_lum", PROPERTY_TYPE_INTEGER, "Maximum display luminance.", "0", "0:2000000000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "mastering_display_sei_min_lum", PROPERTY_TYPE_INTEGER, "Minimum display luminance.", "0", "0:2000000000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+
+    // generate_light_level_information_sei
+    , { "light_level_max_content", PROPERTY_TYPE_INTEGER, NULL, "0", "0:65535", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "light_level_max_frame_average", PROPERTY_TYPE_INTEGER, NULL, "0", "0:65535", 0, 1, ACCESS_TYPE_WRITE_INIT }
+
     // Only properties below (ACCESS_TYPE_USER) can be modified 
     , { "ffmpeg_bin", PROPERTY_TYPE_STRING, "Path to ffmpeg binary.", "ffmpeg", NULL, 0, 1, ACCESS_TYPE_USER }
-    , { "command_line", PROPERTY_TYPE_STRING, "Command line to be inserted into the ffmpeg command between the input and output specification.", NULL, NULL, 1, 100, ACCESS_TYPE_USER }
+    , { "command_line", PROPERTY_TYPE_STRING, "Command line to be inserted into the ffmpeg command between the input and output specification.", NULL, NULL, 0, 100, ACCESS_TYPE_USER }
+    , { "cmd_gen", PROPERTY_TYPE_STRING, "Path to a script that can generate an ffmpeg command line using the config file as input.", NULL, NULL, 0, 1, ACCESS_TYPE_USER }
+    , { "interpreter", PROPERTY_TYPE_STRING, "Path to binary used to read the cmd_gen script.", "python", NULL, 0, 1, ACCESS_TYPE_USER }
 };
 
 static
@@ -106,42 +133,70 @@ ffmpeg_init
         return STATUS_ERROR;
     }
 
-    std::string ffmpeg_call = state->data->ffmpeg_bin;
+    std::string ffmpeg_call;
 
-    // input format
-    ffmpeg_call += " -f rawvideo";
-
-    // video size
-    ffmpeg_call += " -s " + std::to_string(state->data->width) + "x" + std::to_string(state->data->height);
-
-    // picture format
-    ffmpeg_call += " -pix_fmt " + state->data->color_space;
-    if (state->data->bit_depth == 10)
+    if (state->data->command_line.size() > (unsigned int)state->data->pass_num && state->data->command_line[state->data->pass_num].empty() == false)
     {
-        ffmpeg_call += "10le";
+        ffmpeg_call = state->data->ffmpeg_bin;
+
+        // input format
+        ffmpeg_call += " -f rawvideo";
+
+        // video size
+        ffmpeg_call += " -s " + std::to_string(state->data->width) + "x" + std::to_string(state->data->height);
+
+        // picture format
+        ffmpeg_call += " -pix_fmt " + state->data->color_space;
+        if (state->data->bit_depth == 10)
+        {
+            ffmpeg_call += "10le";
+        }
+
+        // frame rate
+        ffmpeg_call += " -framerate " + state->data->frame_rate;
+
+        // INPUT
+        ffmpeg_call += " -i ";
+        ffmpeg_call += state->data->temp_file[0];
+
+        // user specified commandline
+        ffmpeg_call += " " + state->data->command_line[state->data->pass_num];
+
+        // disable audio
+        ffmpeg_call += " -an";
+
+        // overwrite file if present
+        ffmpeg_call += " -y";
+
+        // OUTPUT
+        ffmpeg_call += " -f hevc ";
+        ffmpeg_call += state->data->temp_file[1];
     }
+    else
+    {
+        if (write_cfg_file(state->data, state->data->temp_file[2]) == false)
+        {
+            state->data->msg = "Error writing encoding parameters to file: " + state->data->temp_file[2];
+            return STATUS_ERROR;
+        }
 
-    // frame rate
-    ffmpeg_call += " -framerate " + state->data->frame_rate;
+        if (state->data->cmd_gen.empty())
+        {
+            state->data->msg = "No command line or command generation script provided. Use \'cmd_gen\' or \'command_line\' XML parameter.";
+            return STATUS_ERROR;
+        }
 
-    // INPUT
-    ffmpeg_call += " -i ";
-    ffmpeg_call += state->data->temp_file[0];
-
-    // user specified commandline
-    ffmpeg_call += " " + state->data->command_line[state->data->pass_num];
-
-    // disable audio
-    ffmpeg_call += " -an";
-
-    // overwrite file if present
-    ffmpeg_call += " -y";
-
-    // OUTPUT
-    ffmpeg_call += " -f hevc ";
-    ffmpeg_call += state->data->temp_file[1];
-
-    state->data->ffmpeg_thread = std::thread(run_cmd_thread_func, ffmpeg_call);
+        std::string generate_cmd_call = state->data->interpreter + " " + state->data->cmd_gen + " " + state->data->temp_file[2];
+        ffmpeg_call = run_cmd_get_output(generate_cmd_call);
+        
+        if (ffmpeg_call.empty())
+        {
+            state->data->msg = "Error building ffmpeg command line by calling: " + generate_cmd_call;
+            return STATUS_ERROR;
+        }
+    }
+    
+    state->data->ffmpeg_thread = std::thread(run_cmd_thread_func, ffmpeg_call, state->data);
     state->data->writer_thread = std::thread(writer_thread_func, state->data);
     state->data->reader_thread = std::thread(reader_thread_func, state->data);
 
@@ -156,11 +211,39 @@ ffmpeg_close
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
 
-    for (int i = 0; i < state->data->nalus.size(); i++)
+    for (unsigned int i = 0; i < state->data->nalus.size(); i++)
     {
         free(state->data->nalus[i].payload);
     }
     state->data->nalus.clear();
+
+    if (state->data->ffmpeg_ret_code != 0)
+    {
+        state->data->force_stop_writing_thread = true;
+        state->data->force_stop_reading_thread = true;
+#if WIN32
+        CancelIoEx(state->data->in_pipe, NULL);
+        CancelIoEx(state->data->out_pipe, NULL);
+#else        
+        pthread_t writer_id = state->data->writer_thread.native_handle();
+        pthread_t reader_id = state->data->reader_thread.native_handle();
+        pthread_cancel(writer_id);
+        pthread_cancel(reader_id);
+#endif
+    }
+
+    if (state->data->writer_thread.joinable())
+    {
+        state->data->writer_thread.join();
+    }
+    if (state->data->ffmpeg_thread.joinable())
+    {
+        state->data->ffmpeg_thread.join();
+    }
+    if (state->data->reader_thread.joinable())
+    {
+        state->data->reader_thread.join();
+    }
 
     close_pipes(state->data);
     delete state->data;
@@ -179,6 +262,12 @@ ffmpeg_process
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
  
+    if (state->data->ffmpeg_ret_code != 0)
+    {
+        state->data->msg += "\nffmpeg runtime error.";
+        return STATUS_ERROR;
+    }
+
     for (unsigned int i = 0; i < picture_num; i++)
     {
         hevc_enc_picture_t current_pic = picture[i];
@@ -228,7 +317,7 @@ ffmpeg_process
     }
     state->data->out_buffer_mutex.unlock();
 
-    for (int i = 0; i < state->data->nalus.size(); i++)
+    for (unsigned int i = 0; i < state->data->nalus.size(); i++)
     {
         free(state->data->nalus[i].payload);
     }
@@ -259,12 +348,21 @@ ffmpeg_flush
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
 
     state->data->stop_writing_thread = true;
-    state->data->writer_thread.join();
+    if (state->data->writer_thread.joinable())
+    {
+        state->data->writer_thread.join();
+    }
     
-    state->data->ffmpeg_thread.join();
+    if (state->data->ffmpeg_thread.joinable())
+    {
+        state->data->ffmpeg_thread.join();
+    }
     
     state->data->stop_reading_thread = true;
-    state->data->reader_thread.join();
+    if (state->data->reader_thread.joinable())
+    {
+        state->data->reader_thread.join();
+    }
 
     *is_empty = 0;
 
@@ -276,19 +374,13 @@ ffmpeg_flush
         state->data->out_buffer.pop_front();
     }
 
-    for (int i = 0; i < state->data->nalus.size(); i++)
+    for (unsigned int i = 0; i < state->data->nalus.size(); i++)
     {
         free(state->data->nalus[i].payload);
     }
     state->data->nalus.clear();
-    
-    bool exctracted_aud = get_aud_from_bytestream(state->data->output_bytestream, state->data->nalus, true, state->data->max_output_data);
-    while (exctracted_aud == true)
-    {
-        exctracted_aud = get_aud_from_bytestream(state->data->output_bytestream, state->data->nalus, true, state->data->max_output_data);
-    }
 
-    if (state->data->nalus.size() > 0)
+    if (get_aud_from_bytestream(state->data->output_bytestream, state->data->nalus, true, state->data->max_output_data) == true)
     {
         output->nal = state->data->nalus.data();
         output->nal_num = state->data->nalus.size();
@@ -329,17 +421,26 @@ ffmpeg_get_property
 , property_t* property
 )
 {
+    hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
+
     if (NULL != property->name)
     {
         std::string name(property->name);
         if ("max_pass_num" == name)
         {
-            strcpy(property->value, "2");
+            if (state->lib_initialized == true)
+            {
+                strcpy(property->value, std::to_string(state->data->max_pass_num).c_str());
+            }
+            else
+            {
+                strcpy(property->value, "2");
+            }
             return STATUS_OK;
         }
         else if ("temp_file_num" == name)
         {
-            strcpy(property->value, "2");
+            strcpy(property->value, "3");
             return STATUS_OK;
         }
     }

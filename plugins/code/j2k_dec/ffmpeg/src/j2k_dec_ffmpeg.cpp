@@ -42,16 +42,18 @@
 #include "j2k_dec_api.h"
 
 #define MAX_PLANES (3)
-static int temp_file_num = 3;
+static const int temp_file_num = 3;
+static std::string temp_file_num_str = std::to_string(temp_file_num);
+static int cur_instance_idx = 0;
 
 static
 const
 property_info_t j2k_dec_ffmpeg_info[] =
 {
-    {"temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "3", NULL, 0, 1, ACCESS_TYPE_READ},
+    {"temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", temp_file_num_str.c_str(), NULL, 0, 1, ACCESS_TYPE_READ},
     { "width", PROPERTY_TYPE_INTEGER, "Picture width", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "height", PROPERTY_TYPE_INTEGER, "Picture height", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
-    { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, 3, 3, ACCESS_TYPE_WRITE_INIT },
+    { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, temp_file_num, temp_file_num, ACCESS_TYPE_WRITE_INIT },
     { "ffmpeg_bin", PROPERTY_TYPE_STRING, "Path to ffmpeg binary.", "ffmpeg", NULL, 0, 1, ACCESS_TYPE_USER },
     { "vcodec", PROPERTY_TYPE_STRING, "JPEG2000 decoder to be used via ffmpeg.", "libopenjpeg", NULL, 0, 1, ACCESS_TYPE_USER }
 };
@@ -75,6 +77,7 @@ typedef struct
     short*                      reorder_buffer;
     std::vector<std::string>    temp_file;
     std::string                 vcodec;
+    int                         instance_idx;
 } j2k_dec_ffmpeg_data_t;
 
 /* This structure can contain only pointers and simple types */
@@ -103,6 +106,8 @@ init_data
     data->ffmpeg_bin = "ffmpeg";
     data->temp_file.clear();
     data->vcodec = "libopenjpeg";
+    data->instance_idx = cur_instance_idx;
+    cur_instance_idx++;
 }
 
 bool bin_exists(const std::string& bin)
@@ -148,6 +153,11 @@ ffmpeg_init
         else if ("vcodec" == name)
         {
             state->data->vcodec = value;
+        }
+        else
+        {
+            state->data->msg += "\nUnknown XML property: " + name;
+            return STATUS_ERROR;
         }
     }
 
@@ -195,6 +205,8 @@ ffmpeg_close
     )
 {
     j2k_dec_ffmpeg_t* state = (j2k_dec_ffmpeg_t*)handle;
+
+    cur_instance_idx = 0;
 
     if (state->data)
     {
@@ -248,7 +260,8 @@ ffmpeg_process
     FILE* file_in;
     FILE* file_out;
     
-    file_in = fopen(state->data->temp_file[0].c_str(), "wb");
+    int offset = state->data->instance_idx*temp_file_num; // We want to access temp files for this instance specifically
+    file_in = fopen(state->data->temp_file[0+offset].c_str(), "wb");
     if (NULL == file_in)
     {
         state->data->msg = "Could not open temp file 0.";
@@ -259,16 +272,16 @@ ffmpeg_process
     
     std::string cmd = state->data->ffmpeg_bin;
     cmd += " -vcodec " + state->data->vcodec;
-    cmd += " -i " + state->data->temp_file[0];
-    cmd += " -f rawvideo -pix_fmt rgb48le " + state->data->temp_file[1];
-    cmd += " -y 2> " + state->data->temp_file[2];
+    cmd += " -i " + state->data->temp_file[0+offset];
+    cmd += " -f rawvideo -pix_fmt rgb48le " + state->data->temp_file[1+offset];
+    cmd += " -y > " + state->data->temp_file[2+offset] + " 2>&1";
 
     int rt = system(cmd.c_str());
     if (rt)
     {
         state->data->msg = "Command \"" + cmd + "\" returned code " + std::to_string(rt) + ".";
         std::ifstream ffmpeg_log;
-        ffmpeg_log.open (state->data->temp_file[2], std::ifstream::in);
+        ffmpeg_log.open (state->data->temp_file[2+offset], std::ifstream::in);
         if (ffmpeg_log.is_open())
         {
             std::string line;
@@ -282,7 +295,7 @@ ffmpeg_process
         return STATUS_ERROR;
     }
 
-    file_out = fopen(state->data->temp_file[1].c_str(), "rb");
+    file_out = fopen(state->data->temp_file[1+offset].c_str(), "rb");
     if (NULL == file_in)
     {
         state->data->msg = "Could not open temp file 1.";

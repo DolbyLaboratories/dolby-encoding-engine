@@ -70,6 +70,7 @@ typedef struct
     int                         height;
     std::string                 color_space;
     std::string                 frame_rate;
+    std::string                 range;
     int                         pass_num;
     int                         data_rate;
     int                         max_vbv_data_rate;
@@ -77,6 +78,27 @@ typedef struct
     std::vector<std::string>    command_line;
     std::vector<char>           output_bytestream;
     std::vector<hevc_enc_nal_t> nalus;
+
+    bool                        light_level_information_sei_present;
+    int                         light_level_max_content;
+    int                         light_level_max_frame_average;
+
+    bool                        color_description_present;
+    std::string                 color_primaries;
+    std::string                 transfer_characteristics;
+    std::string                 matrix_coefficients;
+
+    bool                        mastering_display_sei_present;
+    int                         mastering_display_sei_x1;
+    int                         mastering_display_sei_y1;
+    int                         mastering_display_sei_x2;
+    int                         mastering_display_sei_y2;
+    int                         mastering_display_sei_x3;
+    int                         mastering_display_sei_y3;
+    int                         mastering_display_sei_wx;
+    int                         mastering_display_sei_wy;
+    int                         mastering_display_sei_max_lum;
+    int                         mastering_display_sei_min_lum;
 
     std::thread                 writer_thread;
     std::thread                 reader_thread;
@@ -87,10 +109,19 @@ typedef struct
     std::mutex                  out_buffer_mutex;
     bool                        stop_writing_thread;
     bool                        stop_reading_thread;
+    bool                        force_stop_writing_thread;
+    bool                        force_stop_reading_thread;
+    int                         ffmpeg_ret_code;
 
+    int                         max_pass_num;
+
+    std::string                 multi_pass;
+    std::string                 stats_file;
 
     std::vector<std::string>    temp_file;
     std::string                 ffmpeg_bin;
+    std::string                 interpreter;
+    std::string                 cmd_gen;
 #ifdef WIN32
     HANDLE                      in_pipe;
     HANDLE                      out_pipe;
@@ -116,9 +147,12 @@ void writer_thread_func(hevc_enc_ffmpeg_data_t* data);
 
 void reader_thread_func(hevc_enc_ffmpeg_data_t* data);
 
-void run_cmd_thread_func(std::string cmd);
+void run_cmd_thread_func(std::string cmd, hevc_enc_ffmpeg_data_t* encoding_data);
 
 bool create_pipes(hevc_enc_ffmpeg_data_t* data);
 
 bool close_pipes(hevc_enc_ffmpeg_data_t* data);
 
+bool write_cfg_file(hevc_enc_ffmpeg_data_t* data, const std::string& file);
+
+std::string run_cmd_get_output(std::string cmd);

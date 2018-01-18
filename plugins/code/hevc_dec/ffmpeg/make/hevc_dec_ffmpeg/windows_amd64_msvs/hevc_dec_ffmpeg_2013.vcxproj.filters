@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<ItemGroup>
+<Filter Include="code">
+<UniqueIdentifier>{cf162038-ec02-32ca-94b6-8c927f3cfc25}</UniqueIdentifier></Filter>
+<Filter Include="code\common">
+<UniqueIdentifier>{58e986a2-7e7e-314b-93a5-53c87fc426e3}</UniqueIdentifier></Filter>
+<Filter Include="code\hevc_dec">
+<UniqueIdentifier>{9f1861c0-4f00-353a-af6e-9d424207b525}</UniqueIdentifier></Filter>
+<Filter Include="code\hevc_dec\ffmpeg">
+<UniqueIdentifier>{c83f5c18-d493-3fba-b703-52872fdad095}</UniqueIdentifier></Filter>
+<Filter Include="code\hevc_dec\ffmpeg\src">
+<UniqueIdentifier>{8705b42a-f196-3bf7-8749-f5a636641f30}</UniqueIdentifier></Filter></ItemGroup>
+<ItemGroup>
+<ClCompile Include="..\..\..\src\NamedPipe.cpp">
+<Filter>code\hevc_dec\ffmpeg\src</Filter></ClCompile>
+<ClCompile Include="..\..\..\src\hevc_dec_ffmpeg.cpp">
+<Filter>code\hevc_dec\ffmpeg\src</Filter></ClCompile>
+<ClCompile Include="..\..\..\src\hevc_dec_ffmpeg_utils.cpp">
+<Filter>code\hevc_dec\ffmpeg\src</Filter></ClCompile></ItemGroup>
+<ItemGroup>
+<ClInclude Include="..\..\..\..\..\common\common.h">
+<Filter>code\common</Filter></ClInclude>
+<ClInclude Include="..\..\..\src\NamedPipe.h">
+<Filter>code\hevc_dec\ffmpeg\src</Filter></ClInclude>
+<ClInclude Include="..\..\..\src\hevc_dec_ffmpeg_utils.h">
+<Filter>code\hevc_dec\ffmpeg\src</Filter></ClInclude>
+<ClInclude Include="..\..\..\..\hevc_dec_api.h">
+<Filter>code\hevc_dec</Filter></ClInclude></ItemGroup>
+<ItemGroup />
+<ItemGroup />
+<ItemGroup />
+<ItemGroup /></Project>

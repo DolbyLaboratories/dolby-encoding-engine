@@ -86,6 +86,29 @@ typedef struct
     int                 max_cu_size;
     int                 qg_size;
     bool                rc_grain;
+
+    std::string         color_primaries;
+    std::string         transfer_characteristics;
+    std::string         matrix_coefficients;
+
+    // master-display
+    bool                mastering_display_enabled;
+    int                 mastering_display_sei_x1;
+    int                 mastering_display_sei_y1;
+    int                 mastering_display_sei_x2;
+    int                 mastering_display_sei_y2;
+    int                 mastering_display_sei_x3;
+    int                 mastering_display_sei_y3;
+    int                 mastering_display_sei_wx;
+    int                 mastering_display_sei_wy;
+    int                 mastering_display_sei_max_lum;
+    int                 mastering_display_sei_min_lum;
+
+    // max-cll
+    bool                light_level_enabled;
+    int                 light_level_max_content;
+    int                 light_level_max_frame_average;
+
     std::string         level_idc;
     std::string         psy_rd;
     std::vector<nalu_t>                             output_buffer;
@@ -130,9 +153,25 @@ hevc_enc_nal_type_t
 cast_nal_type
     (const uint32_t type);
 
+int
+get_color_prim_number
+    (std::string);
+
+int
+get_transfer_characteristics_number
+    (std::string);
+
+int
+get_matrix_coefficients_number
+    (std::string);
+
 void
 get_config_msg
     (hevc_enc_x265_t* state
     ,std::string&     msg);
+
+int
+frametype_to_slicetype
+    (frame_type_t in_type);
 
 #endif // __DEE_PLUGINS_HEVC_ENC_X265_UTILS_H__

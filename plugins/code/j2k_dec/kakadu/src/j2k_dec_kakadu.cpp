@@ -187,6 +187,11 @@ kakadu_init
         {
             state->data->height = std::stoi(value);
         }
+        else
+        {
+            state->data->msg += "\nUnknown XML property: " + name;
+            return STATUS_ERROR;
+        }
     }
 
     if (state->data->width <= 0)

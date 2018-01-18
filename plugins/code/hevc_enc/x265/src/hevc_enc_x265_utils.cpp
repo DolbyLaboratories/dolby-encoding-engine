@@ -31,6 +31,99 @@
 */
 
 #include "hevc_enc_x265_utils.h"
+#include <map>
+
+static
+std::map<std::string, int> color_primaries_map = {
+    { "bt_709", 1 },
+    { "unspecified", 2 },
+    { "bt_601_625", 5 },
+    { "bt_601_525", 6 },
+    { "bt_2020", 9 },
+};
+
+static
+std::map<std::string, int> transfer_characteristics_map = {
+    { "bt_709", 1 },
+    { "unspecified", 2 },
+    { "bt_601_625", 4 },
+    { "bt_601_525", 6 },
+    { "smpte_st_2084", 16 },
+    { "std_b67", 18 },
+};
+
+static
+std::map<std::string, int> matrix_coefficients_map = {
+    { "bt_709", 1 },
+    { "unspecified", 2 },
+    { "bt_601_625", 4 },
+    { "bt_601_525", 6 },
+    { "bt_2020", 9 },
+};
+
+int
+get_color_prim_number(std::string color_prim)
+{
+    auto it = color_primaries_map.find(color_prim);
+    if (it == color_primaries_map.end())
+    {
+        return -1;
+    }
+    return it->second;
+}
+
+int
+get_transfer_characteristics_number(std::string transfer)
+{
+    auto it = transfer_characteristics_map.find(transfer);
+    if (it == transfer_characteristics_map.end())
+    {
+        return -1;
+    }
+    return it->second;
+}
+
+int
+get_matrix_coefficients_number(std::string matrix)
+{
+    auto it = matrix_coefficients_map.find(matrix);
+    if (it == matrix_coefficients_map.end())
+    {
+        return -1;
+    }
+    return it->second;
+}
+
+int
+frametype_to_slicetype(frame_type_t in_type)
+{
+    int ret_val;
+
+    switch (in_type)
+    {
+    case FRAME_TYPE_IDR:
+        ret_val = X265_TYPE_IDR;
+        break;
+    case FRAME_TYPE_I:
+        ret_val = X265_TYPE_I;
+        break;
+    case FRAME_TYPE_P:
+        ret_val = X265_TYPE_P;
+        break;
+    case FRAME_TYPE_B:
+        ret_val = X265_TYPE_B;
+        break;
+    case FRAME_TYPE_BREF:
+        ret_val = X265_TYPE_BREF;
+        break;
+    default:
+    case FRAME_TYPE_AUTO:
+        ret_val = X265_TYPE_AUTO;
+        break;
+    }
+
+    return ret_val;
+}
 
 void
 init_defaults(hevc_enc_x265_t* state)
@@ -42,6 +135,8 @@ init_defaults(hevc_enc_x265_t* state)
     state->data->color_space = "i420";       
     state->data->multi_pass = "off";
     state->data->data_rate = 15000;
+    state->data->max_vbv_data_rate = 15000;
+    state->data->vbv_buffer_size = 30000;
     state->data->preset = "medium";
     state->data->tune = "none";
     state->data->profile = "auto";
@@ -67,6 +162,28 @@ init_defaults(hevc_enc_x265_t* state)
     state->data->rc_grain = false;
     state->data->level_idc = "0";
     state->data->psy_rd = "2.0";
+
+    state->data->color_primaries = "unspecified";
+    state->data->transfer_characteristics = "unspecified";
+    state->data->matrix_coefficients = "unspecified";
+
+    // master-display
+    state->data->mastering_display_enabled = false;
+    state->data->mastering_display_sei_x1 = 0;
+    state->data->mastering_display_sei_y1 = 0;
+    state->data->mastering_display_sei_x2 = 0;
+    state->data->mastering_display_sei_y2 = 0;
+    state->data->mastering_display_sei_x3 = 0;
+    state->data->mastering_display_sei_y3 = 0;
+    state->data->mastering_display_sei_wx = 0;
+    state->data->mastering_display_sei_wy = 0;
+    state->data->mastering_display_sei_max_lum = 0;
+    state->data->mastering_display_sei_min_lum = 0;
+
+    // max-cll
+    state->data->light_level_enabled = false;
+    state->data->light_level_max_content = 0;
+    state->data->light_level_max_frame_average = 0;
 }
 
 bool
@@ -131,6 +248,7 @@ parse_init_params
                 &&  value != "29.97"
                 &&  value != "30"
                 &&  value != "48"
+                &&  value != "50"
                 &&  value != "59.94"
                 &&  value != "60"
                 )
@@ -480,6 +598,175 @@ parse_init_params
             }
             state->data->psy_rd = value;
         }
+        else if ("color_primaries" == name)
+        {
+            auto it = color_primaries_map.find(value);
+            if (it == color_primaries_map.end())
+            {
+                state->data->msg += "\nInvalid 'color_primaries' value.";
+                continue;
+            }
+            state->data->color_primaries = value;
+        }
+        else if ("transfer_characteristics" == name)
+        {
+            auto it = transfer_characteristics_map.find(value);
+            if (it == transfer_characteristics_map.end())
+            {
+                state->data->msg += "\nInvalid 'transfer_characteristics' value.";
+                continue;
+            }
+            state->data->transfer_characteristics = value;
+        }
+        else if ("matrix_coefficients" == name)
+        {
+            auto it = matrix_coefficients_map.find(value);
+            if (it == matrix_coefficients_map.end())
+            {
+                state->data->msg += "\nInvalid 'matrix_coefficients' value.";
+                continue;
+            }
+            state->data->matrix_coefficients = value;
+        }
+        // master-display
+        else if ("mastering_display_sei_x1" == name)
+        {
+            state->data->mastering_display_enabled = true;
+            int mastering_display_sei_x1 = std::stoi(value);
+            if (mastering_display_sei_x1 < 0 || mastering_display_sei_x1 > 50000)
+            {
+                state->data->msg += "\nInvalid 'mastering_display_sei_x1' value.";
+                continue;
+            }
+            state->data->mastering_display_sei_x1 = mastering_display_sei_x1;
+        }
+        else if ("mastering_display_sei_y1" == name)
+        {
+            state->data->mastering_display_enabled = true;
+            int mastering_display_sei_y1 = std::stoi(value);
+            if (mastering_display_sei_y1 < 0 || mastering_display_sei_y1 > 50000)
+            {
+                state->data->msg += "\nInvalid 'mastering_display_sei_y1' value.";
+                continue;
+            }
+            state->data->mastering_display_sei_y1 = mastering_display_sei_y1;
+        }
+        else if ("mastering_display_sei_x2" == name)
+        {
+            state->data->mastering_display_enabled = true;
+            int mastering_display_sei_x2 = std::stoi(value);
+            if (mastering_display_sei_x2 < 0 || mastering_display_sei_x2 > 50000)
+            {
+                state->data->msg += "\nInvalid 'mastering_display_sei_x2' value.";
+                continue;
+            }
+            state->data->mastering_display_sei_x2 = mastering_display_sei_x2;
+        }
+        else if ("mastering_display_sei_y2" == name)
+        {
+            state->data->mastering_display_enabled = true;
+            int mastering_display_sei_y2 = std::stoi(value);
+            if (mastering_display_sei_y2 < 0 || mastering_display_sei_y2 > 50000)
+            {
+                state->data->msg += "\nInvalid 'mastering_display_sei_y2' value.";
+                continue;
+            }
+            state->data->mastering_display_sei_y2 = mastering_display_sei_y2;
+        }
+        else if ("mastering_display_sei_x3" == name)
+        {
+            state->data->mastering_display_enabled = true;
+            int mastering_display_sei_x3 = std::stoi(value);
+            if (mastering_display_sei_x3 < 0 || mastering_display_sei_x3 > 50000)
+            {
+                state->data->msg += "\nInvalid 'mastering_display_sei_x3' value.";
+                continue;
+            }
+            state->data->mastering_display_sei_x3 = mastering_display_sei_x3;
+        }
+        else if ("mastering_display_sei_y3" == name)
+        {
+            state->data->mastering_display_enabled = true;
+            int mastering_display_sei_y3 = std::stoi(value);
+            if (mastering_display_sei_y3 < 0 || mastering_display_sei_y3 > 50000)
+            {
+                state->data->msg += "\nInvalid 'mastering_display_sei_y3' value.";
+                continue;
+            }
+            state->data->mastering_display_sei_y3 = mastering_display_sei_y3;
+        }
+        else if ("mastering_display_sei_wx" == name)
+        {
+            state->data->mastering_display_enabled = true;
+            int mastering_display_sei_wx = std::stoi(value);
+            if (mastering_display_sei_wx < 0 || mastering_display_sei_wx > 50000)
+            {
+                state->data->msg += "\nInvalid 'mastering_display_sei_wx' value.";
+                continue;
+            }
+            state->data->mastering_display_sei_wx = mastering_display_sei_wx;
+        }
+        else if ("mastering_display_sei_wy" == name)
+        {
+            state->data->mastering_display_enabled = true;
+            int mastering_display_sei_wy = std::stoi(value);
+            if (mastering_display_sei_wy < 0 || mastering_display_sei_wy > 50000)
+            {
+                state->data->msg += "\nInvalid 'mastering_display_sei_wy' value.";
+                continue;
+            }
+            state->data->mastering_display_sei_wy = mastering_display_sei_wy;
+        }
+        else if ("mastering_display_sei_max_lum" == name)
+        {
+            state->data->mastering_display_enabled = true;
+            int mastering_display_sei_max_lum = std::stoi(value);
+            if (mastering_display_sei_max_lum < 0 || mastering_display_sei_max_lum > 2000000000)
+            {
+                state->data->msg += "\nInvalid 'mastering_display_sei_max_lum' value.";
+                continue;
+            }
+            state->data->mastering_display_sei_max_lum = mastering_display_sei_max_lum;
+        }
+        else if ("mastering_display_sei_min_lum" == name)
+        {
+            state->data->mastering_display_enabled = true;
+            int mastering_display_sei_min_lum = std::stoi(value);
+            if (mastering_display_sei_min_lum < 0 || mastering_display_sei_min_lum > 2000000000)
+            {
+                state->data->msg += "\nInvalid 'mastering_display_sei_min_lum' value.";
+                continue;
+            }
+            state->data->mastering_display_sei_min_lum = mastering_display_sei_min_lum;
+        }
+        // max-cll
+        else if ("light_level_max_content" == name)
+        {
+            state->data->light_level_enabled = true;
+            int light_level_max_content = std::stoi(value);
+            if (light_level_max_content < 0 || light_level_max_content > 65535)
+            {
+                state->data->msg += "\nInvalid 'light_level_max_content' value.";
+                continue;
+            }
+            state->data->light_level_max_content = light_level_max_content;
+        }
+        else if ("light_level_max_frame_average" == name)
+        {
+            state->data->light_level_enabled = true;
+            int light_level_max_frame_average = std::stoi(value);
+            if (light_level_max_frame_average < 0 || light_level_max_frame_average > 65535)
+            {
+                state->data->msg += "\nInvalid 'light_level_max_frame_average' value.";
+                continue;
+            }
+            state->data->light_level_max_frame_average = light_level_max_frame_average;
+        }
+        else if ("absolute_pass_num" == name)
+        {
+            // this internal param is ignored for x265
+            continue;
+        }
         else if ("param" == name)
         {
             std::string param_name, param_value;
@@ -497,6 +784,10 @@ parse_init_params
             param.first = param_name;
             param.second = param_value;
             state->data->internal_params.push_back(param);
+        }
+        else
+        {
+            state->data->msg += "\nUnknown XML property: " + name;
         }
     }
 
@@ -635,6 +926,31 @@ get_config_msg
     msg += "\n  psy_rd=" + state->data->psy_rd;
     msg += "\n  profile=" + state->data->profile;
     
+    msg += "\n  color_primaries=" + state->data->color_primaries;
+    msg += "\n  transfer_characteristics=" + state->data->transfer_characteristics;
+
+    // master-display
+    if (state->data->mastering_display_enabled)
+    {
+        msg += "\n  mastering_display_sei_x1=" + std::to_string(state->data->mastering_display_sei_x1);
+        msg += "\n  mastering_display_sei_y1=" + std::to_string(state->data->mastering_display_sei_y1);
+        msg += "\n  mastering_display_sei_x2=" + std::to_string(state->data->mastering_display_sei_x2);
+        msg += "\n  mastering_display_sei_y2=" + std::to_string(state->data->mastering_display_sei_y2);
+        msg += "\n  mastering_display_sei_x3=" + std::to_string(state->data->mastering_display_sei_x3);
+        msg += "\n  mastering_display_sei_y3=" + std::to_string(state->data->mastering_display_sei_y3);
+        msg += "\n  mastering_display_sei_wx=" + std::to_string(state->data->mastering_display_sei_wx);
+        msg += "\n  mastering_display_sei_wy=" + std::to_string(state->data->mastering_display_sei_wy);
+        msg += "\n  mastering_display_sei_max_lum=" + std::to_string(state->data->mastering_display_sei_max_lum);
+        msg += "\n  mastering_display_sei_min_lum=" + std::to_string(state->data->mastering_display_sei_min_lum);
+    }
+
+    // max-cll
+    if (state->data->light_level_enabled)
+    {
+        msg += "\n  light_level_max_content=" + std::to_string(state->data->light_level_max_content);
+        msg += "\n  light_level_max_frame_average=" + std::to_string(state->data->light_level_max_frame_average);
+    }
+
     if (state->data->internal_params.size())
     {
         msg += "\n  additional x265 params:";

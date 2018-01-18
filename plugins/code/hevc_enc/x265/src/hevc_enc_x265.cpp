@@ -34,6 +34,7 @@
 #include "hevc_enc_x265_utils.h"
 #include "x265.h"
 #include <stdint.h>
+#include <map>
 
 static
 const
@@ -46,13 +47,34 @@ property_info_t hevc_enc_x265_info[] =
     ,{"width", PROPERTY_TYPE_INTEGER, NULL, NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"height", PROPERTY_TYPE_INTEGER, NULL, NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"color_space", PROPERTY_TYPE_STRING, NULL, "i420", "i400:i420:i422:i444", 0, 1, ACCESS_TYPE_WRITE_INIT}
-    ,{"frame_rate", PROPERTY_TYPE_DECIMAL, NULL, NULL, "23.976:24:25:29.97:30:48:59.94:60", 1, 1, ACCESS_TYPE_WRITE_INIT}
+    ,{"frame_rate", PROPERTY_TYPE_DECIMAL, NULL, NULL, "23.976:24:25:29.97:30:48:50:59.94:60", 1, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"data_rate", PROPERTY_TYPE_INTEGER, "Average data rate in kbps.", "15000", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"max_vbv_data_rate", PROPERTY_TYPE_INTEGER, "Max VBV data rate in kbps.", "15000", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"vbv_buffer_size", PROPERTY_TYPE_INTEGER, "VBV buffer size in kb.", "30000", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"range", PROPERTY_TYPE_STRING, NULL, "full", "limited:full", 0, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"multi_pass", PROPERTY_TYPE_STRING, NULL, "off", "off:1st:nth:last", 0, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"stats_file", PROPERTY_TYPE_STRING, NULL, NULL, NULL, 0, 1, ACCESS_TYPE_WRITE_INIT}
+
+    , { "color_primaries", PROPERTY_TYPE_STRING, NULL, "unspecified", "unspecified:bt_709:bt_601_625:bt_601_525:bt_2020", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "transfer_characteristics", PROPERTY_TYPE_STRING, NULL, "unspecified", "unspecified:bt_709:bt_601_625:bt_601_525:smpte_st_2084:std_b67", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "matrix_coefficients", PROPERTY_TYPE_STRING, NULL, "unspecified", "unspecified:bt_709:bt_601_625:bt_601_525:bt_2020", 0, 1, ACCESS_TYPE_WRITE_INIT }
+
+    // master-display
+    ,{ "mastering_display_sei_x1", PROPERTY_TYPE_INTEGER, "First primary x.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    ,{ "mastering_display_sei_y1", PROPERTY_TYPE_INTEGER, "First primary y.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    ,{ "mastering_display_sei_x2", PROPERTY_TYPE_INTEGER, "Second primary x.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    ,{ "mastering_display_sei_y2", PROPERTY_TYPE_INTEGER, "Second primary y.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    ,{ "mastering_display_sei_x3", PROPERTY_TYPE_INTEGER, "Third primary x.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    ,{ "mastering_display_sei_y3", PROPERTY_TYPE_INTEGER, "Third primary y.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    ,{ "mastering_display_sei_wx", PROPERTY_TYPE_INTEGER, "White point x.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    ,{ "mastering_display_sei_wy", PROPERTY_TYPE_INTEGER, "White point y.", "0", "0:50000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    ,{ "mastering_display_sei_max_lum", PROPERTY_TYPE_INTEGER, "Maximum display luminance.", "0", "0:2000000000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    ,{ "mastering_display_sei_min_lum", PROPERTY_TYPE_INTEGER, "Minimum display luminance.", "0", "0:2000000000", 0, 1, ACCESS_TYPE_WRITE_INIT }
+
+    // max-cll
+    ,{ "light_level_max_content", PROPERTY_TYPE_INTEGER, NULL, "0", "0:65535", 0, 1, ACCESS_TYPE_WRITE_INIT }
+    ,{ "light_level_max_frame_average", PROPERTY_TYPE_INTEGER, NULL, "0", "0:65535", 0, 1, ACCESS_TYPE_WRITE_INIT }
+
     // Only properties below (ACCESS_TYPE_USER) can be modified 
     ,{"preset", PROPERTY_TYPE_STRING, "Sets parameters to preselected values.", "medium", "ultrafast:superfast:veryfast:faster:fast:medium:slow:slower:veryslow:placebo", 0, 1, ACCESS_TYPE_USER}
     ,{"tune", PROPERTY_TYPE_STRING, "Tune the settings for a particular type of source or situation.", "none", "none:psnr:ssim:grain:fastdecode:zerolatency", 0, 1, ACCESS_TYPE_USER}
@@ -151,6 +173,12 @@ x265_init
     }
 
     api = state->api = x265_api_get(state->data->bit_depth);
+    if (!api)
+    {
+        state->data->msg = "x265_api_get() failed for " + std::to_string(state->data->bit_depth) + " bit.";
+        return STATUS_ERROR;
+    }
+
     state->param = api->param_alloc();
 
     if (!state->param)
@@ -198,6 +226,7 @@ x265_init
     ok &= set_param(state, "aud", "");
     ok &= set_param(state, "hrd", "");
     ok &= set_param(state, "hash", "1");
+    ok &= set_param(state, "chromaloc", "2");
     ok &= set_param(state, "range", state->data->range);
 
     ok &= set_param(state, "min-cu-size", std::to_string(state->data->min_cu_size));
@@ -218,6 +247,31 @@ x265_init
     
         if (!state->data->stats_file.empty()) ok &= set_param(state, "stats", state->data->stats_file);
     }
+
+    ok &= set_param(state, "colorprim", std::to_string(get_color_prim_number(state->data->color_primaries)));
+    ok &= set_param(state, "transfer", std::to_string(get_transfer_characteristics_number(state->data->transfer_characteristics)));
+    ok &= set_param(state, "colormatrix", std::to_string(get_matrix_coefficients_number(state->data->matrix_coefficients)));
+
+    if (state->data->mastering_display_enabled == true)
+    {
+        // --master-display G(gx,gy)B(bx,by)R(rx,ry)WP(wpx,wpy)L(max_peak_lum,min_peak_lum)
+        std::string master_display =
+            "G(" + std::to_string(state->data->mastering_display_sei_x1) + "," + std::to_string(state->data->mastering_display_sei_y1) + ")"
+            + "B(" + std::to_string(state->data->mastering_display_sei_x2) + "," + std::to_string(state->data->mastering_display_sei_y2) + ")"
+            + "R(" + std::to_string(state->data->mastering_display_sei_x3) + "," + std::to_string(state->data->mastering_display_sei_y3) + ")"
+            + "WP(" + std::to_string(state->data->mastering_display_sei_wx) + "," + std::to_string(state->data->mastering_display_sei_wy) + ")"
+            + "L(" + std::to_string(state->data->mastering_display_sei_max_lum) + "," + std::to_string(state->data->mastering_display_sei_min_lum) + ")";
+
+        ok &= set_param(state, "master-display", master_display);
+    }
+
+    if (state->data->light_level_enabled == true)
+    {
+        // --max-cll max_cll,max_fall
+        std::string max_cll = std::to_string(state->data->light_level_max_content) + "," + std::to_string(state->data->light_level_max_frame_average);
+        ok &= set_param(state, "max-cll", max_cll);
+    }
+
 
     for (auto ip : state->data->internal_params)
     {
@@ -341,7 +395,7 @@ x265_process
         }
 
         input_picture.colorSpace = picture[i].color_space;
-        input_picture.sliceType = picture[i].frame_type;
+        input_picture.sliceType = frametype_to_slicetype(picture[i].frame_type);
         
         int width = (int)picture[i].width;
         int height = (int)picture[i].height;
