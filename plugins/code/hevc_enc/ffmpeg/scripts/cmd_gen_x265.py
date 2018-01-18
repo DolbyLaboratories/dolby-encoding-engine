@@ -67,10 +67,10 @@ for x in content:
     elif split_line[0] == "ffmpeg_bin":
         ffmpeg_bin = split_line[1]
     elif split_line[0] == "multipass":
-        multipass = split_line[1]		
+        multipass = split_line[1]       
     elif split_line[0] == "stats_file":
         stats_file = split_line[1]
-	
+    
     elif split_line[0] == "mastering_display_sei_present":
         mastering_display_sei_present = split_line[1]
     elif split_line[0] == "mastering_display_sei_x1":
@@ -93,7 +93,7 @@ for x in content:
         mastering_display_sei_max_lum = split_line[1]
     elif split_line[0] == "mastering_display_sei_min_lum":
         mastering_display_sei_min_lum = split_line[1]
-		
+        
     elif split_line[0] == "color_description_present":
         color_description_present = split_line[1]
     elif split_line[0] == "color_primaries":
@@ -123,30 +123,30 @@ command_line += " -i " + input_file
 command_line += " -c:v libx265 -x265-params \""
 
 if multipass == "1st":
-	command_line += "pass=1:"
+    command_line += "pass=1:"
 elif multipass == "last":
-	command_line += "pass=2:"
+    command_line += "pass=2:"
 elif multipass == "nth":
-	command_line += "pass=3:"
+    command_line += "pass=3:"
 
 if multipass != "off":
-	command_line += "stats=" + stats_file + ":"
+    command_line += "stats=" + stats_file + ":"
 
 if color_description_present == "1":
-	command_line += "colorprim=" + color_primaries + ":"
-	command_line += "transfer=" + transfer_characteristics + ":"
-	command_line += "colormatrix=" + matrix_coefficients + ":"
+    command_line += "colorprim=" + color_primaries + ":"
+    command_line += "transfer=" + transfer_characteristics + ":"
+    command_line += "colormatrix=" + matrix_coefficients + ":"
 
 if light_level_information_sei_present == "1":
-	command_line += "max-cll=" + light_level_max_content + "," + light_level_max_frame_average + ":"
+    command_line += "max-cll=" + light_level_max_content + "," + light_level_max_frame_average + ":"
 
 if mastering_display_sei_present == "1":
-	command_line += "master-display=" 
-	command_line += "G(" + mastering_display_sei_x1 + "," + mastering_display_sei_y1 + ")"
-	command_line += "B(" + mastering_display_sei_x2 + "," + mastering_display_sei_y2 + ")"
-	command_line += "R(" + mastering_display_sei_x3 + "," + mastering_display_sei_y3 + ")"
-	command_line += "WP(" + mastering_display_sei_wx + "," + mastering_display_sei_wy + ")"
-	command_line += "L(" + mastering_display_sei_max_lum + "," + mastering_display_sei_min_lum + "):"
+    command_line += "master-display=" 
+    command_line += "G(" + mastering_display_sei_x1 + "," + mastering_display_sei_y1 + ")"
+    command_line += "B(" + mastering_display_sei_x2 + "," + mastering_display_sei_y2 + ")"
+    command_line += "R(" + mastering_display_sei_x3 + "," + mastering_display_sei_y3 + ")"
+    command_line += "WP(" + mastering_display_sei_wx + "," + mastering_display_sei_wy + ")"
+    command_line += "L(" + mastering_display_sei_max_lum + "," + mastering_display_sei_min_lum + "):"
 
 command_line += "aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:chromaloc=2:bitrate=" + data_rate + ":vbv-maxrate=" + max_vbv_data_rate + ":vbv-bufsize=" + vbv_buffer_size + "\""
 command_line += " -an"
