@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
 * 
 * Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <list>
 #include <utility>
 #include <fstream>
 #include <cstdio>
@@ -114,7 +115,7 @@ typedef struct
     std::vector<nalu_t>                             output_buffer;
     std::vector<nalu_t>::iterator                   last_used_nal;
     std::vector<hevc_enc_nal_t>                     output;
-    std::vector<std::pair<std::string,std::string>> internal_params;
+    std::list<std::pair<std::string,std::string>>   internal_params;
 } hevc_enc_x265_data_t;
 
 /* This structure can contain only pointers and simple types */
@@ -168,10 +169,16 @@ get_matrix_coefficients_number
 void
 get_config_msg
     (hevc_enc_x265_t* state
+    ,std::list<std::pair<std::string,std::string>>& native_params
     ,std::string&     msg);
 
 int
 frametype_to_slicetype
     (frame_type_t in_type);
+
+bool
+filter_native_params
+    (hevc_enc_x265_t* state
+    ,std::list<std::pair<std::string,std::string>>& params);
 
 #endif // __DEE_PLUGINS_HEVC_ENC_X265_UTILS_H__

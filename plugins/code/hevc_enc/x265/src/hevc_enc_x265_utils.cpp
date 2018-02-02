@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
 * 
 * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,8 @@
 
 #include "hevc_enc_x265_utils.h"
 #include <map>
+#include <algorithm>
+#include <sstream>
 
 static
 std::map<std::string, int> color_primaries_map = {
@@ -60,6 +62,34 @@ std::map<std::string, int> matrix_coefficients_map = {
     { "bt_601_525", 6 },
     { "bt_2020", 9 },
 };
+
+template<typename T>
+static
+void 
+split_string
+    (const std::string &s
+    ,char delimiter
+    ,T result) 
+{
+    std::stringstream ss;
+    ss.str(s);
+    std::string item;
+    while (std::getline(ss, item, delimiter)) 
+    {
+        *(result++) = item;
+    }
+}
+
+static
+std::vector<std::string>
+split_string
+    (const std::string &s
+    ,char delimiter)
+{
+    std::vector<std::string> items;
+    split_string(s, delimiter, std::back_inserter(items));
+    return items;
+}
 
 int
 get_color_prim_number(std::string color_prim)
@@ -769,21 +799,22 @@ parse_init_params
         }
         else if ("param" == name)
         {
-            std::string param_name, param_value;
-            std::size_t found = value.find("=");
-            if (found == std::string::npos)
-            {
-                param_name = value;
+            auto items = split_string(value, ':');
+            for (auto i : items)
+            {  
+                std::string param_name, param_value;
+                std::size_t found = i.find("=");
+                if (found == std::string::npos)
+                {
+                    param_name = i;
+                }
+                else
+                {
+                    param_name = i.substr(0, found);
+                    param_value = i.substr(found+1);
+                }
+                state->data->internal_params.push_back({param_name, param_value});
             }
-            else
-            {
-                param_name = value.substr(0, found);
-                param_value = value.substr(found+1);
-            }
-            std::pair<std::string, std::string> param;
-            param.first = param_name;
-            param.second = param_value;
-            state->data->internal_params.push_back(param);
         }
         else
         {
@@ -888,9 +919,10 @@ bool2string(const bool val)
 void
 get_config_msg
     (hevc_enc_x265_t* state
+    ,std::list<std::pair<std::string,std::string>>& native_params
     ,std::string&     msg)
 {
-    msg = "x265 configuration:";
+    msg = "x265 plugin configuration:";
     msg += "\n  bit_depth="+std::to_string(state->data->bit_depth);
     msg += "\n  width="+std::to_string(state->data->width);
     msg += "\n  height="+std::to_string(state->data->height);
@@ -966,4 +998,99 @@ get_config_msg
             }
         }
     }
+
+    msg += "\nx265 native params: ";
+    for (auto p : native_params)
+    {
+        msg +=  " ";
+        msg += p.first;
+        if (!p.second.empty())
+        {
+            msg += "=";
+            msg += p.second;
+        }
+    }
+}
+
+static
+bool
+same_param
+    (const std::string& p1
+    ,const std::string& p2)
+{
+    if (p1 == p2 || p1 == "no-"+p2 || "no-"+p1 == p2) return true;
+    else return false;
+}
+
+static
+bool
+check_change
+    (const std::string& p1
+    ,const std::string& p2)
+{
+    const std::list<std::string> forbidden_params = {"annexb", "repeat-headers", "aud", "hrd", "input-csp", "input-res", "fps", "stats", "pass"};
+    for (auto p : forbidden_params)
+    {
+        if (same_param(p, p1) && same_param(p, p2)) return false;
+    }
+    return true;
+}
+
+static
+std::string
+get_key(const std::string& p)
+{
+    const std::string prefix("no-");
+    if (p.find(prefix) != std::string::npos)
+    {
+        return p.substr(prefix.size());
+    }
+    return p;
+}
+
+bool
+filter_native_params
+    (hevc_enc_x265_t* state
+    ,std::list<std::pair<std::string,std::string>>& params)
+{
+    std::string error;
+    params.sort([](const std::pair<std::string,std::string>& p1, const std::pair<std::string,std::string>& p2)
+                { return get_key(p2.first) > get_key(p1.first); });
+    params.erase(std::unique (params.begin(), params.end()), params.end()); // Remove duplicates
+
+    for (size_t i = 0; i < params.size(); i++)
+    {
+        auto keep = std::next(params.begin(), i);
+
+        //  Multi-pass encoding is handled by DEE framework
+        if ("off" == state->data->multi_pass && ("pass" == keep->first || "stats" == keep->first))
+        {
+            error += "\nParam '" + keep->first + "' cannot be modified.";
+        }
+
+        for (size_t j = i + 1; j < params.size(); j++)
+        {
+            auto cur = std::next(params.begin(), j);
+            if (same_param(keep->first, cur->first))
+            {
+                if (check_change(keep->first, cur->first))
+                {
+                    keep->first.clear();
+                    keep->second.clear();
+                    keep = cur;
+                }
+                else
+                {
+                    error += "\nParam '" + keep->first + "' cannot be modified.";
+                }
+            }
+        }
+    }
+
+    params.erase(std::remove_if(params.begin(), params.end(),
+                    [](const std::pair<std::string,std::string>& x)
+                    { return x.first.empty(); }), params.end());
+
+    state->data->msg += error;
+    return error.empty();
 }

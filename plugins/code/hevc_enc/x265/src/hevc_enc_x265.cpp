@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
 * 
 * Redistribution and use in source and binary forms, with or without
@@ -148,7 +148,7 @@ x265_init
     }
     catch (...) 
     {
-        std::string errmsg = "An exception occured when parsing init params. " + state->data->msg;
+        std::string errmsg = "An exception occurred when parsing init params. " + state->data->msg;
         state->data->msg = errmsg;
         return STATUS_ERROR;
     }
@@ -156,7 +156,7 @@ x265_init
 
     if (0 == state->data->max_output_data)
     {
-        state->data->max_output_data = SIZE_MAX;
+        state->data->max_output_data = INT32_MAX;
     }
 
     // CRF mode does not support 'hrd' option, which is required
@@ -191,68 +191,53 @@ x265_init
 
     bool ok = set_preset(state, state->data->preset, state->data->tune);
     
-    ok &= set_param(state, "annexb", "");
-    ok &= set_param(state, "input-res", std::to_string(state->data->width)+"x"+std::to_string(state->data->height));
-    ok &= set_param(state, "input-csp", state->data->color_space);
-    ok &= set_param(state, "fps", state->data->frame_rate);
+    std::list<std::pair<std::string,std::string>> native_params;
     
-    if (state->data->open_gop) ok &= set_param(state, "open-gop", "");
-    else                       ok &= set_param(state, "no-open-gop", "");
+    native_params.push_back({"annexb", ""});
+    native_params.push_back({"repeat-headers", ""});
+    native_params.push_back({"aud", ""});
+    native_params.push_back({"hrd", ""});
+    native_params.push_back({"hash", "1"});
+    native_params.push_back({"chromaloc", "2"});
+    native_params.push_back({"log-level", "0"});
+    native_params.push_back({"sar", "1"});
+    native_params.push_back({"input-csp", state->data->color_space});
+    native_params.push_back({"input-res", std::to_string(state->data->width)+"x"+std::to_string(state->data->height)});
+    native_params.push_back({"fps", state->data->frame_rate});
+    native_params.push_back({state->data->open_gop ? "open-gop" : "no-open-gop", ""});
+    native_params.push_back({state->data->info ? "info" : "no-info", ""});
+    native_params.push_back({"keyint", std::to_string(state->data->max_intra_period)});
+    native_params.push_back({"min-keyint", std::to_string(state->data->min_intra_period)});
+    native_params.push_back({"bframes", std::to_string(state->data->max_bframes)});
+    native_params.push_back({"rc-lookahead", std::to_string(state->data->lookahead_frames)});
+    if (state->data->intra_refresh) native_params.push_back({"intra-refresh", ""});
 
-    if (state->data->info) ok &= set_param(state, "info", "");
-    else                       ok &= set_param(state, "no-info", "");
+    native_params.push_back({"bitrate", std::to_string(state->data->data_rate)}); 
+    native_params.push_back({"vbv-maxrate", std::to_string(state->data->max_vbv_data_rate)}); 
+    native_params.push_back({"vbv-bufsize", std::to_string(state->data->vbv_buffer_size)}); 
 
-    ok &= set_param(state, "keyint", std::to_string(state->data->max_intra_period));
-    
-    if (state->data->intra_refresh) ok &= set_param(state, "intra-refresh", "");
+    native_params.push_back({"range", state->data->range});
 
-    ok &= set_param(state, "bframes", std::to_string(state->data->max_bframes));
-    ok &= set_param(state, "min-keyint", std::to_string(state->data->min_intra_period));
-    ok &= set_param(state, "rc-lookahead", std::to_string(state->data->lookahead_frames));
-    ok &= set_param(state, "bitrate", std::to_string(state->data->data_rate));
-    ok &= set_param(state, "vbv-maxrate", std::to_string(state->data->max_vbv_data_rate));
-    ok &= set_param(state, "vbv-bufsize", std::to_string(state->data->vbv_buffer_size));
+    native_params.push_back({"frame-threads", std::to_string(state->data->frame_threads)});
+    native_params.push_back({"nr-inter", std::to_string(state->data->nr_inter)});
+    native_params.push_back({"nr-intra", std::to_string(state->data->nr_intra)});
+    native_params.push_back({"cbqpoffs", std::to_string(state->data->cbqpoffs)});
+    native_params.push_back({"crqpoffs", std::to_string(state->data->crqpoffs)});
 
-    ok &= set_param(state, "frame-threads", std::to_string(state->data->frame_threads));
-    ok &= set_param(state, "nr-inter", std::to_string(state->data->nr_inter));
-    ok &= set_param(state, "nr-intra", std::to_string(state->data->nr_intra));
-    ok &= set_param(state, "cbqpoffs", std::to_string(state->data->cbqpoffs));
-    ok &= set_param(state, "crqpoffs", std::to_string(state->data->crqpoffs));
+    native_params.push_back({"scenecut", std::to_string(state->data->scenecut)});
+    native_params.push_back({"scenecut-bias", std::to_string(state->data->scenecut_bias)});
 
-    ok &= set_param(state, "scenecut", std::to_string(state->data->scenecut));
-    ok &= set_param(state, "scenecut_bias", std::to_string(state->data->scenecut_bias));
+    native_params.push_back({"min-cu-size", std::to_string(state->data->min_cu_size)});
+    native_params.push_back({"ctu", std::to_string(state->data->max_cu_size)});
+    native_params.push_back({"qg-size", std::to_string(state->data->qg_size)});
+    native_params.push_back({state->data->rc_grain ? "rc-grain" : "no-rc-grain", ""});
+    native_params.push_back({"level-idc", state->data->level_idc});
+    native_params.push_back({"psy-rd", state->data->psy_rd});
+    native_params.push_back({"colorprim", std::to_string(get_color_prim_number(state->data->color_primaries))});
+    native_params.push_back({"transfer", std::to_string(get_transfer_characteristics_number(state->data->transfer_characteristics))});
+    native_params.push_back({"colormatrix", std::to_string(get_matrix_coefficients_number(state->data->matrix_coefficients))});
 
-    ok &= set_param(state, "repeat-headers", "");
-    ok &= set_param(state, "aud", "");
-    ok &= set_param(state, "hrd", "");
-    ok &= set_param(state, "hash", "1");
-    ok &= set_param(state, "chromaloc", "2");
-    ok &= set_param(state, "range", state->data->range);
-
-    ok &= set_param(state, "min-cu-size", std::to_string(state->data->min_cu_size));
-    ok &= set_param(state, "ctu", std::to_string(state->data->max_cu_size));
-    ok &= set_param(state, "qg-size", std::to_string(state->data->qg_size));
-
-    if (state->data->rc_grain) ok &= set_param(state, "rc-grain", "");
-    else                       ok &= set_param(state, "no-rc-grain", "");
-
-    ok &= set_param(state, "level-idc", state->data->level_idc);
-    ok &= set_param(state, "psy-rd", state->data->psy_rd);
- 
-    if (state->data->multi_pass != "off")
-    {
-        if (state->data->multi_pass == "1st") ok &= set_param(state, "pass", "1");
-        else if (state->data->multi_pass == "nth") ok &= set_param(state, "pass", "3");
-        else if (state->data->multi_pass == "last") ok &= set_param(state, "pass", "2");
-    
-        if (!state->data->stats_file.empty()) ok &= set_param(state, "stats", state->data->stats_file);
-    }
-
-    ok &= set_param(state, "colorprim", std::to_string(get_color_prim_number(state->data->color_primaries)));
-    ok &= set_param(state, "transfer", std::to_string(get_transfer_characteristics_number(state->data->transfer_characteristics)));
-    ok &= set_param(state, "colormatrix", std::to_string(get_matrix_coefficients_number(state->data->matrix_coefficients)));
-
-    if (state->data->mastering_display_enabled == true)
+     if (state->data->mastering_display_enabled == true)
     {
         // --master-display G(gx,gy)B(bx,by)R(rx,ry)WP(wpx,wpy)L(max_peak_lum,min_peak_lum)
         std::string master_display =
@@ -261,27 +246,44 @@ x265_init
             + "R(" + std::to_string(state->data->mastering_display_sei_x3) + "," + std::to_string(state->data->mastering_display_sei_y3) + ")"
             + "WP(" + std::to_string(state->data->mastering_display_sei_wx) + "," + std::to_string(state->data->mastering_display_sei_wy) + ")"
             + "L(" + std::to_string(state->data->mastering_display_sei_max_lum) + "," + std::to_string(state->data->mastering_display_sei_min_lum) + ")";
-
-        ok &= set_param(state, "master-display", master_display);
+        native_params.push_back({"master-display", master_display});
     }
 
     if (state->data->light_level_enabled == true)
     {
         // --max-cll max_cll,max_fall
         std::string max_cll = std::to_string(state->data->light_level_max_content) + "," + std::to_string(state->data->light_level_max_frame_average);
-        ok &= set_param(state, "max-cll", max_cll);
+        native_params.push_back({"max-cll", max_cll});
     }
-
 
     for (auto ip : state->data->internal_params)
     {
-        if (!ip.second.empty())
+        native_params.push_back({ip.first, ip.second});
+    }
+    
+    if (state->data->multi_pass != "off")
+    {
+        if (state->data->multi_pass == "1st") native_params.push_back({"pass", "1"});
+        else if (state->data->multi_pass == "nth") native_params.push_back({"pass", "3"});
+        else if (state->data->multi_pass == "last") native_params.push_back({"pass", "2"});
+    
+        if (!state->data->stats_file.empty()) native_params.push_back({"stats", state->data->stats_file});
+    }
+
+    if (!filter_native_params(state, native_params))
+    {
+        return STATUS_ERROR; 
+    }
+
+    for (auto p : native_params)
+    {
+        if (!p.second.empty())
         {
-            ok &= set_param(state, ip.first, ip.second);
+            ok &= set_param(state, p.first, p.second);
         }
         else
         {
-            ok &= set_param(state, ip.first, "");
+            ok &= set_param(state, p.first, "");
         }
     }
 
@@ -310,7 +312,7 @@ x265_init
     }
     state->lib_initialized = true;
 
-    get_config_msg(state, state->data->msg);
+    get_config_msg(state, native_params, state->data->msg);
     return STATUS_OK;
 }
 
