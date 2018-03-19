@@ -87,10 +87,10 @@ typedef size_t (*func_noise_flt_get_info)(const property_info_t**);
  *  @return Size in bytes
  */
 size_t
-noise_flt_get_size();
+noise_flt_get_size(void);
  
 /** @brief Definition of pointer to noise_flt_get_size function */
-typedef size_t (*func_noise_flt_get_size)();
+typedef size_t (*func_noise_flt_get_size)(void);
 
 /** @brief Initialize filter instance
  *  @return status code 
@@ -181,11 +181,11 @@ typedef struct
  *  @return pointer to noise_flt_api_t
  */
 DLB_EXPORT
-noise_flt_api_t* noise_flt_get_api();
+noise_flt_api_t* noise_flt_get_api(void);
  
 /** @brief Definition of pointer to noise_flt_get_api function */
 typedef 
-noise_flt_api_t* (*func_noise_flt_get_api)();
+noise_flt_api_t* (*func_noise_flt_get_api)(void);
 
 #ifdef __cplusplus
 }

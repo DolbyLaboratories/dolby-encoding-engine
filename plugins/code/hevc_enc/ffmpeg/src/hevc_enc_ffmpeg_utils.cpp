@@ -3,10 +3,10 @@
 *
 * Copyright (c) 2017, Dolby Laboratories
 * All rights reserved.
-* 
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
-* 
+*
 * * Redistributions of source code must retain the above copyright notice, this
 *   list of conditions and the following disclaimer.
 *
@@ -17,7 +17,7 @@
 * * Neither the name of the copyright holder nor the names of its
 *   contributors may be used to endorse or promote products derived from
 *   this software without specific prior written permission.
-* 
+*
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -34,6 +34,7 @@
 #include <map>
 #include <fstream>
 #include <stdexcept>
+#include <mutex>
 #include "hevc_enc_ffmpeg_utils.h"
 
 #define READ_BUFFER_SIZE 1024
@@ -57,7 +58,7 @@ std::map<std::string, int> transfer_characteristics_map = {
     { "smpte_st_2084", 16 },
     { "std_b67", 18 },
 };
- 
+
 static
 std::map<std::string, int> matrix_coefficients_map = {
     { "bt_709", 1 },
@@ -119,13 +120,9 @@ init_defaults(hevc_enc_ffmpeg_t* state)
     state->data->max_pass_num = 2;
 
 #ifdef WIN32
-    state->data->in_pipe = INVALID_HANDLE_VALUE;
-    state->data->out_pipe = INVALID_HANDLE_VALUE;
     state->data->ffmpeg_bin = "ffmpeg.exe";
     state->data->interpreter = "python.exe";
 #else
-    state->data->in_pipe = 0;
-    state->data->out_pipe = 0;
     state->data->ffmpeg_bin = "ffmpeg";
     state->data->interpreter = "python";
 #endif
@@ -139,9 +136,14 @@ init_defaults(hevc_enc_ffmpeg_t* state)
     state->data->ffmpeg_ret_code = 0;
 }
 
-std::string 
-run_cmd_get_output(std::string cmd) 
+std::string
+run_cmd_get_output(std::string cmd)
 {
+#ifdef WIN32
+    // wrap command in extra quotations to ensure windows calls it properly
+    cmd = "\"" + cmd + "\"";
+#endif
+
     char buffer[READ_BUFFER_SIZE];
     std::string result;
 #ifdef WIN32
@@ -153,7 +155,7 @@ run_cmd_get_output(std::string cmd)
     {
         return "";
     }
-    while (!feof(pipe.get())) 
+    while (!feof(pipe.get()))
     {
         if (fgets(buffer, READ_BUFFER_SIZE, pipe.get()) != NULL)
             result += buffer;
@@ -161,30 +163,43 @@ run_cmd_get_output(std::string cmd)
     return result;
 }
 
-void 
-run_cmd_thread_func(std::string cmd, hevc_enc_ffmpeg_data_t* encoding_data)
+
+void
+check_ffmpeg_status(hevc_enc_ffmpeg_data_t* data)
 {
-    int ret_code = system(cmd.c_str());
-    encoding_data->ffmpeg_ret_code = ret_code;
+    data->check_mutex.lock();
+    if (data->ffmpeg_ret_code)
+    {
+        data->force_stop_reading_thread = true;
+        data->force_stop_writing_thread = true;
+    }
+    data->check_mutex.unlock();
 }
 
-void 
-writer_thread_func(hevc_enc_ffmpeg_data_t* encoding_data)
+void
+run_cmd_thread_func(std::string cmd, hevc_enc_ffmpeg_data_t* encoding_data)
 {
 #ifdef WIN32
-    if (ConnectNamedPipe(encoding_data->in_pipe, NULL) == FALSE)
-    {
-        return;
-    }
-#else
-    if ((encoding_data->in_pipe = open(encoding_data->temp_file[0].c_str(), O_WRONLY)) == -1)
-    {
-        return;
-    }
+    // wrap command in extra quotations to ensure windows calls it properly
+    cmd = "\"" + cmd + "\"";
 #endif
-    
+
+    int ret_code = system(cmd.c_str());
+    encoding_data->ffmpeg_ret_code = ret_code;
+    check_ffmpeg_status(encoding_data);
+}
+
+void
+writer_thread_func(hevc_enc_ffmpeg_data_t* encoding_data)
+{
+    if (encoding_data->in_pipe.connectPipe() != 0)
+    {
+        return;
+    }
+
     while (encoding_data->stop_writing_thread == false || encoding_data->in_buffer.size() > 0)
     {
+        check_ffmpeg_status(encoding_data);
         if (encoding_data->force_stop_writing_thread)
         {
             break;
@@ -196,85 +211,70 @@ writer_thread_func(hevc_enc_ffmpeg_data_t* encoding_data)
             encoding_data->in_buffer_mutex.unlock();
             continue;
         }
+
         BufferBlob* front = encoding_data->in_buffer.front();
+        encoding_data->in_buffer.pop_front();
         encoding_data->in_buffer_mutex.unlock();
-        
+
         char* data_to_write = front->data;
         size_t data_size = front->data_size;
         size_t left_to_write = data_size;
 
-#ifdef WIN32
-        DWORD bytes_written;
         while (left_to_write > 0)
         {
-            WriteFile(encoding_data->in_pipe, data_to_write, (DWORD)left_to_write, &bytes_written, NULL);
+            check_ffmpeg_status(encoding_data);
+            size_t bytes_written = 0;
+            if (encoding_data->in_pipe.writeToPipe(data_to_write, left_to_write, &bytes_written) != 0)
+            {
+                // error writing to pipe
+                bytes_written = 0;
+                encoding_data->force_stop_writing_thread = true;
+            }
+
+            if (bytes_written > left_to_write)
+            {
+                encoding_data->force_stop_writing_thread = true;
+                bytes_written = 0;
+            }
+
             left_to_write -= bytes_written;
             data_to_write += bytes_written;
-            if (bytes_written == 0) break;
+            check_ffmpeg_status(encoding_data);
+
+            if (encoding_data->force_stop_writing_thread) break;
         }
-#else
-        ssize_t bytes_written;
-        while (left_to_write > 0)
-        {
-            bytes_written = write(encoding_data->in_pipe, data_to_write, left_to_write);
-            left_to_write -= bytes_written;
-            data_to_write += bytes_written;
-            if (bytes_written == 0) break;
-        }
-#endif
-        if (left_to_write == 0)
-        {
-            encoding_data->in_buffer_mutex.lock();
-            delete front;
-            encoding_data->in_buffer.pop_front();
-            encoding_data->in_buffer_mutex.unlock();
-        }
+
+        delete front;
     }
-    
-#ifdef WIN32
-    CloseHandle(encoding_data->in_pipe);
-#else
-    if (encoding_data->in_pipe != 0)
-    {
-        close(encoding_data->in_pipe);
-    }
-#endif
+
+    encoding_data->in_pipe.closePipe();
 }
 
-void 
+void
 reader_thread_func(hevc_enc_ffmpeg_data_t* encoding_data)
 {
-#ifdef WIN32
-    if (ConnectNamedPipe(encoding_data->out_pipe, NULL) == FALSE)
+    if (encoding_data->out_pipe.connectPipe() != 0)
     {
         return;
     }
-#else
-    if ((encoding_data->out_pipe = open(encoding_data->temp_file[1].c_str(), O_RDONLY)) == -1)
-    {
-        return;
-    }
-#endif
-    
-    size_t last_read_size = 0;
 
+    size_t last_read_size = 0;
     while (encoding_data->stop_reading_thread == false || last_read_size > 0)
     {
+        check_ffmpeg_status(encoding_data);
         if (encoding_data->force_stop_reading_thread)
         {
             break;
         }
 
         char read_data[READ_BUFFER_SIZE];
-
-#ifdef WIN32
-        DWORD bytes_read;
-        ReadFile(encoding_data->out_pipe, read_data, READ_BUFFER_SIZE, &bytes_read, NULL);
-        last_read_size = bytes_read;
-#else
-        last_read_size = read(encoding_data->out_pipe, read_data, READ_BUFFER_SIZE);
-#endif
-
+        if (encoding_data->out_pipe.readFromPipe(read_data, READ_BUFFER_SIZE, &last_read_size) != 0)
+        {
+            // error reading from pipe
+            last_read_size = 0;
+            encoding_data->stop_reading_thread = true;
+        }
+        check_ffmpeg_status(encoding_data);
         if (last_read_size > 0)
         {
             encoding_data->out_buffer_mutex.lock();
@@ -282,18 +282,11 @@ reader_thread_func(hevc_enc_ffmpeg_data_t* encoding_data)
             encoding_data->out_buffer_mutex.unlock();
         }
     }
-    
-#ifdef WIN32
-    CloseHandle(encoding_data->out_pipe);
-#else
-    if (encoding_data->out_pipe != 0)
-    {
-        close(encoding_data->out_pipe);
-    }
-#endif
+
+    encoding_data->out_pipe.closePipe();
 }
 
-bool 
+bool
 get_aud_from_bytestream(std::vector<char> &bytestream, std::vector<hevc_enc_nal_t> &nalus, bool flush, size_t max_data)
 {
     unsigned int pos = 0;
@@ -302,11 +295,9 @@ get_aud_from_bytestream(std::vector<char> &bytestream, std::vector<hevc_enc_nal_
     std::vector<int> nalu_end;
     unsigned int aud_end = 0;
     bool aud_open = false;
-    bool nalu_open = false;
 
     // first nalu starts right away because we dont want to skip any input bytes
     nalu_start.push_back(pos);
-    nalu_open = true;
 
     // seek AU start
     while (pos < bytestream.size() && aud_open == false)
@@ -365,7 +356,7 @@ get_aud_from_bytestream(std::vector<char> &bytestream, std::vector<hevc_enc_nal_
             pos += 1;
         }
     }
-    
+
     if (flush && aud_open)
     {
         aud_open = false;
@@ -417,6 +408,12 @@ static bool
 bin_exists(const std::string& bin, const std::string& arg)
 {
     std::string cmd = bin + " " + arg;
+
+#ifdef WIN32
+    // wrap command in extra quotations to ensure windows calls it properly
+    cmd = "\"" + cmd + "\"";
+#endif
+
     int rt = system(cmd.c_str());
     return (rt == 0);
 }
@@ -749,6 +746,10 @@ parse_init_params
             state->data->light_level_information_sei_present = true;
             state->data->light_level_max_frame_average = light_level_max_frame_average;
         }
+        else if ("force_slice_type" == name)
+        {
+            //consume this parameter
+        }
         else if ("command_line" == name)
         {
             state->data->command_line.push_back(value);
@@ -760,7 +761,7 @@ parse_init_params
     }
 
     // Following properties are guaranteed to be set by caller,
-    // thus must be handled by plugin.    
+    // thus must be handled by plugin.
     if (0 == state->data->bit_depth)
     {
         state->data->msg += "\nMissing 'bit_depth' property.";
@@ -780,7 +781,7 @@ parse_init_params
     {
         state->data->msg += "\nMissing 'frame_rate' property.";
     }
-    
+
     if (state->data->temp_file.size() < 3)
     {
         state->data->msg += "Need more temp files.";
@@ -804,69 +805,6 @@ parse_init_params
     return state->data->msg.empty();
 }
 
-bool 
-create_pipes(hevc_enc_ffmpeg_data_t* data)
-{
-#ifdef WIN32
-    data->temp_file[0] = std::string("\\\\.\\pipe\\") + data->temp_file[0].substr(data->temp_file[0].rfind("\\") + 1);
-    data->temp_file[1] = std::string("\\\\.\\pipe\\") + data->temp_file[1].substr(data->temp_file[1].rfind("\\") + 1);
-
-    data->in_pipe = CreateNamedPipe(data->temp_file[0].c_str(),
-        PIPE_ACCESS_OUTBOUND,
-        PIPE_WAIT | PIPE_TYPE_BYTE | PIPE_READMODE_BYTE,
-        1,
-        PIPE_BUFFER_SIZE,
-        PIPE_BUFFER_SIZE,
-        NMPWAIT_USE_DEFAULT_WAIT,
-        NULL);
-
-    data->out_pipe = CreateNamedPipe(data->temp_file[1].c_str(),
-        PIPE_ACCESS_INBOUND,
-        PIPE_WAIT | PIPE_TYPE_BYTE | PIPE_READMODE_BYTE,
-        1,
-        PIPE_BUFFER_SIZE,
-        PIPE_BUFFER_SIZE,
-        NMPWAIT_USE_DEFAULT_WAIT,
-        NULL);
-
-    if (data->in_pipe == NULL || data->out_pipe == NULL)
-    {
-        return false;
-    }
-#else
-    remove(data->temp_file[0].c_str());
-    if (mkfifo(data->temp_file[0].c_str(), S_IWUSR | S_IRUSR | S_IWOTH | S_IROTH) != 0)
-    {
-        return false;
-    }
-    remove(data->temp_file[1].c_str());
-    if (mkfifo(data->temp_file[1].c_str(), S_IWUSR | S_IRUSR | S_IWOTH | S_IROTH) != 0)
-    {
-        return false;
-    }
-#endif
-
-    return true;
-}
-
-bool
-close_pipes(hevc_enc_ffmpeg_data_t* data)
-{
-#ifdef WIN32
-    if (data->in_pipe != INVALID_HANDLE_VALUE)
-    {
-        DisconnectNamedPipe(data->in_pipe);
-    }
-    if (data->out_pipe != INVALID_HANDLE_VALUE)
-    {
-        DisconnectNamedPipe(data->out_pipe);
-    }
-#endif
-    // no need to close pipes on linux, they are just temp files removed by DEE later
-
-    return true;
-}
-
 bool
 write_cfg_file(hevc_enc_ffmpeg_data_t* data, const std::string& file)
 {
@@ -877,7 +815,7 @@ write_cfg_file(hevc_enc_ffmpeg_data_t* data, const std::string& file)
         cfg_file << "width="                            << data->width                          << "\n";
         cfg_file << "height="                           << data->height                         << "\n";
         cfg_file << "color_space="                      << data->color_space                    << "\n";
-        cfg_file << "frame_rate="                       << data->frame_rate                     << "\n";
+        cfg_file << "frame_rate="                       << fps_to_num_denom(data->frame_rate)   << "\n";
         cfg_file << "data_rate="                        << data->data_rate                      << "\n";
         cfg_file << "max_vbv_data_rate="                << data->max_vbv_data_rate              << "\n";
         cfg_file << "vbv_buffer_size="                  << data->vbv_buffer_size                << "\n";
@@ -902,9 +840,9 @@ write_cfg_file(hevc_enc_ffmpeg_data_t* data, const std::string& file)
         cfg_file << "light_level_information_sei_present=" << data->light_level_information_sei_present << "\n";
         cfg_file << "light_level_max_content="          << data->light_level_max_content        << "\n";
         cfg_file << "light_level_max_frame_average="    << data->light_level_max_frame_average  << "\n";
-        cfg_file << "input_file="                       << data->temp_file[0]                   << "\n";
-        cfg_file << "output_file="                      << data->temp_file[1]                   << "\n";
-        cfg_file << "ffmpeg_bin="                       << data->ffmpeg_bin                     << "\n";
+        cfg_file << "input_file=\""                     << data->in_pipe.getPath()              << "\"\n";
+        cfg_file << "output_file=\""                    << data->out_pipe.getPath()             << "\"\n";
+        cfg_file << "ffmpeg_bin=\""                     << data->ffmpeg_bin                     << "\"\n";
         cfg_file.close();
         return true;
     }
@@ -912,4 +850,14 @@ write_cfg_file(hevc_enc_ffmpeg_data_t* data, const std::string& file)
     {
         return false;
     }
+}
+
+std::string
+fps_to_num_denom
+    (const std::string& fps)
+{
+    if ("23.976" == fps) return "24000/1001";
+    else if ("29.97" == fps) return "30000/1001";
+    else if ("59.94" == fps) return "60000/1001";
+    return std::to_string(std::stoi(fps))+"/1";
 }

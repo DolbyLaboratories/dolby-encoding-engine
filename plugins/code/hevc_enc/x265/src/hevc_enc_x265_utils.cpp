@@ -214,6 +214,8 @@ init_defaults(hevc_enc_x265_t* state)
     state->data->light_level_enabled = false;
     state->data->light_level_max_content = 0;
     state->data->light_level_max_frame_average = 0;
+
+    state->data->force_slice_type = false;
 }
 
 bool
@@ -792,6 +794,10 @@ parse_init_params
             }
             state->data->light_level_max_frame_average = light_level_max_frame_average;
         }
+        else if ("force_slice_type" == name)
+        {
+            state->data->force_slice_type = ("true" == value);
+        }
         else if ("absolute_pass_num" == name)
         {
             // this internal param is ignored for x265
@@ -1093,4 +1099,14 @@ filter_native_params
 
     state->data->msg += error;
     return error.empty();
+}
+
+std::pair<int,int>
+fps_to_num_denom
+    (const std::string& fps)
+{
+    if ("23.976" == fps) return {24000,1001};
+    else if ("29.97" == fps) return {30000,1001};
+    else if ("59.94" == fps) return {60000, 1001};
+    else return {std::stoi(fps), 1};
 }

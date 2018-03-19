@@ -48,7 +48,7 @@
 <CompileAs>Default</CompileAs>
 <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
 <DisableSpecificWarnings />
-<ExceptionHandling />
+<ExceptionHandling>Sync</ExceptionHandling>
 <MinimalRebuild>false</MinimalRebuild>
 <Optimization>Disabled</Optimization>
 <DisableLanguageExtensions>false</DisableLanguageExtensions>
@@ -78,7 +78,7 @@
 <CompileAs>Default</CompileAs>
 <DebugInformationFormat />
 <DisableSpecificWarnings />
-<ExceptionHandling />
+<ExceptionHandling>Sync</ExceptionHandling>
 <MinimalRebuild>false</MinimalRebuild>
 <Optimization>MaxSpeed</Optimization>
 <DisableLanguageExtensions>false</DisableLanguageExtensions>
@@ -101,10 +101,12 @@
 <TargetMachine>MachineX64</TargetMachine>
 <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers></Link></ItemDefinitionGroup>
 <ItemGroup>
+<ClCompile Include="..\..\..\src\NamedPipe.cpp" />
 <ClCompile Include="..\..\..\src\hevc_enc_ffmpeg.cpp" />
 <ClCompile Include="..\..\..\src\hevc_enc_ffmpeg_utils.cpp" /></ItemGroup>
 <ItemGroup>
 <ClInclude Include="..\..\..\..\..\common\common.h" />
+<ClInclude Include="..\..\..\src\NamedPipe.h" />
 <ClInclude Include="..\..\..\src\hevc_enc_ffmpeg_utils.h" />
 <ClInclude Include="..\..\..\..\hevc_enc_api.h" /></ItemGroup>
 <ItemGroup />

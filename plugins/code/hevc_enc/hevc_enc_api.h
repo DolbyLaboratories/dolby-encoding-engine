@@ -44,19 +44,35 @@ extern "C" {
 * -----------------------------------------------------------------------------
 *      width : integer : n/a : hevc_enc_init
 *      height : integer : n/a : hevc_enc_init
-*      bit_depth : enum : [8,10] : hevc_enc_init : in DEE 1.0 it is always '10'
+*      bit_depth : enum : [8,10] : hevc_enc_init : in DEE it is always '10'
 *      frame_rate : enum : [23.976,24,25,29.97,30,48,59.94,60] : hevc_enc_init 
-*      color_space : enum : [i400,i420,i422,i444] : hevc_enc_init : in DEE 1.0 it is always 'i420'
+*      color_space : enum : [i400,i420,i422,i444] : hevc_enc_init : in DEE it is always 'i420'
 *      data_rate : integer : n/a : hevc_enc_init : value in kbps
 *      max_vbv_data_rate : integer : n/a : hevc_enc_init : value in kbps
 *      vbv_buffer_size : integer : n/a : hevc_enc_init : value in kb
-*      range : enum : [limited,full] : hevc_enc_init : in DEE 1.0 it is always 'full'
+*      range : enum : [limited,full] : hevc_enc_init : in DEE it is always 'full'
 *      multi_pass : enum : [off,1st,nth,last] : hevc_enc_init
 *      stats_file : string : n/a : hevc_enc_init : temp file to write stats in multipass encoding
 *      max_output_data : integer : n/a : hevc_enc_set_property : framework indicates max size of buffer before each 'process' call
 *      max_pass_num : integer : n/a : hevc_enc_get_property : accessed before hevc_enc_init
+*      absolute_pass_num : integer : n/a : hevc_enc_init : when encoding multiple times (in multipass encoding or in multiple output streams) this value states the index number of the current encoding
 *      temp_file_num : integer : n/a : hevc_enc_get_property : accessed before hevc_enc_init, optional, should be used if plugin needs some temp files
 *      temp_file : string : n/a : hevc_enc_init : occurs multiple times, according to value retrieved from 'temp_file_num'
+*      color_primaries : enum : [unspecified,bt_709,bt_601_625,bt_601_525,bt_2020] : hevc_enc_init
+*      transfer_characteristics : enum : [unspecified,bt_709,bt_601_625,bt_601_525,smpte_st_2084,std_b67] : hevc_enc_init
+*      matrix_coefficients : enum : [unspecified,bt_709,bt_601_625,bt_601_525,bt_2020] : hevc_enc_init
+*      mastering_display_sei_x1 : integer : [0,50000] : hevc_enc_init : first primary x
+*      mastering_display_sei_y1 : integer : [0,50000] : hevc_enc_init : first primary y
+*      mastering_display_sei_x2 : integer : [0,50000] : hevc_enc_init : second primary x
+*      mastering_display_sei_y2 : integer : [0,50000] : hevc_enc_init : second primary y
+*      mastering_display_sei_x3 : integer : [0,50000] : hevc_enc_init : third primary x
+*      mastering_display_sei_y3 : integer : [0,50000] : hevc_enc_init : third primary y
+*      mastering_display_sei_wx : integer : [0,50000] : hevc_enc_init : white point x
+*      mastering_display_sei_wy : integer : [0,50000] : hevc_enc_init : white point y
+*      mastering_display_sei_max_lum : integer : [0:2000000000] : hevc_enc_init : maximum display luminance
+*      mastering_display_sei_min_lum : integer : [0:2000000000] : hevc_enc_init : minimum display luminance
+*      light_level_max_content : integer : [0,65535] : hevc_enc_init
+*      light_level_max_frame_average : integer : [0,65535] : hevc_enc_init
 *
 * Additionally, hevc_enc_init_params_t structure will contain all plugin-specific properties set via XML interface (ACCESS_TYPE_USER).
 *
@@ -104,7 +120,7 @@ typedef struct
 } hevc_enc_picture_t;
 
 /** @brief NAL unit types.
- *         In DEE 1.0 only HEVC_ENC_NAL_UNIT_ACCESS_UNIT_DELIMITER is important.
+ *         In DEE only HEVC_ENC_NAL_UNIT_ACCESS_UNIT_DELIMITER is important.
  *         All other NAL units can be set to HEVC_ENC_NAL_UNIT_OTHER.
  */
 typedef enum
@@ -174,10 +190,10 @@ typedef size_t (*func_hevc_enc_get_info)(const property_info_t**);
  *  @return Size in bytes
  */
 size_t
-hevc_enc_get_size();
+hevc_enc_get_size(void);
  
 /** @brief Definition of pointer to hevc_enc_get_size function */
-typedef size_t (*func_hevc_enc_get_size)();
+typedef size_t (*func_hevc_enc_get_size)(void);
  
 /** @brief Initialize encoder instance
  *  @return status code 
@@ -202,7 +218,7 @@ hevc_enc_close
 /** @brief Definition of pointer to hevc_enc_close function */ 
 typedef status_t (*func_hevc_enc_close)(hevc_enc_handle_t);
  
-/** @brief Encode array of pictures. In DEE 1.0 picture_num is always '1'.
+/** @brief Encode array of pictures. In DEE picture_num is always '1'.
  *         Should produce complete access unit, if available.
  *         If buffer size (max_output_data) is too small to handle access unit,
  *         plugin must keep it until bigger buffer is available.
@@ -288,11 +304,11 @@ typedef struct
  *  @return pointer to hevc_enc_api_t
  */
 DLB_EXPORT
-hevc_enc_api_t* hevc_enc_get_api();
+hevc_enc_api_t* hevc_enc_get_api(void);
  
 /** @brief Definition of pointer to hevc_enc_get_api function */
 typedef 
-hevc_enc_api_t* (*func_hevc_enc_get_api)();
+hevc_enc_api_t* (*func_hevc_enc_get_api)(void);
 
 #ifdef __cplusplus
 }

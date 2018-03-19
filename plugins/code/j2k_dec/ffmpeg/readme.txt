@@ -6,7 +6,7 @@ Build tools:
 - gcc 4.8.5
 
 Prerequisites:
-- ffmpeg with jpeg2000 decoder
+- ffmpeg (version 3.4.2) with jpeg2000 decoder
 
 Build instructions, Windows:
 1. Build using make\j2k_dec_ffmpeg\windows_amd64_msvs\j2k_dec_ffmpeg_2013.sln

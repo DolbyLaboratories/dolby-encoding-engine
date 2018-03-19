@@ -13,3 +13,8 @@ Build instructions, Linux:
     - make hevc_enc_ffmpeg_release.so
 2. Copy .so library with plugin to DEE installation folder
 
+The minimum required ffmpeg version is 3.4.2. Previous versions
+are built without the necessary 10-bit support on Windows.
+
+Dolby Vision profile 4 can only be encoded with the ffmpeg
+plugin provided that a constant intra period is used.

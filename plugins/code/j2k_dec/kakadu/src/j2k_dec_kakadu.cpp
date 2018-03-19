@@ -129,7 +129,7 @@ class j2k_buffer : public kdu_compressed_source
         {
             assert(m_buffer != NULL);
             assert(m_curpos != NULL);
-            if ((kdu_long)num_bytes > m_buffer_size-get_pos()) num_bytes = m_buffer_size-get_pos();
+            if ((kdu_long)num_bytes > m_buffer_size-get_pos()) num_bytes = (int)(m_buffer_size-get_pos());
             memcpy(buf, m_curpos, num_bytes);
             m_curpos += num_bytes;
             return num_bytes;
@@ -206,7 +206,7 @@ kakadu_init
         return STATUS_ERROR;
     }
 
-    int buffer_size = state->data->width*state->data->height*MAX_PLANES;
+    int buffer_size = (int)(state->data->width*state->data->height*MAX_PLANES);
     state->data->output_buffer = new kdu_int16[buffer_size];
     state->data->reorder_buffer = new short[buffer_size];
 
@@ -237,7 +237,7 @@ prepare_output
     (j2k_dec_kakadu_t* state
     ,j2k_dec_output_t* out)
 {
-    int plane_samples_num = state->data->width*state->data->height;
+    int plane_samples_num = (int)(state->data->width*state->data->height);
     short* p_r = (short*)state->data->reorder_buffer;
     short* p_g = p_r + plane_samples_num;
     short* p_b = p_g + plane_samples_num;
@@ -314,8 +314,8 @@ kakadu_process
 static
 status_t
 kakadu_set_property
-    (j2k_dec_handle_t   handle          /**< [in/out] Decoder instance handle */
-    , const property_t* property        /**< [in] Property to write */
+    (j2k_dec_handle_t          /**< [in/out] Decoder instance handle */
+    , const property_t*        /**< [in] Property to write */
     )
 {
     return STATUS_ERROR;
@@ -324,8 +324,8 @@ kakadu_set_property
 static
 status_t
 kakadu_get_property
-    (j2k_dec_handle_t   handle              /**< [in/out] Decoder instance handle */
-    , property_t*       property            /**< [in/out] Property to read */
+    (j2k_dec_handle_t              /**< [in/out] Decoder instance handle */
+    , property_t*                  /**< [in/out] Property to read */
     )
 {
     return STATUS_ERROR;

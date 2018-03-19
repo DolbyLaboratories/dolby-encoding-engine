@@ -1,3 +1,35 @@
+/*
+* BSD 3-Clause License
+*
+* Copyright (c) 2017, Dolby Laboratories
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+* * Redistributions of source code must retain the above copyright notice, this
+*   list of conditions and the following disclaimer.
+*
+* * Redistributions in binary form must reproduce the above copyright notice,
+*   this list of conditions and the following disclaimer in the documentation
+*   and/or other materials provided with the distribution.
+*
+* * Neither the name of the copyright holder nor the names of its
+*   contributors may be used to endorse or promote products derived from
+*   this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <fstream>
 #include "hevc_dec_ffmpeg_utils.h"
 
@@ -16,8 +48,6 @@ BufferBlob::~BufferBlob()
 void remove_pictures(hevc_dec_ffmpeg_data_t* data)
 {
     // remove all pictures already sent out during last process
-    //if (data->decoded_pictures_to_discard) std::cout << "Pop " << data->decoded_pictures_to_discard << " of " <<  data->decoded_pictures.size() << " frames." << std::endl;
-
     data->calls++;
     if (0 == data->decoded_pictures_to_discard) data->missed_calls++;
     while (data->decoded_pictures_to_discard > 0)
@@ -28,9 +58,6 @@ void remove_pictures(hevc_dec_ffmpeg_data_t* data)
         data->decoded_pictures.pop_front();
         data->decoded_pictures_to_discard -= 1;
     }
-
-    //double miss_rate = ((double)data->missed_calls/(double)data->calls) * 100.0;
-    //std::cout << "Miss rate: " << miss_rate << " (" << data->missed_calls << " / " << data->calls << ")" << std::endl;
 }
 
 hevc_dec_frame_rate_t string_to_fr(const std::string& str)
@@ -91,14 +118,30 @@ hevc_dec_frame_rate_t string_to_fr(const std::string& str)
 bool bin_exists(const std::string& bin, const std::string& arg)
 {
     std::string cmd = bin + " " + arg;
+
+#ifdef WIN32
+    // wrap command in extra quotations to ensure windows calls it properly
+    cmd = "\"" + cmd + "\"";
+#endif
+
     int rt = system(cmd.c_str());
     return (rt == 0);
 }
 
 void run_cmd_thread_func(std::string cmd, hevc_dec_ffmpeg_data_t* decoding_data)
 {
+#ifdef WIN32
+    // wrap command in extra quotations to ensure windows calls it properly
+    cmd = "\"" + cmd + "\"";
+#endif
+
     int ret_code = system(cmd.c_str());
     decoding_data->ffmpeg_ret_code = ret_code;
+    if (ret_code)
+    {
+        decoding_data->force_stop_writing_thread = true;
+        decoding_data->force_stop_reading_thread = true;
+    }
 }
 
 void writer_thread_func(hevc_dec_ffmpeg_data_t* decoding_data)
@@ -255,6 +298,11 @@ size_t get_buf_size(std::list<BufferBlob*>& blob_list)
 
 std::string run_cmd_get_output(std::string cmd)
 {
+#ifdef WIN32
+    // wrap command in extra quotations to ensure windows calls it properly
+    cmd = "\"" + cmd + "\"";
+#endif
+
     char* buffer = new char[READ_BUFFER_SIZE];
     std::string result;
 
@@ -296,7 +344,7 @@ int extract_pictures_from_buffer(hevc_dec_ffmpeg_data_t* data)
         new_pic.luma_size = y_size;
         new_pic.color_space = data->chroma_format;
         new_pic.frame_rate = data->frame_rate_ext;
-        new_pic.frame_type = FRAME_TYPE_AUTO;
+        new_pic.frame_type = HEVC_DEC_FRAME_TYPE_AUTO;
         new_pic.height = data->height;
         new_pic.width = data->width;
         new_pic.matrix_coeffs = 0;
@@ -338,9 +386,9 @@ write_cfg_file(hevc_dec_ffmpeg_data_t* data, const std::string& file)
         cfg_file << "output_bitdepth=" << data->output_bitdepth << "\n";
         cfg_file << "width=" << data->width << "\n";
         cfg_file << "height=" << data->height << "\n";
-        cfg_file << "input_file=" << data->in_pipe.getPath() << "\n";
-        cfg_file << "output_file=" << data->out_pipe.getPath() << "\n";
-        cfg_file << "ffmpeg_bin=" << data->ffmpeg_bin << "\n";
+        cfg_file << "input_file=\"" << data->in_pipe.getPath() << "\"\n";
+        cfg_file << "output_file=\"" << data->out_pipe.getPath() << "\"\n";
+        cfg_file << "ffmpeg_bin=\"" << data->ffmpeg_bin << "\"\n";
         cfg_file.close();
         return true;
     }

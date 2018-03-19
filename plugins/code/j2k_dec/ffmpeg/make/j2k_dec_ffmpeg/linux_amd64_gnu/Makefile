@@ -1,19 +1,22 @@
 #-*-makefile-*-
 
-BASE=../../../../../../
-CCDEP = $(CC)
-CXXFLAGS_debug = -std=c++11 -g -ggdb3 -O0 -fPIC -m64 -c -Wall
-CXXFLAGS_release = -std=c++11 -O3 -ftree-vectorize -fPIC -m64 -c -Wall
+BASE=../../../../../../../
+TMP=$(BASE)
+.PRECIOUS: %/..
+%/..:; @test $(dir $(basename $(@D))) | mkdir -p $(dir $(basename $(@D)))
+CXXDEP = $(CXX)
+CXXFLAGS_debug = -g -ggdb3 -O0 -fPIC -m64 -c -Wall -std=c++11
+CXXFLAGS_release = -O3 -ftree-vectorize -fPIC -m64 -c -Wall -std=c++11
 DEFINES_release = -DNDEBUG=1
-INCLUDES = -I$(BASE)code/common -I$(BASE)code/j2k_dec/ffmpeg/src -I$(BASE)code/j2k_dec
+INCLUDES = -I$(BASE)phoenix/Plugins/common -I$(BASE)phoenix/Plugins/j2k_dec/ffmpeg/src -I$(BASE)phoenix/Plugins/j2k_dec -I$(BASE)contrib -I$(BASE)contrib/ddp_enc_pro_static/v1.9 -I$(BASE)contrib/dlb_buffer/include -I$(BASE)contrib/dlb_wave/include -I$(BASE). -I$(BASE)dlb_buffer/include -I$(BASE)dlb_wave/include
 LD = $(CC)
 LDFLAGS_debug = -fPIC -shared -m64
 LDFLAGS_release = -O2 -fPIC -shared -m64
 LDLIBS = -ldl
 
 
-INPUTS_LINK_debug = $(BASE)code/j2k_dec/ffmpeg/src/j2k_dec_ffmpeg.j2k_dec_ffmpeg_linux_amd64_gnu_debug.o
-INPUTS_LINK_release = $(BASE)code/j2k_dec/ffmpeg/src/j2k_dec_ffmpeg.j2k_dec_ffmpeg_linux_amd64_gnu_release.o
+INPUTS_LINK_debug = $(TMP)phoenix/Plugins/j2k_dec/ffmpeg/src/j2k_dec_ffmpeg.j2k_dec_ffmpeg_linux_amd64_gnu_debug.o
+INPUTS_LINK_release = $(TMP)phoenix/Plugins/j2k_dec/ffmpeg/src/j2k_dec_ffmpeg.j2k_dec_ffmpeg_linux_amd64_gnu_release.o
 
 
 default: j2k_dec_ffmpeg_debug.so j2k_dec_ffmpeg_release.so
@@ -24,16 +27,16 @@ j2k_dec_ffmpeg_debug.so: $(INPUTS_LINK_debug)
 j2k_dec_ffmpeg_release.so: $(INPUTS_LINK_release)
 	$(LD) $(LDFLAGS_release) -o $@ $+ $(LDLIBS)
 
-%.j2k_dec_ffmpeg_linux_amd64_gnu_debug.o: %.cpp
-	$(CCDEP) -std=c++11 -MM $(INCLUDES) -MT $@ -o $*.j2k_dec_ffmpeg_linux_amd64_gnu_debug.d $<
+$(TMP)%.j2k_dec_ffmpeg_linux_amd64_gnu_debug.o: $(BASE)%.cpp | $(TMP)%/..
+	$(CXXDEP) -MM -std=c++11 $(INCLUDES) -MT $@ -o $(patsubst %.o,%.d,$@) $<
 	$(CXX) $(CXXFLAGS_debug) $(INCLUDES) -o $@ $<
 
-%.j2k_dec_ffmpeg_linux_amd64_gnu_release.o: %.cpp
-	$(CCDEP) -std=c++11 -MM $(DEFINES_release) $(INCLUDES) -MT $@ -o $*.j2k_dec_ffmpeg_linux_amd64_gnu_release.d $<
+$(TMP)%.j2k_dec_ffmpeg_linux_amd64_gnu_release.o: $(BASE)%.cpp | $(TMP)%/..
+	$(CXXDEP) -MM -std=c++11 $(DEFINES_release) $(INCLUDES) -MT $@ -o $(patsubst %.o,%.d,$@) $<
 	$(CXX) $(CXXFLAGS_release) $(DEFINES_release) $(INCLUDES) -o $@ $<
 
-CLEAN_COMPILE_debug = $(BASE)code/j2k_dec/ffmpeg/src/j2k_dec_ffmpeg.j2k_dec_ffmpeg_linux_amd64_gnu_debug.d
-CLEAN_COMPILE_release = $(BASE)code/j2k_dec/ffmpeg/src/j2k_dec_ffmpeg.j2k_dec_ffmpeg_linux_amd64_gnu_release.d
+CLEAN_COMPILE_debug = $(TMP)phoenix/Plugins/j2k_dec/ffmpeg/src/j2k_dec_ffmpeg.j2k_dec_ffmpeg_linux_amd64_gnu_debug.d
+CLEAN_COMPILE_release = $(TMP)phoenix/Plugins/j2k_dec/ffmpeg/src/j2k_dec_ffmpeg.j2k_dec_ffmpeg_linux_amd64_gnu_release.d
 
 cleandeps:
 	$(RM) $(CLEAN_COMPILE_debug)
@@ -62,7 +65,7 @@ help:
 	@echo " cleandeps"
 	@echo " help"
 
-include $(wildcard $(BASE)code/j2k_dec/ffmpeg/src/j2k_dec_ffmpeg.j2k_dec_ffmpeg_linux_amd64_gnu_debug.d)
-include $(wildcard $(BASE)code/j2k_dec/ffmpeg/src/j2k_dec_ffmpeg.j2k_dec_ffmpeg_linux_amd64_gnu_release.d)
+include $(wildcard $(TMP)phoenix/Plugins/j2k_dec/ffmpeg/src/j2k_dec_ffmpeg.j2k_dec_ffmpeg_linux_amd64_gnu_debug.d)
+include $(wildcard $(TMP)phoenix/Plugins/j2k_dec/ffmpeg/src/j2k_dec_ffmpeg.j2k_dec_ffmpeg_linux_amd64_gnu_release.d)
 
 

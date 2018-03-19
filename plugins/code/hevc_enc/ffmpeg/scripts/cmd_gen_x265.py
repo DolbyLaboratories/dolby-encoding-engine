@@ -70,7 +70,7 @@ for x in content:
         multipass = split_line[1]       
     elif split_line[0] == "stats_file":
         stats_file = split_line[1]
-    
+
     elif split_line[0] == "mastering_display_sei_present":
         mastering_display_sei_present = split_line[1]
     elif split_line[0] == "mastering_display_sei_x1":
@@ -93,7 +93,7 @@ for x in content:
         mastering_display_sei_max_lum = split_line[1]
     elif split_line[0] == "mastering_display_sei_min_lum":
         mastering_display_sei_min_lum = split_line[1]
-        
+
     elif split_line[0] == "color_description_present":
         color_description_present = split_line[1]
     elif split_line[0] == "color_primaries":
@@ -122,16 +122,6 @@ command_line += " -framerate " + frame_rate
 command_line += " -i " + input_file
 command_line += " -c:v libx265 -x265-params \""
 
-if multipass == "1st":
-    command_line += "pass=1:"
-elif multipass == "last":
-    command_line += "pass=2:"
-elif multipass == "nth":
-    command_line += "pass=3:"
-
-if multipass != "off":
-    command_line += "stats=" + stats_file + ":"
-
 if color_description_present == "1":
     command_line += "colorprim=" + color_primaries + ":"
     command_line += "transfer=" + transfer_characteristics + ":"
@@ -148,7 +138,16 @@ if mastering_display_sei_present == "1":
     command_line += "WP(" + mastering_display_sei_wx + "," + mastering_display_sei_wy + ")"
     command_line += "L(" + mastering_display_sei_max_lum + "," + mastering_display_sei_min_lum + "):"
 
-command_line += "aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:chromaloc=2:bitrate=" + data_rate + ":vbv-maxrate=" + max_vbv_data_rate + ":vbv-bufsize=" + vbv_buffer_size + "\""
+command_line += "aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:chromaloc=2:sar=1:bitrate=" + data_rate + ":vbv-maxrate=" + max_vbv_data_rate + ":vbv-bufsize=" + vbv_buffer_size + "\""
+
+if multipass == "1st":
+    command_line += " -pass 1"
+elif multipass == "last":
+    command_line += " -pass 2"
+
+if multipass != "off":
+    command_line += " -passlogfile \"" + stats_file + "\""
+
 command_line += " -an"
 command_line += " -y"
 command_line += " -f hevc " + output_file

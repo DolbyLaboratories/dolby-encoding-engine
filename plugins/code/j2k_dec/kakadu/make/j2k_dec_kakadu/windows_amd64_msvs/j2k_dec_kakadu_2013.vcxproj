@@ -48,7 +48,7 @@
 <CompileAs>Default</CompileAs>
 <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
 <DisableSpecificWarnings />
-<ExceptionHandling />
+<ExceptionHandling>Sync</ExceptionHandling>
 <MinimalRebuild>false</MinimalRebuild>
 <Optimization>Disabled</Optimization>
 <DisableLanguageExtensions>false</DisableLanguageExtensions>
@@ -78,7 +78,7 @@
 <CompileAs>Default</CompileAs>
 <DebugInformationFormat />
 <DisableSpecificWarnings />
-<ExceptionHandling />
+<ExceptionHandling>Sync</ExceptionHandling>
 <MinimalRebuild>false</MinimalRebuild>
 <Optimization>MaxSpeed</Optimization>
 <DisableLanguageExtensions>false</DisableLanguageExtensions>

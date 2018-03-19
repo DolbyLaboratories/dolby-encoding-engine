@@ -110,6 +110,8 @@ typedef struct
     int                 light_level_max_content;
     int                 light_level_max_frame_average;
 
+    bool                force_slice_type;
+
     std::string         level_idc;
     std::string         psy_rd;
     std::vector<nalu_t>                             output_buffer;
@@ -180,5 +182,9 @@ bool
 filter_native_params
     (hevc_enc_x265_t* state
     ,std::list<std::pair<std::string,std::string>>& params);
+
+std::pair<int,int>
+fps_to_num_denom
+    (const std::string& fps);
 
 #endif // __DEE_PLUGINS_HEVC_ENC_X265_UTILS_H__

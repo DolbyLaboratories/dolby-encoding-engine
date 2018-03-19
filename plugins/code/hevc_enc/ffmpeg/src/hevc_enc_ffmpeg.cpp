@@ -3,10 +3,10 @@
 *
 * Copyright (c) 2017, Dolby Laboratories
 * All rights reserved.
-* 
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
-* 
+*
 * * Redistributions of source code must retain the above copyright notice, this
 *   list of conditions and the following disclaimer.
 *
@@ -17,7 +17,7 @@
 * * Neither the name of the copyright holder nor the names of its
 *   contributors may be used to endorse or promote products derived from
 *   this software without specific prior written permission.
-* 
+*
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -55,7 +55,7 @@ property_info_t hevc_enc_ffmpeg_info[] =
     , { "stats_file", PROPERTY_TYPE_STRING, NULL, NULL, NULL, 0, 1, ACCESS_TYPE_WRITE_INIT }
     , { "multi_pass", PROPERTY_TYPE_STRING, NULL, "off", "off:1st:nth:last", 0, 1, ACCESS_TYPE_WRITE_INIT }
     , { "temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "3", NULL, 0, 1, ACCESS_TYPE_READ}
-    , { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, 2, 2, ACCESS_TYPE_WRITE_INIT }
+    , { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, 3, 3, ACCESS_TYPE_WRITE_INIT }
 
     // generate_vui_param_videosignaltype
     , { "color_primaries", PROPERTY_TYPE_STRING, NULL, "unspecified", "unspecified:bt_709:bt_601_625:bt_601_525:bt_2020", 0, 1, ACCESS_TYPE_WRITE_INIT }
@@ -78,7 +78,7 @@ property_info_t hevc_enc_ffmpeg_info[] =
     , { "light_level_max_content", PROPERTY_TYPE_INTEGER, NULL, "0", "0:65535", 0, 1, ACCESS_TYPE_WRITE_INIT }
     , { "light_level_max_frame_average", PROPERTY_TYPE_INTEGER, NULL, "0", "0:65535", 0, 1, ACCESS_TYPE_WRITE_INIT }
 
-    // Only properties below (ACCESS_TYPE_USER) can be modified 
+    // Only properties below (ACCESS_TYPE_USER) can be modified
     , { "ffmpeg_bin", PROPERTY_TYPE_STRING, "Path to ffmpeg binary.", "ffmpeg", NULL, 0, 1, ACCESS_TYPE_USER }
     , { "command_line", PROPERTY_TYPE_STRING, "Command line to be inserted into the ffmpeg command between the input and output specification.", NULL, NULL, 0, 100, ACCESS_TYPE_USER }
     , { "cmd_gen", PROPERTY_TYPE_STRING, "Path to a script that can generate an ffmpeg command line using the config file as input.", NULL, NULL, 0, 1, ACCESS_TYPE_USER }
@@ -127,7 +127,13 @@ ffmpeg_init
         state->data->max_output_data = SIZE_MAX;
     }
 
-    if (!create_pipes(state->data))
+
+    if (state->data->in_pipe.createPipe(state->data->temp_file[0], true, false) == -1)
+    {
+        state->data->msg = "Creating pipes failed.";
+        return STATUS_ERROR;
+    }
+    if (state->data->out_pipe.createPipe(state->data->temp_file[1], false, true) == -1)
     {
         state->data->msg = "Creating pipes failed.";
         return STATUS_ERROR;
@@ -137,7 +143,7 @@ ffmpeg_init
 
     if (state->data->command_line.size() > (unsigned int)state->data->pass_num && state->data->command_line[state->data->pass_num].empty() == false)
     {
-        ffmpeg_call = state->data->ffmpeg_bin;
+        ffmpeg_call = "\"" + state->data->ffmpeg_bin + "\"";
 
         // input format
         ffmpeg_call += " -f rawvideo";
@@ -153,11 +159,11 @@ ffmpeg_init
         }
 
         // frame rate
-        ffmpeg_call += " -framerate " + state->data->frame_rate;
+        ffmpeg_call += " -framerate " + fps_to_num_denom(state->data->frame_rate);
 
         // INPUT
         ffmpeg_call += " -i ";
-        ffmpeg_call += state->data->temp_file[0];
+        ffmpeg_call += "\"" + state->data->in_pipe.getPath() + "\"";
 
         // user specified commandline
         ffmpeg_call += " " + state->data->command_line[state->data->pass_num];
@@ -170,7 +176,7 @@ ffmpeg_init
 
         // OUTPUT
         ffmpeg_call += " -f hevc ";
-        ffmpeg_call += state->data->temp_file[1];
+        ffmpeg_call += "\"" + state->data->out_pipe.getPath() + "\"";
     }
     else
     {
@@ -186,21 +192,32 @@ ffmpeg_init
             return STATUS_ERROR;
         }
 
-        std::string generate_cmd_call = state->data->interpreter + " " + state->data->cmd_gen + " " + state->data->temp_file[2];
+        std::string generate_cmd_call = "\"" + state->data->interpreter + "\" \"" + state->data->cmd_gen + "\" \"" + state->data->temp_file[2] + "\"";
         ffmpeg_call = run_cmd_get_output(generate_cmd_call);
-        
+
         if (ffmpeg_call.empty())
         {
             state->data->msg = "Error building ffmpeg command line by calling: " + generate_cmd_call;
             return STATUS_ERROR;
         }
     }
-    
-    state->data->ffmpeg_thread = std::thread(run_cmd_thread_func, ffmpeg_call, state->data);
-    state->data->writer_thread = std::thread(writer_thread_func, state->data);
-    state->data->reader_thread = std::thread(reader_thread_func, state->data);
 
-    return STATUS_OK;
+    if (state->data->msg.empty())
+    {
+        // LAUNCH THREADS //
+
+        state->data->ffmpeg_thread = std::thread(run_cmd_thread_func, ffmpeg_call, state->data);
+        state->data->writer_thread = std::thread(writer_thread_func, state->data);
+        state->data->reader_thread = std::thread(reader_thread_func, state->data);
+
+        state->data->msg = "FFMPEG launched with the following command line: " + ffmpeg_call;
+
+        return STATUS_OK;
+    }
+    else
+    {
+        return STATUS_ERROR;
+    }
 }
 
 static
@@ -217,19 +234,12 @@ ffmpeg_close
     }
     state->data->nalus.clear();
 
+    bool plugin_failed = false;
     if (state->data->ffmpeg_ret_code != 0)
     {
         state->data->force_stop_writing_thread = true;
         state->data->force_stop_reading_thread = true;
-#if WIN32
-        CancelIoEx(state->data->in_pipe, NULL);
-        CancelIoEx(state->data->out_pipe, NULL);
-#else        
-        pthread_t writer_id = state->data->writer_thread.native_handle();
-        pthread_t reader_id = state->data->reader_thread.native_handle();
-        pthread_cancel(writer_id);
-        pthread_cancel(reader_id);
-#endif
+        plugin_failed = true;
     }
 
     if (state->data->writer_thread.joinable())
@@ -245,10 +255,10 @@ ffmpeg_close
         state->data->reader_thread.join();
     }
 
-    close_pipes(state->data);
     delete state->data;
 
-    return STATUS_OK;
+    if (state->data->ffmpeg_ret_code != 0) plugin_failed = true;
+    return plugin_failed ? STATUS_ERROR: STATUS_OK;
 }
 
 static
@@ -261,10 +271,12 @@ ffmpeg_process
 )
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
- 
+
     if (state->data->ffmpeg_ret_code != 0)
     {
-        state->data->msg += "\nffmpeg runtime error.";
+        state->data->msg = "ffmpeg runtime error.";
+        state->data->force_stop_writing_thread = true;
+        state->data->force_stop_reading_thread = true;
         return STATUS_ERROR;
     }
 
@@ -289,12 +301,15 @@ ffmpeg_process
         }
         else if (current_pic.color_space != COLOR_SPACE_I444)
         {
+            state->data->force_stop_writing_thread = true;
+            state->data->force_stop_reading_thread = true;
             return STATUS_ERROR;
         }
 
         bool picture_written_flag = false;
         while (state->data->ffmpeg_thread.joinable() && picture_written_flag == false)
         {
+            if (state->data->ffmpeg_ret_code != 0) break;
             state->data->in_buffer_mutex.lock();
             if (state->data->in_buffer.size() < MAX_BUFFERED_PLANES)
             {
@@ -306,10 +321,11 @@ ffmpeg_process
             state->data->in_buffer_mutex.unlock();
         }
     }
-    
+
     state->data->out_buffer_mutex.lock();
     while (state->data->out_buffer.size() > 0)
     {
+        if (state->data->ffmpeg_ret_code != 0) break;
         BufferBlob* out_blob = state->data->out_buffer.front();
         state->data->output_bytestream.insert(state->data->output_bytestream.end(), out_blob->data, out_blob->data + out_blob->data_size);
         delete out_blob;
@@ -334,7 +350,7 @@ ffmpeg_process
         output->nal_num = 0;
     }
 
-    return STATUS_OK;
+    return (state->data->ffmpeg_ret_code != 0) ? STATUS_ERROR : STATUS_OK;
 }
 
 static
@@ -347,21 +363,37 @@ ffmpeg_flush
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
 
+    if (state->data->ffmpeg_ret_code != 0)
+    {
+        state->data->msg = "ffmpeg runtime error.";
+        state->data->force_stop_writing_thread = true;
+        state->data->force_stop_reading_thread = true;
+        *is_empty = 1;
+        return STATUS_ERROR;
+    }
+
     state->data->stop_writing_thread = true;
     if (state->data->writer_thread.joinable())
     {
         state->data->writer_thread.join();
     }
-    
+
     if (state->data->ffmpeg_thread.joinable())
     {
         state->data->ffmpeg_thread.join();
     }
-    
+
     state->data->stop_reading_thread = true;
     if (state->data->reader_thread.joinable())
     {
         state->data->reader_thread.join();
+    }
+
+    if (state->data->ffmpeg_ret_code != 0)
+    {
+        state->data->msg = "ffmpeg runtime error.";
+        *is_empty = 1;
+        return STATUS_ERROR;
     }
 
     *is_empty = 0;
@@ -391,7 +423,6 @@ ffmpeg_flush
         output->nal_num = 0;
         *is_empty = 1;
     }
-    
 
     return STATUS_OK;
 }
@@ -404,13 +435,13 @@ ffmpeg_set_property
 )
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
-    
+
     if (property->name == std::string("max_output_data"))
     {
         state->data->max_output_data = atoi(property->value);
         return STATUS_OK;
     }
-    
+
     return STATUS_ERROR;
 }
 
@@ -444,7 +475,7 @@ ffmpeg_get_property
             return STATUS_OK;
         }
     }
-    
+
     return STATUS_ERROR;
 }
 

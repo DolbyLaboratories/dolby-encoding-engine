@@ -112,7 +112,13 @@ init_data
 
 bool bin_exists(const std::string& bin)
 {
-    std::string cmd = bin + " -version";
+    std::string cmd = "\"" + bin + "\" -version";
+
+#ifdef WIN32 
+    // wrap command in extra quotations to ensure windows calls it properly 
+    cmd = "\"" + cmd + "\"";
+#endif
+
     int rt = system(cmd.c_str());
     return (rt == 0);
 }
@@ -224,7 +230,7 @@ prepare_output
     (j2k_dec_ffmpeg_t* state
     ,j2k_dec_output_t* out)
 {
-    int plane_samples_num = state->data->width*state->data->height;
+    int plane_samples_num = (int)(state->data->width*state->data->height);
     short* p_r = (short*)state->data->reorder_buffer;
     short* p_g = p_r + plane_samples_num;
     short* p_b = p_g + plane_samples_num;
@@ -270,11 +276,16 @@ ffmpeg_process
     fwrite(in->buffer, 1, in->size, file_in);
     fclose(file_in);
     
-    std::string cmd = state->data->ffmpeg_bin;
+    std::string cmd = "\"" + state->data->ffmpeg_bin + "\"";
     cmd += " -vcodec " + state->data->vcodec;
-    cmd += " -i " + state->data->temp_file[0+offset];
-    cmd += " -f rawvideo -pix_fmt rgb48le " + state->data->temp_file[1+offset];
-    cmd += " -y > " + state->data->temp_file[2+offset] + " 2>&1";
+    cmd += " -i \"" + state->data->temp_file[0+offset] + "\"";
+    cmd += " -f rawvideo -pix_fmt rgb48le \"" + state->data->temp_file[1+offset] + "\"";
+    cmd += " -y > \"" + state->data->temp_file[2 + offset] + "\"" + " 2>&1";
+    
+#ifdef WIN32
+    // wrap command in extra quotations to ensure windows calls it properly
+    cmd = "\"" + cmd + "\"";
+#endif
 
     int rt = system(cmd.c_str());
     if (rt)
@@ -317,8 +328,8 @@ ffmpeg_process
 static
 status_t
 ffmpeg_set_property
-    (j2k_dec_handle_t   handle          /**< [in/out] Decoder instance handle */
-    , const property_t* property        /**< [in] Property to write */
+    (j2k_dec_handle_t                   /**< [in/out] Decoder instance handle */
+    , const property_t*                 /**< [in] Property to write */
     )
 {
     return STATUS_ERROR;

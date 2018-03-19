@@ -1,24 +1,26 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 <ItemGroup>
-<Filter Include="code">
-<UniqueIdentifier>{cf162038-ec02-32ca-94b6-8c927f3cfc25}</UniqueIdentifier></Filter>
-<Filter Include="code\common">
-<UniqueIdentifier>{58e986a2-7e7e-314b-93a5-53c87fc426e3}</UniqueIdentifier></Filter>
-<Filter Include="code\j2k_dec">
-<UniqueIdentifier>{e7b95b62-229f-35d3-8538-347c5c86d501}</UniqueIdentifier></Filter>
-<Filter Include="code\j2k_dec\ffmpeg">
-<UniqueIdentifier>{6e33cce6-90c3-3caa-b839-41f1bc1f3005}</UniqueIdentifier></Filter>
-<Filter Include="code\j2k_dec\ffmpeg\src">
-<UniqueIdentifier>{d8a37f98-100a-3726-bc61-a4254092149e}</UniqueIdentifier></Filter></ItemGroup>
+<Filter Include="phoenix">
+<UniqueIdentifier>{30e7d437-00c7-3665-bd1f-1a4d72ee0750}</UniqueIdentifier></Filter>
+<Filter Include="phoenix\Plugins">
+<UniqueIdentifier>{7ac4102f-5923-3e56-8d03-b58a29d6fcca}</UniqueIdentifier></Filter>
+<Filter Include="phoenix\Plugins\common">
+<UniqueIdentifier>{6c2bba87-5c9f-3cbc-a084-49af674ae37e}</UniqueIdentifier></Filter>
+<Filter Include="phoenix\Plugins\j2k_dec">
+<UniqueIdentifier>{01831c8b-45c7-3dd6-809e-4f51282fef32}</UniqueIdentifier></Filter>
+<Filter Include="phoenix\Plugins\j2k_dec\ffmpeg">
+<UniqueIdentifier>{83bff315-501b-30d0-b7a6-9edac0429eb4}</UniqueIdentifier></Filter>
+<Filter Include="phoenix\Plugins\j2k_dec\ffmpeg\src">
+<UniqueIdentifier>{4cfe7188-a97e-3de2-804e-b50abdbc77df}</UniqueIdentifier></Filter></ItemGroup>
 <ItemGroup>
 <ClCompile Include="..\..\..\src\j2k_dec_ffmpeg.cpp">
-<Filter>code\j2k_dec\ffmpeg\src</Filter></ClCompile></ItemGroup>
+<Filter>phoenix\Plugins\j2k_dec\ffmpeg\src</Filter></ClCompile></ItemGroup>
 <ItemGroup>
 <ClInclude Include="..\..\..\..\..\common\common.h">
-<Filter>code\common</Filter></ClInclude>
+<Filter>phoenix\Plugins\common</Filter></ClInclude>
 <ClInclude Include="..\..\..\..\j2k_dec_api.h">
-<Filter>code\j2k_dec</Filter></ClInclude></ItemGroup>
+<Filter>phoenix\Plugins\j2k_dec</Filter></ClInclude></ItemGroup>
 <ItemGroup />
 <ItemGroup />
 <ItemGroup />

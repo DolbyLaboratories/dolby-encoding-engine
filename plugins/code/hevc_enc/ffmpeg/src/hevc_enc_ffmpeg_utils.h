@@ -3,10 +3,10 @@
 *
 * Copyright (c) 2017, Dolby Laboratories
 * All rights reserved.
-* 
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
-* 
+*
 * * Redistributions of source code must retain the above copyright notice, this
 *   list of conditions and the following disclaimer.
 *
@@ -17,7 +17,7 @@
 * * Neither the name of the copyright holder nor the names of its
 *   contributors may be used to endorse or promote products derived from
 *   this software without specific prior written permission.
-* 
+*
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -37,10 +37,11 @@
 #include <memory>
 #include <mutex>
 #include "hevc_enc_api.h"
+#include "NamedPipe.h"
 
 #ifdef WIN32
 
-#include <windows.h> 
+#include <windows.h>
 #define PIPE_BUFFER_SIZE 1024 * 1024
 
 #else
@@ -51,6 +52,8 @@
 #include <unistd.h>
 
 #endif
+
+#include <iostream>
 
 struct BufferBlob
 {
@@ -107,6 +110,7 @@ typedef struct
     std::list<BufferBlob*>      out_buffer;
     std::mutex                  in_buffer_mutex;
     std::mutex                  out_buffer_mutex;
+    std::mutex                  check_mutex;
     bool                        stop_writing_thread;
     bool                        stop_reading_thread;
     bool                        force_stop_writing_thread;
@@ -122,13 +126,9 @@ typedef struct
     std::string                 ffmpeg_bin;
     std::string                 interpreter;
     std::string                 cmd_gen;
-#ifdef WIN32
-    HANDLE                      in_pipe;
-    HANDLE                      out_pipe;
-#else
-    int                         in_pipe;
-    int                         out_pipe;
-#endif
+
+    NamedPipe                   in_pipe;
+    NamedPipe                   out_pipe;
 } hevc_enc_ffmpeg_data_t;
 
 typedef struct
@@ -156,3 +156,7 @@ bool close_pipes(hevc_enc_ffmpeg_data_t* data);
 bool write_cfg_file(hevc_enc_ffmpeg_data_t* data, const std::string& file);
 
 std::string run_cmd_get_output(std::string cmd);
+
+std::string fps_to_num_denom(const std::string& fps);
+
+void check_ffmpeg_status(hevc_enc_ffmpeg_data_t* data);

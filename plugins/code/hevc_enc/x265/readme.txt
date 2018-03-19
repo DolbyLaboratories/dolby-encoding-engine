@@ -1,5 +1,5 @@
 Dolby Encoding Engine plugin for x265 HEVC encoder.
-Provided source code was built and tested using x265 library version 2.5.
+Provided source code was built and tested using x265 library version 2.6.
 
 Build tools: 
 - Visual Studio 2013

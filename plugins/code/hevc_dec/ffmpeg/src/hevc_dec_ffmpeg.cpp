@@ -44,11 +44,10 @@ property_info_t hevc_dec_ffmpeg_info[] =
     , { "temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "2", NULL, 0, 1, ACCESS_TYPE_READ }
     , { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, 3, 3, ACCESS_TYPE_WRITE_INIT }
 
-    // Only properties below (ACCESS_TYPE_USER) can be modified 
+    // Only properties below (ACCESS_TYPE_USER) can be modified
     , { "ffmpeg_bin", PROPERTY_TYPE_STRING, "Path to ffmpeg binary.", "ffmpeg", NULL, 0, 1, ACCESS_TYPE_USER }
     , { "width", PROPERTY_TYPE_INTEGER, "Width of output in pixels.", "0", NULL, 1, 1, ACCESS_TYPE_USER }
     , { "height", PROPERTY_TYPE_INTEGER, "Height of output in pixels.", "0", NULL, 1, 1, ACCESS_TYPE_USER }
-    , { "use_sps_frame_rate", PROPERTY_TYPE_BOOLEAN, "Derive framerate from SPS NALU. Use it only if you do not know actual frame rate.", "false", NULL, 0, 1, ACCESS_TYPE_USER }
     , { "cmd_gen", PROPERTY_TYPE_STRING, "Path to a script that can generate an ffmpeg command line using the config file as input.", NULL, NULL, 1, 1, ACCESS_TYPE_USER }
     , { "interpreter", PROPERTY_TYPE_STRING, "Path to binary used to read the cmd_gen script.", "python", NULL, 0, 1, ACCESS_TYPE_USER }
 };
@@ -92,13 +91,12 @@ hevc_dec_ffmpeg_init
     state->data->width = 0;
     state->data->height = 0;
     state->data->output_bitdepth = 8;
-    state->data->chroma_format = COLOR_SPACE_I420;
+    state->data->chroma_format = HEVC_DEC_COLOR_SPACE_I420;
     state->data->frame_rate.frame_period = 24000;
     state->data->frame_rate.time_scale = 1000;
     state->data->decoded_pictures_to_discard = 0;
     state->data->frame_rate_ext.frame_period = 24;
     state->data->frame_rate_ext.time_scale = 1;
-    state->data->use_sps_frame_rate = false;
     state->data->output_format = "any";
 
 #ifdef WIN32
@@ -130,12 +128,12 @@ hevc_dec_ffmpeg_init
             if (value == "any")
             {
                 // by default we output yuv420
-                state->data->chroma_format = COLOR_SPACE_I420;
+                state->data->chroma_format = HEVC_DEC_COLOR_SPACE_I420;
                 state->data->output_bitdepth = 8;
             }
             else if (value == "yuv420_10")
             {
-                state->data->chroma_format = COLOR_SPACE_I420;
+                state->data->chroma_format = HEVC_DEC_COLOR_SPACE_I420;
                 state->data->output_bitdepth = 10;
             }
             else
@@ -173,17 +171,6 @@ hevc_dec_ffmpeg_init
         {
             state->data->height = std::atoi(value.c_str());
         }
-        else if ("use_sps_frame_rate" == name)
-        {
-            if (value != "true"
-                &&  value != "false"
-                )
-            {
-                state->data->msg += "\nInvalid 'use_sps_frame_rate' value.";
-                continue;
-            }
-            state->data->use_sps_frame_rate = (value == "true");
-        }
         else if ("interpreter" == name)
         {
             state->data->interpreter = value;
@@ -218,6 +205,12 @@ hevc_dec_ffmpeg_init
     {
         state->data->msg += "Path to interpreter binary is not set.";
     }
+
+    if (state->data->msg != "")
+    {
+        return HEVC_DEC_ERROR;
+    }
+
     if (state->data->in_pipe.createPipe(state->data->temp_file[0]) == -1)
     {
         state->data->msg = "Creating pipes failed.";
@@ -250,7 +243,7 @@ hevc_dec_ffmpeg_init
         return HEVC_DEC_ERROR;
     }
 
-    std::string generate_cmd_call = state->data->interpreter + " " + state->data->cmd_gen + " " + state->data->temp_file[2];
+    std::string generate_cmd_call = "\"" + state->data->interpreter + "\" \"" + state->data->cmd_gen + "\" \"" + state->data->temp_file[2] + "\"";
     ffmpeg_call = run_cmd_get_output(generate_cmd_call);
 
     if (ffmpeg_call.empty())
@@ -267,6 +260,7 @@ hevc_dec_ffmpeg_init
         state->data->writer_thread = std::thread(writer_thread_func, state->data);
         state->data->reader_thread = std::thread(reader_thread_func, state->data);
 
+        state->data->msg = "FFMPEG launched with the following command line: " + ffmpeg_call;
         return HEVC_DEC_OK;
     }
     else
@@ -290,20 +284,23 @@ hevc_dec_ffmpeg_close
     {
         state->data->force_stop_writing_thread = true;
         state->data->force_stop_reading_thread = true;
+    }
 
-        if (state->data->writer_thread.joinable())
-        {
-            state->data->writer_thread.join();
-        }
-        if (state->data->ffmpeg_thread.joinable())
-        {
-            state->data->ffmpeg_thread.join();
-        }
-        if (state->data->reader_thread.joinable())
-        {
-            state->data->reader_thread.join();
-        }
-    }  
+    state->data->stop_writing_thread = true;
+    state->data->stop_reading_thread = true;
+
+    if (state->data->writer_thread.joinable())
+    {
+        state->data->writer_thread.join();
+    }
+    if (state->data->ffmpeg_thread.joinable())
+    {
+        state->data->ffmpeg_thread.join();
+    }
+    if (state->data->reader_thread.joinable())
+    {
+        state->data->reader_thread.join();
+    }
 
     state->data->decoded_pictures_to_discard = state->data->decoded_pictures.size();
     remove_pictures(state->data);
@@ -335,6 +332,7 @@ hevc_dec_ffmpeg_process
     bool buffer_written_flag = false;
     while (state->data->ffmpeg_thread.joinable() && buffer_written_flag == false)
     {
+        if (state->data->ffmpeg_ret_code != 0) break;
         state->data->in_buffer_mutex.lock();
         if (state->data->in_buffer.size() < MAX_BUFFERED_BLOBS)
         {

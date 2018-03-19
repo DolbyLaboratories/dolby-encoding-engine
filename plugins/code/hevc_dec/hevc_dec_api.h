@@ -42,7 +42,10 @@ extern "C" {
 /* Framework sets/gets following properties. Each hevc_dec plugin should handle them. 
 *      PROPERTY : TYPE : VALUES : WHERE : COMMENT
 * -----------------------------------------------------------------------------
-*      max_output_data : integer : n/a : hevc_enc_set_property : framework indicates max size of buffer before each 'process' call
+*   output_format : string  : "any:yuv420_10" : hevc_dec_ffmpeg_init : framework indicates the desired output format of yuv data
+*   frame_rate    : integer : "23.976:24:25:29.97:30:48:50:59.94:60" : hevc_dec_ffmpeg_init : framework indicates the framerate of input bitstream
+*   temp_file     : string  : n/a : hevc_dec_ffmpeg_init  : framework passes the path to a temporary file created for the plugin, will be called multiple times if the plugin requires multiple temporary files
+*   temp_file_num : integer : n/a : hevc_dec_get_property : the framework will try to get this property to know how many temporary files it should allocate for the plugin
 *
 * Additionally, hevc_dec_init_params_t structure will contain all plugin-specific properties set via XML interface (ACCESS_TYPE_USER).
 *
@@ -74,21 +77,21 @@ typedef struct
 /** @brief Color Space */
 typedef enum
 {
-    COLOR_SPACE_I400 = 0,
-    COLOR_SPACE_I420,
-    COLOR_SPACE_I422,
-    COLOR_SPACE_I444
+    HEVC_DEC_COLOR_SPACE_I400 = 0,
+    HEVC_DEC_COLOR_SPACE_I420,
+    HEVC_DEC_COLOR_SPACE_I422,
+    HEVC_DEC_COLOR_SPACE_I444
 } hevc_dec_color_space_t;
  
 /** @brief Type of video frame */
 typedef enum
 {
-    FRAME_TYPE_AUTO = 0,
-    FRAME_TYPE_IDR,
-    FRAME_TYPE_I,
-    FRAME_TYPE_P,
-    FRAME_TYPE_B,
-    FRAME_TYPE_BREF
+    HEVC_DEC_FRAME_TYPE_AUTO = 0,
+    HEVC_DEC_FRAME_TYPE_IDR,
+    HEVC_DEC_FRAME_TYPE_I,
+    HEVC_DEC_FRAME_TYPE_P,
+    HEVC_DEC_FRAME_TYPE_B,
+    HEVC_DEC_FRAME_TYPE_BREF
 } hevc_dec_frame_type_t;
  
 /** @brief Picture structure

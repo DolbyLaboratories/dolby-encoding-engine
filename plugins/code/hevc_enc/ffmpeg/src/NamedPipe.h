@@ -54,11 +54,13 @@ class NamedPipe
     int         handle;
 #endif
     std::string name;
+    bool        read_enabled;
+    bool        write_enabled;
 
 public:
     NamedPipe();
     ~NamedPipe();
-    int createPipe(std::string name);
+    int createPipe(std::string name, bool write, bool read);
     int connectPipe();
     void closePipe();
     int writeToPipe(char* data_to_write, size_t data_size, size_t* bytes_written);

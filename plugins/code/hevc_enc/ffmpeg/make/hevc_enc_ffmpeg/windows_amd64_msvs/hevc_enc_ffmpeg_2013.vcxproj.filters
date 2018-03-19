@@ -12,6 +12,8 @@
 <Filter Include="code\hevc_enc\ffmpeg\src">
 <UniqueIdentifier>{f42f128b-1e8c-3153-b584-f8da2d07e1a1}</UniqueIdentifier></Filter></ItemGroup>
 <ItemGroup>
+<ClCompile Include="..\..\..\src\NamedPipe.cpp">
+<Filter>code\hevc_enc\ffmpeg\src</Filter></ClCompile>
 <ClCompile Include="..\..\..\src\hevc_enc_ffmpeg.cpp">
 <Filter>code\hevc_enc\ffmpeg\src</Filter></ClCompile>
 <ClCompile Include="..\..\..\src\hevc_enc_ffmpeg_utils.cpp">
@@ -19,6 +21,8 @@
 <ItemGroup>
 <ClInclude Include="..\..\..\..\..\common\common.h">
 <Filter>code\common</Filter></ClInclude>
+<ClInclude Include="..\..\..\src\NamedPipe.h">
+<Filter>code\hevc_enc\ffmpeg\src</Filter></ClInclude>
 <ClInclude Include="..\..\..\src\hevc_enc_ffmpeg_utils.h">
 <Filter>code\hevc_enc\ffmpeg\src</Filter></ClInclude>
 <ClInclude Include="..\..\..\..\hevc_enc_api.h">

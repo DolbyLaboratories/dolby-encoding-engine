@@ -97,10 +97,10 @@ typedef size_t (*func_scaling_flt_get_info)(const property_info_t**);
  *  @return Size in bytes
  */
 size_t
-scaling_flt_get_size();
+scaling_flt_get_size(void);
  
 /** @brief Definition of pointer to scaling_flt_get_size function */
-typedef size_t (*func_scaling_flt_get_size)();
+typedef size_t (*func_scaling_flt_get_size)(void);
 
 /** @brief Initialize filter instance
  *  @return status code 
@@ -191,11 +191,11 @@ typedef struct
  *  @return pointer to scaling_flt_api_t
  */
 DLB_EXPORT
-scaling_flt_api_t* scaling_flt_get_api();
+scaling_flt_api_t* scaling_flt_get_api(void);
  
 /** @brief Definition of pointer to scaling_flt_get_api function */
 typedef 
-scaling_flt_api_t* (*func_scaling_flt_get_api)();
+scaling_flt_api_t* (*func_scaling_flt_get_api)(void);
 
 #ifdef __cplusplus
 }

@@ -75,6 +75,8 @@ property_info_t hevc_enc_x265_info[] =
     ,{ "light_level_max_content", PROPERTY_TYPE_INTEGER, NULL, "0", "0:65535", 0, 1, ACCESS_TYPE_WRITE_INIT }
     ,{ "light_level_max_frame_average", PROPERTY_TYPE_INTEGER, NULL, "0", "0:65535", 0, 1, ACCESS_TYPE_WRITE_INIT }
 
+    ,{ "force_slice_type", PROPERTY_TYPE_BOOLEAN, "Indicates that framework will try to force specific slice type.", "false", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT }
+
     // Only properties below (ACCESS_TYPE_USER) can be modified 
     ,{"preset", PROPERTY_TYPE_STRING, "Sets parameters to preselected values.", "medium", "ultrafast:superfast:veryfast:faster:fast:medium:slow:slower:veryslow:placebo", 0, 1, ACCESS_TYPE_USER}
     ,{"tune", PROPERTY_TYPE_STRING, "Tune the settings for a particular type of source or situation.", "none", "none:psnr:ssim:grain:fastdecode:zerolatency", 0, 1, ACCESS_TYPE_USER}
@@ -193,6 +195,15 @@ x265_init
     
     std::list<std::pair<std::string,std::string>> native_params;
     
+    if(state->data->force_slice_type)
+    {
+        state->data->max_intra_period = -1;
+        state->data->min_intra_period = 0;
+    }
+
+    auto num_denom = fps_to_num_denom(state->data->frame_rate);
+    std::string fps_arg = std::to_string(num_denom.first) + "/" + std::to_string(num_denom.second);
+
     native_params.push_back({"annexb", ""});
     native_params.push_back({"repeat-headers", ""});
     native_params.push_back({"aud", ""});
@@ -202,8 +213,8 @@ x265_init
     native_params.push_back({"log-level", "0"});
     native_params.push_back({"sar", "1"});
     native_params.push_back({"input-csp", state->data->color_space});
-    native_params.push_back({"input-res", std::to_string(state->data->width)+"x"+std::to_string(state->data->height)});
-    native_params.push_back({"fps", state->data->frame_rate});
+    native_params.push_back({"input-res", std::to_string(state->data->width)+"x"+std::to_string(state->data->height)}); 
+    native_params.push_back({"fps", fps_arg});
     native_params.push_back({state->data->open_gop ? "open-gop" : "no-open-gop", ""});
     native_params.push_back({state->data->info ? "info" : "no-info", ""});
     native_params.push_back({"keyint", std::to_string(state->data->max_intra_period)});

@@ -94,10 +94,10 @@ typedef size_t (*func_j2k_dec_get_info)(const property_info_t**);
  *  @return Size in bytes
  */
 size_t
-j2k_dec_get_size();
+j2k_dec_get_size(void);
  
 /** @brief Definition of pointer to j2k_dec_get_size function */
-typedef size_t (*func_j2k_dec_get_size)();
+typedef size_t (*func_j2k_dec_get_size)(void);
 
 /** @brief Initialize decoder instance
  *  @return status code 
@@ -188,11 +188,11 @@ typedef struct
  *  @return pointer to j2k_dec_api_t
  */
 DLB_EXPORT
-j2k_dec_api_t* j2k_dec_get_api();
+j2k_dec_api_t* j2k_dec_get_api(void);
  
 /** @brief Definition of pointer to j2k_dec_get_api function */
 typedef 
-j2k_dec_api_t* (*func_j2k_dec_get_api)();
+j2k_dec_api_t* (*func_j2k_dec_get_api)(void);
 
 #ifdef __cplusplus
 }

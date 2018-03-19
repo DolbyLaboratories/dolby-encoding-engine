@@ -42,13 +42,13 @@
 <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='release|x64'">false</LinkIncremental></PropertyGroup>
 <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
 <ClCompile>
-<AdditionalIncludeDirectories>..\..\..\..\..\common;..\..\..\src;..\..\..\..</AdditionalIncludeDirectories>
+<AdditionalIncludeDirectories>..\..\..\..\..\common;..\..\..\src;..\..\..\..;..\..\..\..\..\..\..\contrib;..\..\..\..\..\..\..\contrib\ddp_enc_pro_static\v1.9;..\..\..\..\..\..\..\contrib\dlb_buffer\include;..\..\..\..\..\..\..\contrib\dlb_wave\include;..\..\..\..\..\..\..;..\..\..\..\..\..\..\dlb_buffer\include;..\..\..\..\..\..\..\dlb_wave\include</AdditionalIncludeDirectories>
 <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
 <BufferSecurityCheck>true</BufferSecurityCheck>
 <CompileAs>Default</CompileAs>
 <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-<DisableSpecificWarnings />
-<ExceptionHandling />
+<DisableSpecificWarnings>4100</DisableSpecificWarnings>
+<ExceptionHandling>Sync</ExceptionHandling>
 <MinimalRebuild>false</MinimalRebuild>
 <Optimization>Disabled</Optimization>
 <DisableLanguageExtensions>false</DisableLanguageExtensions>
@@ -72,13 +72,13 @@
 <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers></Link></ItemDefinitionGroup>
 <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
 <ClCompile>
-<AdditionalIncludeDirectories>..\..\..\..\..\common;..\..\..\src;..\..\..\..</AdditionalIncludeDirectories>
+<AdditionalIncludeDirectories>..\..\..\..\..\common;..\..\..\src;..\..\..\..;..\..\..\..\..\..\..\contrib;..\..\..\..\..\..\..\contrib\ddp_enc_pro_static\v1.9;..\..\..\..\..\..\..\contrib\dlb_buffer\include;..\..\..\..\..\..\..\contrib\dlb_wave\include;..\..\..\..\..\..\..;..\..\..\..\..\..\..\dlb_buffer\include;..\..\..\..\..\..\..\dlb_wave\include</AdditionalIncludeDirectories>
 <BasicRuntimeChecks>Default</BasicRuntimeChecks>
 <BufferSecurityCheck>false</BufferSecurityCheck>
 <CompileAs>Default</CompileAs>
 <DebugInformationFormat />
-<DisableSpecificWarnings />
-<ExceptionHandling />
+<DisableSpecificWarnings>4100</DisableSpecificWarnings>
+<ExceptionHandling>Sync</ExceptionHandling>
 <MinimalRebuild>false</MinimalRebuild>
 <Optimization>MaxSpeed</Optimization>
 <DisableLanguageExtensions>false</DisableLanguageExtensions>

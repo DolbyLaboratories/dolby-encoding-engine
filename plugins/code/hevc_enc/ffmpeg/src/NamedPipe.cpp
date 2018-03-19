@@ -34,7 +34,10 @@
 #include <chrono>
 #include "NamedPipe.h"
 
-#define PIPE_TIMEOUT 30000
+#define PIPE_TIMEOUT (30000)
+#define PIPE_CONNECT_TIMEOUT (8000)
+
+#include <iostream>
 
 struct thread_data
 {
@@ -49,6 +52,8 @@ struct thread_data
     size_t      bytes_written_or_read;
     bool        is_working;
     int         ret_code;
+    bool        pipe_read_enabled;
+    bool        pipe_write_enabled;
 };
 
 static
@@ -63,7 +68,17 @@ void connect_thread_func(thread_data* data)
         data->ret_code = GetLastError();
     }
 #else
-    if ((data->pipe_handle = open(data->pipe_name.c_str(), O_RDWR)) == -1)
+    int flags = 0;
+    if (data->pipe_read_enabled && data->pipe_write_enabled)    flags = O_RDWR;
+    else if (data->pipe_read_enabled)                           flags = O_RDONLY;
+    else if (data->pipe_write_enabled)                          flags = O_WRONLY;
+    else
+    {
+        return;
+    }
+    
+
+    if ((data->pipe_handle = open(data->pipe_name.c_str(), flags)) == -1)
     {
         data->ret_code = -1;
     }
@@ -121,6 +136,8 @@ NamedPipe::NamedPipe()
     handle = 0;
 #endif
     name = "";
+    read_enabled = false;
+    write_enabled = false;
 }
 
 NamedPipe::~NamedPipe()
@@ -134,20 +151,30 @@ NamedPipe::~NamedPipe()
     // no need to close pipes on linux, they are just temp files removed later by DEE
 }
 
-int NamedPipe::createPipe(std::string file)
+int NamedPipe::createPipe(std::string file, bool write, bool read)
 {
+    write_enabled = write;
+    read_enabled = read;
+    
     // this function assumes DEE will pass path to an existing temp file that will be removed later
 #ifdef WIN32
     // on windows we only use the name of the temp file to create the named pipe
     name = std::string("\\\\.\\pipe\\") + file.substr(file.rfind("\\") + 1);
 
+    DWORD access = 0;
+
+    if (write && read)  access = PIPE_ACCESS_DUPLEX;
+    else if (write)     access = PIPE_ACCESS_OUTBOUND;
+    else if (read)      access = PIPE_ACCESS_INBOUND;
+    else                return -1;
+
     handle = CreateNamedPipe(name.c_str(),
-        PIPE_ACCESS_DUPLEX,
+        access,
         PIPE_WAIT | PIPE_TYPE_BYTE | PIPE_READMODE_BYTE,
         1,
         PIPE_BUFFER_SIZE,
         PIPE_BUFFER_SIZE,
-        PIPE_TIMEOUT,
+        NMPWAIT_USE_DEFAULT_WAIT,
         NULL);
 
     if (handle == INVALID_HANDLE_VALUE)
@@ -158,7 +185,8 @@ int NamedPipe::createPipe(std::string file)
     // on linux we remove the original temp file and create a pipe in it's place
     name = file;
     remove(file.c_str());
-    if (mkfifo(file.c_str(), S_IWUSR | S_IRUSR | S_IWOTH | S_IROTH) != 0)
+    
+    if (mkfifo(file.c_str(), S_IWUSR | S_IWOTH | S_IRUSR | S_IROTH) != 0)
     {
         return -1;
     }
@@ -179,6 +207,8 @@ int NamedPipe::connectPipe()
     data.ret_code = 0;
     data.pipe_handle = handle;
     data.pipe_name = name;
+    data.pipe_read_enabled = read_enabled;
+    data.pipe_write_enabled = write_enabled;
 
     std::thread connect_thread = std::thread(connect_thread_func, &data);
 
@@ -188,7 +218,7 @@ int NamedPipe::connectPipe()
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         auto now = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = now - start;
-        if (elapsed.count() > PIPE_TIMEOUT)
+        if (elapsed.count() > PIPE_CONNECT_TIMEOUT)
         {
 #ifdef WIN32
             CancelIoEx(handle, NULL);
@@ -205,9 +235,8 @@ int NamedPipe::connectPipe()
     {
         connect_thread.join();
     }
-    
-    handle = data.pipe_handle;
 
+    handle = data.pipe_handle;
     return data.ret_code;
 }
 
