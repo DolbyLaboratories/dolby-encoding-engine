@@ -47,7 +47,7 @@
 <BufferSecurityCheck>true</BufferSecurityCheck>
 <CompileAs>Default</CompileAs>
 <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-<DisableSpecificWarnings />
+<DisableSpecificWarnings>4100</DisableSpecificWarnings>
 <ExceptionHandling>Sync</ExceptionHandling>
 <MinimalRebuild>false</MinimalRebuild>
 <Optimization>Disabled</Optimization>
@@ -77,7 +77,7 @@
 <BufferSecurityCheck>false</BufferSecurityCheck>
 <CompileAs>Default</CompileAs>
 <DebugInformationFormat />
-<DisableSpecificWarnings />
+<DisableSpecificWarnings>4100</DisableSpecificWarnings>
 <ExceptionHandling>Sync</ExceptionHandling>
 <MinimalRebuild>false</MinimalRebuild>
 <Optimization>MaxSpeed</Optimization>
