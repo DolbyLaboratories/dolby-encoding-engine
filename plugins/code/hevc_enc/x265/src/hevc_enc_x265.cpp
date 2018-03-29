@@ -197,7 +197,7 @@ x265_init
     
     if(state->data->force_slice_type)
     {
-        state->data->max_intra_period = -1;
+        state->data->max_intra_period = 65535;
         state->data->min_intra_period = 0;
     }
 
