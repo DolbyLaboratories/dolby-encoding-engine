@@ -1,4 +1,3 @@
-<?xml version="1.0"?>
 <job_config>
     <input>
         <video>
@@ -15,26 +14,20 @@
         </video>
     </input>
     <filter>
-		<video>
-			<sdr_to_dv_profile_4_2>
-                <el_data_rate>5000</el_data_rate>
-                <el_max_vbv_data_rate>5000</el_max_vbv_data_rate>
-                <el_vbv_buffer_size>10000</el_vbv_buffer_size>
-                <encode_pass_num>1</encode_pass_num>
+        <video>
+            <sdr_to_dv_profile_8_2>
                 <max_light_level>4000</max_light_level>
                 <disable_md_postproc>false</disable_md_postproc>
                 <hevc_dec>
-                    <impact>
-                        <use_sps_frame_rate>false</use_sps_frame_rate>
-                    </impact>
-                </hevc_dec>
-                <hevc_enc>
                     <ffmpeg>
                         <ffmpeg_bin>/absolute/path/to/ffmpeg</ffmpeg_bin>
-                        <cmd_gen>/absolute/path/to/cmd_gen_hevc_enc_ffmpeg.py</cmd_gen>
+                        <width>OUTPUT_WIDTH</width>
+                        <height>OUTPUT_HEIGHT</height>
+                        <cmd_gen>/absolute/path/to/cmd_gen_hevc_dec_ffmpeg.py</cmd_gen>
+                        <interpreter>python</interpreter>
                     </ffmpeg>
-                </hevc_enc>
-            </sdr_to_dv_profile_4_2>
+                </hevc_dec>
+            </sdr_to_dv_profile_8_2>
         </video>
     </filter>
     <output>

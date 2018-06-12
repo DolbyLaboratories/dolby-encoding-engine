@@ -88,35 +88,35 @@ typedef struct
 /** @brief Color Space */
 typedef enum
 {
-    COLOR_SPACE_I400 = 0,
-    COLOR_SPACE_I420,
-    COLOR_SPACE_I422,
-    COLOR_SPACE_I444
-} color_space_t;
+    HEVC_ENC_COLOR_SPACE_I400 = 0,
+    HEVC_ENC_COLOR_SPACE_I420,
+    HEVC_ENC_COLOR_SPACE_I422,
+    HEVC_ENC_COLOR_SPACE_I444
+} hevc_enc_color_space_t;
  
 /** @brief Type of video frame */
 typedef enum
 {
-    FRAME_TYPE_AUTO = 0,
-    FRAME_TYPE_IDR,
-    FRAME_TYPE_I,
-    FRAME_TYPE_P,
-    FRAME_TYPE_B,
-    FRAME_TYPE_BREF
-} frame_type_t;
+    HEVC_ENC_FRAME_TYPE_AUTO = 0,
+    HEVC_ENC_FRAME_TYPE_IDR,
+    HEVC_ENC_FRAME_TYPE_I,
+    HEVC_ENC_FRAME_TYPE_P,
+    HEVC_ENC_FRAME_TYPE_B,
+    HEVC_ENC_FRAME_TYPE_BREF
+} hevc_enc_frame_type_t;
  
 /** @brief Picture structure
  *  Points to video data and describes how it should be interpreted.
  */
 typedef struct
 {
-    size_t          width;     
-    size_t          height;
-    int             bit_depth;      /**< 8 or 10 bits */
-    color_space_t   color_space;   
-    frame_type_t    frame_type;
-    void*           plane[3];       /**< Pointers to Y, Cb and Cr planes */
-    int             stride[3];      /**< Number of bytes between rows (for each plane) */
+    size_t                  width;     
+    size_t                  height;
+    int                     bit_depth;      /**< 8 or 10 bits */
+    hevc_enc_color_space_t  color_space;   
+    hevc_enc_frame_type_t   frame_type;
+    void*                   plane[3];       /**< Pointers to Y, Cb and Cr planes */
+    int                     stride[3];      /**< Number of bytes between rows (for each plane) */
 } hevc_enc_picture_t;
 
 /** @brief NAL unit types.

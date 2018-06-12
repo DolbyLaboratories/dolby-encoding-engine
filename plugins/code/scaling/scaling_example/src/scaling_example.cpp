@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2018, Dolby Laboratories
 * All rights reserved.
 * 
 * Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,18 @@ typedef struct
     scaling_flt_pic_t           source_pic;
     scaling_flt_pic_t           target_pic;
     std::string                 msg;
-    int                         strength;
     std::vector<std::string>    temp_file;
+    bool                        allow_crop;
+
+    int                 source_offset_top;
+    int                 source_offset_bottom;
+    int                 source_offset_left;
+    int                 source_offset_right;
+
+    int                 target_offset_top;
+    int                 target_offset_bottom;
+    int                 target_offset_left;
+    int                 target_offset_right;
 } scaling_flt_example_data_t;
 
 /* This structure can contain only pointers and simple types */
@@ -60,11 +70,20 @@ property_info_t scaling_base_info[] =
 {
     {"temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "3", NULL, 0, 1, ACCESS_TYPE_READ},
     { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, 3, 3, ACCESS_TYPE_WRITE_INIT },
-    { "format", PROPERTY_TYPE_INTEGER, "Format of input picture.", "0", "rgb_16:yuv420_10", 1, 1, ACCESS_TYPE_WRITE_INIT },
+    { "format", PROPERTY_TYPE_INTEGER, "Format of input picture.", "rgb_16", "rgb_16:yuv420_10", 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "source_width", PROPERTY_TYPE_INTEGER, "Source picture width.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "source_height", PROPERTY_TYPE_INTEGER, "Source picture height.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "target_width", PROPERTY_TYPE_INTEGER, "Target picture width (0 = no width scaling).", "0", NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "target_height", PROPERTY_TYPE_INTEGER, "Target picture height (0 = no height scaling).", "0", NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
+    { "source_offset_top", PROPERTY_TYPE_INTEGER, "Source picture active area top offset", "0", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT },
+    { "source_offset_bottom", PROPERTY_TYPE_INTEGER, "Source picture active area bottom offset", "0", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT },
+    { "source_offset_left", PROPERTY_TYPE_INTEGER, "Source picture active area left offset", "0", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT },
+    { "source_offset_right", PROPERTY_TYPE_INTEGER, "Source picture active area right offset", "0", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT },
+    { "allow_crop", PROPERTY_TYPE_BOOLEAN, "If set to false, no cropping or padding should occur.", "true", "true:false", 0, 1, ACCESS_TYPE_WRITE_INIT },
+    { "get_target_offset_top", PROPERTY_TYPE_INTEGER, "Query target picture active area top offset", NULL, NULL, 1, 1, ACCESS_TYPE_READ },
+    { "get_target_offset_bottom", PROPERTY_TYPE_INTEGER, "Query target picture active area bottom offset", NULL, NULL, 1, 1, ACCESS_TYPE_READ },
+    { "get_target_offset_left", PROPERTY_TYPE_INTEGER, "Query target picture active area left offset", NULL, NULL, 1, 1, ACCESS_TYPE_READ },
+    { "get_target_offset_right", PROPERTY_TYPE_INTEGER, "Query target picture active area right offset", NULL, NULL, 1, 1, ACCESS_TYPE_READ },
 };
 
 static
@@ -85,6 +104,27 @@ scaling_example_get_size()
 }
 
 static
+void
+calculate_offsets(scaling_flt_handle_t handle)
+{
+    scaling_flt_example_t* state = (scaling_flt_example_t*)handle;
+
+    /*
+    *  Assuming the picture is just stretched, the offsets will be stretched too.
+    *  If you want to apply a different scaling mechanism, like introducing black bars,
+    *  you need to adjust the below algorithm accordingly, to reflect the new active area.
+    */
+
+    double scale_factor_width = (double)(state->data->target_width) / (double)state->data->source_width;
+    double scale_factor_height = (double)(state->data->target_height) / (double)state->data->source_height;
+
+    state->data->target_offset_top = (int)((double)state->data->source_offset_top * scale_factor_height);
+    state->data->target_offset_bottom = (int)((double)state->data->source_offset_bottom * scale_factor_height);
+    state->data->target_offset_left = (int)((double)state->data->source_offset_left * scale_factor_width);
+    state->data->target_offset_right = (int)((double)state->data->source_offset_right * scale_factor_width);
+}
+
+static
 status_t
 scaling_example_init
     (scaling_flt_handle_t               handle          /**< [in/out] filter instance handle */
@@ -94,9 +134,25 @@ scaling_example_init
     scaling_flt_example_t* state = (scaling_flt_example_t*)handle;
 
     state->data = new scaling_flt_example_data_t;
-    state->data->strength = 0;
     memset(&state->data->source_pic, 0, sizeof(scaling_flt_pic_t));
     memset(&state->data->target_pic, 0, sizeof(scaling_flt_pic_t));
+
+    state->data->allow_crop = true;
+
+    state->data->source_offset_top = 0;
+    state->data->source_offset_bottom = 0;
+    state->data->source_offset_left = 0;
+    state->data->source_offset_right = 0;
+
+    state->data->target_offset_top = 0;
+    state->data->target_offset_bottom = 0;
+    state->data->target_offset_left = 0;
+    state->data->target_offset_right = 0;
+
+    state->data->target_width = 0;     // 0 = same as source
+    state->data->target_height = 0;    // 0 = same as source
+    state->data->format = SCALING_FLT_RGB_16;
+
 
     state->data->msg.clear();
     for (size_t i = 0; i < init_params->count; i++)
@@ -130,6 +186,43 @@ scaling_example_init
         {
             state->data->temp_file.push_back(value);
         }
+        else if ("source_offset_top" == name)
+        {
+            state->data->source_offset_top = atoi(value.c_str());
+        }
+        else if ("source_offset_bottom" == name)
+        {
+            state->data->source_offset_bottom = atoi(value.c_str());
+        }
+        else if ("source_offset_left" == name)
+        {
+            state->data->source_offset_left = atoi(value.c_str());
+        }
+        else if ("source_offset_right" == name)
+        {
+            state->data->source_offset_right = atoi(value.c_str());
+        }
+        else if ("allow_crop" == name)
+        {
+            if (value == "true")
+            {
+                state->data->allow_crop = true;
+            }
+            else if (value == "false")
+            {
+                state->data->allow_crop = false;
+            }
+            else
+            {
+                state->data->msg += "\nInvalid property value: " + value;
+                return STATUS_ERROR;
+            }
+        }
+        else
+        {
+            state->data->msg += "\nUnknown XML property: " + name;
+            return STATUS_ERROR;
+        }
     }
 
     if (!state->data->msg.empty())
@@ -138,6 +231,17 @@ scaling_example_init
         state->data->msg = errmsg;
         return STATUS_ERROR;
     }
+
+    if (state->data->target_width == 0)
+    {
+        state->data->target_width = state->data->source_width;
+    }
+    if (state->data->target_height == 0)
+    {
+        state->data->target_height = state->data->source_height;
+    }
+
+    calculate_offsets(handle);
 
     state->data->source_pic.width = state->data->source_width;
     state->data->source_pic.height = state->data->source_height;
@@ -226,16 +330,40 @@ scaling_example_get_property
 {
     scaling_flt_example_t* state = (scaling_flt_example_t*)handle;
     if (NULL == state) return STATUS_ERROR;
-    
-    if (NULL != property->name)
+
+    std::string name(property->name);
+
+    if ("temp_file_num" == name)
     {
-        std::string name(property->name);
-        if ("temp_file_num" == name)
-        {
-            strcpy(property->value, "3");
-            return STATUS_OK;
-        }
+        strcpy(property->value, "3");
+        return STATUS_OK;
     }
+    else if ("get_target_offset_top" == name && property->max_value_sz > std::to_string(state->data->target_offset_top).size())
+    {
+        strcpy(property->value, std::to_string(state->data->target_offset_top).c_str());
+        return STATUS_OK;
+    }
+    else if ("get_target_offset_bottom" == name && property->max_value_sz > std::to_string(state->data->target_offset_bottom).size())
+    {
+        strcpy(property->value, std::to_string(state->data->target_offset_bottom).c_str());
+        return STATUS_OK;
+    }
+    else if ("get_target_offset_left" == name && property->max_value_sz > std::to_string(state->data->target_offset_left).size())
+    {
+        strcpy(property->value, std::to_string(state->data->target_offset_left).c_str());
+        return STATUS_OK;
+    }
+    else if ("get_target_offset_right" == name && property->max_value_sz > std::to_string(state->data->target_offset_right).size())
+    {
+        strcpy(property->value, std::to_string(state->data->target_offset_right).c_str());
+        return STATUS_OK;
+    }
+    else
+    {
+        return STATUS_ERROR;
+    }
+
+
     return STATUS_ERROR;
 }
 

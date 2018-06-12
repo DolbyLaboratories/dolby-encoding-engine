@@ -103,7 +103,7 @@ property_info_t hevc_enc_x265_info[] =
     ,{"psy_rd", PROPERTY_TYPE_DECIMAL, "Influence rate distortion optimizated mode decision to preserve the energy of the source image in the encoded image at the expense of compression efficiency.", "2.0", "0:5", 0, 1, ACCESS_TYPE_USER }
 
     ,{"profile", PROPERTY_TYPE_STRING, "Enforce the requirements of the specified HEVC profile", "auto", "auto:main:main10:main-intra:main10-intra:main444-8:main444-intra:main422-10:main422-10-intra:main444-10:main444-10-intra:main12:main12-intra:main422-12:main422-12-intra:main444-12:main444-12-intra", 0, 1, ACCESS_TYPE_USER }
-    ,{"param", PROPERTY_TYPE_STRING, "Sets any x265 parameter using syntax \"name=value\" or just \"name\" for boolean flags.", NULL, NULL, 0, 100, ACCESS_TYPE_USER}
+    ,{"param", PROPERTY_TYPE_STRING, "Sets any x265 parameter using syntax \"name=value\" or just \"name\" for boolean flags. Use ':' separator to enter multiple values under one tag.", NULL, NULL, 0, 100, ACCESS_TYPE_USER}
 };
 
 static

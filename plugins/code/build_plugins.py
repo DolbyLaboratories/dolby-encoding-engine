@@ -66,6 +66,8 @@ PLUGINS_DICT = {
 'hevc_enc_ffmpeg' : 'hevc_enc/ffmpeg/make/hevc_enc_ffmpeg',
 'j2k_dec_ffmpeg' : 'j2k_dec/ffmpeg/make/j2k_dec_ffmpeg',
 'j2k_dec_kakadu' : 'j2k_dec/kakadu/make/j2k_dec_kakadu',
+'noise_example' : 'noise/noise_example/make/noise_example',
+'scaling_example' : 'scaling/scaling_example/make/scaling_example',
 #disabled_plugin_example : 'disabled',
 }
 

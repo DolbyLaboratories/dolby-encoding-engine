@@ -49,7 +49,7 @@
                         <min_cu_size>8</min_cu_size>
                         <max_cu_size>64</max_cu_size>
                         <qg_size>32</qg_size>
-                        <rc_grain>true</rc_grain>
+                        <rc_grain>false</rc_grain>
                         <level_idc>0</level_idc>
                         <psy_rd>0</psy_rd>
                         <profile>auto</profile>

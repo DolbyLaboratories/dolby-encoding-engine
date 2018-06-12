@@ -30,10 +30,14 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "SystemCalls.h"
 #include "hevc_dec_ffmpeg_utils.h"
 
-#define MAX_BUFFERED_BLOBS 64
+#define TEMP_BUFFER 1024
 #define REQUIRED_TEMP_FILE_NUM 3
+
+#define PIPE_BUFFER_SIZE 1024 * 1024 * 64 // 64MB of buffer is enough to store an UHD 444 10bit frame
+#define PIPE_TIMEOUT 60000
 
 static
 const
@@ -94,10 +98,12 @@ hevc_dec_ffmpeg_init
     state->data->chroma_format = HEVC_DEC_COLOR_SPACE_I420;
     state->data->frame_rate.frame_period = 24000;
     state->data->frame_rate.time_scale = 1000;
-    state->data->decoded_pictures_to_discard = 0;
     state->data->frame_rate_ext.frame_period = 24;
     state->data->frame_rate_ext.time_scale = 1;
     state->data->output_format = "any";
+    state->data->decoded_picture.plane[0] = NULL;
+    state->data->decoded_picture.plane[1] = NULL;
+    state->data->decoded_picture.plane[2] = NULL;
 
 #ifdef WIN32
     state->data->ffmpeg_bin = "ffmpeg.exe";
@@ -107,12 +113,14 @@ hevc_dec_ffmpeg_init
     state->data->interpreter = "python";
 #endif
 
-    state->data->stop_writing_thread = false;
-    state->data->stop_reading_thread = false;
-    state->data->force_stop_writing_thread = false;
-    state->data->force_stop_reading_thread = false;
-
     state->data->ffmpeg_ret_code = 0;
+
+    state->data->kill_ffmpeg = false;
+    state->data->ffmpeg_running = false;
+    state->data->piping_error = false;
+
+    state->data->piping_mgr.setTimeout(PIPE_TIMEOUT);
+    state->data->piping_mgr.setMaxbuf(PIPE_BUFFER_SIZE);
 
     state->data->missed_calls = 0;
     state->data->calls = 0;
@@ -211,21 +219,33 @@ hevc_dec_ffmpeg_init
         return HEVC_DEC_ERROR;
     }
 
-    if (state->data->in_pipe.createPipe(state->data->temp_file[0]) == -1)
+    state->data->in_pipe_id = state->data->piping_mgr.createNamedPipe(state->data->temp_file[0], INPUT_PIPE);
+    state->data->out_pipe_id = state->data->piping_mgr.createNamedPipe(state->data->temp_file[1], OUTPUT_PIPE);
+
+    if (state->data->in_pipe_id == -1 || state->data->out_pipe_id == -1)
     {
         state->data->msg = "Creating pipes failed.";
         return HEVC_DEC_ERROR;
     }
-    if (state->data->out_pipe.createPipe(state->data->temp_file[1]) == -1)
+
+    if (state->data->piping_mgr.getPipePath(state->data->in_pipe_id, state->data->in_pipe_path) != PIPE_MGR_OK)
     {
         state->data->msg = "Creating pipes failed.";
         return HEVC_DEC_ERROR;
     }
+    if (state->data->piping_mgr.getPipePath(state->data->out_pipe_id, state->data->out_pipe_path) != PIPE_MGR_OK)
+    {
+        state->data->msg = "Creating pipes failed.";
+        return HEVC_DEC_ERROR;
+    }
+
     if (state->data->width == 0 || state->data->height == 0)
     {
-        state->data->msg = "Correct output width and height need to specified.";
+        state->data->msg = "Correct output width and height need to be specified.";
         return HEVC_DEC_ERROR;
     }
+
+    init_picture_buffer(state->data);
 
     // build command line //
 
@@ -244,22 +264,25 @@ hevc_dec_ffmpeg_init
     }
 
     std::string generate_cmd_call = "\"" + state->data->interpreter + "\" \"" + state->data->cmd_gen + "\" \"" + state->data->temp_file[2] + "\"";
-    ffmpeg_call = run_cmd_get_output(generate_cmd_call);
 
-    if (ffmpeg_call.empty())
+    if (systemWithStdout(generate_cmd_call, ffmpeg_call) != SYSCALL_STATUS_OK)
     {
         state->data->msg = "Error building ffmpeg command line by calling: " + generate_cmd_call;
         return HEVC_DEC_ERROR;
     }
 
+    if (!strip_header(ffmpeg_call))
+    {
+        state->data->msg = "cmd_gen script error: " + ffmpeg_call;
+        return HEVC_DEC_ERROR;
+    }
+
+    strip_newline(ffmpeg_call);
     if (state->data->msg == "")
     {
-        // LAUNCH THREADS //
-
+        // LAUNCH FFMPEG //
+        state->data->ffmpeg_running = true;
         state->data->ffmpeg_thread = std::thread(run_cmd_thread_func, ffmpeg_call, state->data);
-        state->data->writer_thread = std::thread(writer_thread_func, state->data);
-        state->data->reader_thread = std::thread(reader_thread_func, state->data);
-
         state->data->msg = "FFMPEG launched with the following command line: " + ffmpeg_call;
         return HEVC_DEC_OK;
     }
@@ -277,37 +300,53 @@ hevc_dec_ffmpeg_close
 {
     hevc_dec_ffmpeg_t* state = (hevc_dec_ffmpeg_t*)handle;
 
-    //double miss_rate = ((double)state->data->missed_calls/(double)state->data->calls) * 100.0;
-    //std::cout << "Miss rate: " << miss_rate << " (" << state->data->missed_calls << " / " << state->data->calls << ")" << std::endl;
+    bool plugin_failed = false;
 
-    if (state->data->ffmpeg_ret_code != 0)
+    // close input pipe to let FFMPEG know we finished decoding
+    state->data->piping_mgr.closePipe(state->data->in_pipe_id);
+    
+    // empty the output buffer and pipe so that ffmpeg can close gracefully
+    size_t bytes_read = 0;
+    char temp_buf[TEMP_BUFFER];
+    piping_status_t status;
+    do
     {
-        state->data->force_stop_writing_thread = true;
-        state->data->force_stop_reading_thread = true;
-    }
+        status = state->data->piping_mgr.readFromPipe(state->data->out_pipe_id, temp_buf, TEMP_BUFFER, bytes_read);
+        if (status != PIPE_MGR_OK && status != PIPE_MGR_PIPE_CLOSED)
+        {
+            state->data->msg = "Output pipe error " + std::to_string(status) + ".";
+            state->data->piping_error = true;
+            break;
+        }
+        // if we closed the input and there is no more output but ffmpeg still runs we need to terminate it
+        else if (bytes_read == 0 && state->data->piping_mgr.getPipeStatus(state->data->in_pipe_id) == PIPE_MGR_PIPE_CLOSED)
+        {
+            state->data->kill_ffmpeg = true;
+        }
+    } 
+    while (state->data->ffmpeg_running == true);
 
-    state->data->stop_writing_thread = true;
-    state->data->stop_reading_thread = true;
-
-    if (state->data->writer_thread.joinable())
+    if (state->data->piping_error)
     {
-        state->data->writer_thread.join();
+        state->data->kill_ffmpeg = true;
     }
     if (state->data->ffmpeg_thread.joinable())
     {
         state->data->ffmpeg_thread.join();
     }
-    if (state->data->reader_thread.joinable())
+
+    if (state->data->ffmpeg_ret_code != 0 || state->data->piping_error)
     {
-        state->data->reader_thread.join();
+        plugin_failed = true;
     }
 
-    state->data->decoded_pictures_to_discard = state->data->decoded_pictures.size();
-    remove_pictures(state->data);
+    if (state->data)
+    {
+        clean_picture_buffer(state->data);
+        delete state->data;
+    }
 
-    if (state->data) delete state->data;
-
-    return HEVC_DEC_OK;
+    return plugin_failed ? HEVC_DEC_ERROR : HEVC_DEC_OK;
 }
 
 static
@@ -320,44 +359,26 @@ hevc_dec_ffmpeg_process
 )
 {
     hevc_dec_ffmpeg_t* state = (hevc_dec_ffmpeg_t*)handle;
-    remove_pictures(state->data);
 
     if (state->data->ffmpeg_ret_code != 0)
     {
-        state->data->msg += "\nffmpeg runtime error.";
+        state->data->msg = "Ffmpeg runtime error.";
         return HEVC_DEC_ERROR;
     }
 
-    // send new data to process by ffmpeg
-    bool buffer_written_flag = false;
-    while (state->data->ffmpeg_thread.joinable() && buffer_written_flag == false)
-    {
-        if (state->data->ffmpeg_ret_code != 0) break;
-        state->data->in_buffer_mutex.lock();
-        if (state->data->in_buffer.size() < MAX_BUFFERED_BLOBS)
-        {
-            state->data->in_buffer.push_back(new BufferBlob(stream_buffer, buffer_size));
-            buffer_written_flag = true;
-        }
-        state->data->in_buffer_mutex.unlock();
-    }
-
-    // receive data from ffmpeg
-    if (extract_pictures_from_buffer(state->data) != 0)
+    if (write_to_ffmpeg(state->data, (void*)stream_buffer, buffer_size) == HEVC_DEC_ERROR)
     {
         return HEVC_DEC_ERROR;
     }
 
-    if (state->data->decoded_pictures.size() > 0)
+    hevc_dec_status_t reading_status = read_pic_from_ffmpeg(state->data);
+
+    if (reading_status == HEVC_DEC_OK)
     {
-        *output = state->data->decoded_pictures.front();
-        state->data->decoded_pictures_to_discard += 1;
-        return HEVC_DEC_OK;
+        *output = state->data->decoded_picture;
     }
-    else
-    {
-        return HEVC_DEC_PICTURE_NOT_READY;
-    }
+
+    return reading_status;
 }
 
 static
@@ -369,53 +390,40 @@ hevc_dec_ffmpeg_flush
 )
 {
     hevc_dec_ffmpeg_t* state = (hevc_dec_ffmpeg_t*)handle;
-    remove_pictures(state->data);
+
+    if (flush_to_ffmpeg(state->data) == HEVC_DEC_PICTURE_NOT_READY)
+    {
+        // close input pipe to let FFMPEG know we finished sending input once the buffer is flushed
+        state->data->piping_mgr.closePipe(state->data->in_pipe_id);
+    }
 
     if (state->data->ffmpeg_ret_code != 0)
     {
-        state->data->msg += "\nffmpeg runtime error.";
+        state->data->msg = "Ffmpeg runtime error.";
         return HEVC_DEC_ERROR;
     }
 
-    state->data->stop_writing_thread = true;
-    if (state->data->writer_thread.joinable())
-    {
-        state->data->writer_thread.join();
-    }
-    if (state->data->ffmpeg_thread.joinable())
-    {
-        state->data->ffmpeg_thread.join();
-    }
-    state->data->stop_reading_thread = true;
-    if (state->data->reader_thread.joinable())
-    {
-        state->data->reader_thread.join();
-    }
+    hevc_dec_status_t reading_status = read_pic_from_ffmpeg(state->data);
 
-    // flush must be called until no more picture are in the decoder buffer
-    if (state->data->decoded_pictures.size() > 0 || state->data->out_buffer.size() > 0)
+    if (reading_status == HEVC_DEC_OK)
     {
+        *output = state->data->decoded_picture;
         *is_empty = false;
-    }
-    else
-    {
-        *is_empty = true;
-    }
-
-    if (extract_pictures_from_buffer(state->data) != 0)
-    {
-        return HEVC_DEC_ERROR;
-    }
-
-    if (state->data->decoded_pictures.size() > 0)
-    {
-        *output = state->data->decoded_pictures.front();
-        state->data->decoded_pictures_to_discard += 1;
         return HEVC_DEC_OK;
     }
+    else if (reading_status == HEVC_DEC_PICTURE_NOT_READY && state->data->ffmpeg_running)
+    {
+        *is_empty = false;
+        return HEVC_DEC_PICTURE_NOT_READY;
+    }
+    else if (reading_status == HEVC_DEC_PICTURE_NOT_READY)
+    {
+        *is_empty = true;
+        return HEVC_DEC_PICTURE_NOT_READY;
+    }
     else
     {
-        return HEVC_DEC_PICTURE_NOT_READY;
+        return HEVC_DEC_ERROR;
     }
 }
 

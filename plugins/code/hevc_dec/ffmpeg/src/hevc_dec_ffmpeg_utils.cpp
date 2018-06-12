@@ -31,34 +31,11 @@
 */
 
 #include <fstream>
+#include <cstring>
+#include <SystemCalls.h>
 #include "hevc_dec_ffmpeg_utils.h"
 
-BufferBlob::BufferBlob(const void* data_to_copy, size_t size)
-{
-    data = new char[size];
-    data_size = size;
-    memcpy(data, data_to_copy, size);
-}
-
-BufferBlob::~BufferBlob()
-{
-    delete[] data;
-}
-
-void remove_pictures(hevc_dec_ffmpeg_data_t* data)
-{
-    // remove all pictures already sent out during last process
-    data->calls++;
-    if (0 == data->decoded_pictures_to_discard) data->missed_calls++;
-    while (data->decoded_pictures_to_discard > 0)
-    {
-        if (data->decoded_pictures.front().plane[0]) free(data->decoded_pictures.front().plane[0]);
-        if (data->decoded_pictures.front().plane[1]) free(data->decoded_pictures.front().plane[1]);
-        if (data->decoded_pictures.front().plane[2]) free(data->decoded_pictures.front().plane[2]);
-        data->decoded_pictures.pop_front();
-        data->decoded_pictures_to_discard -= 1;
-    }
-}
+#define BINARY_CHECK_TIMEOUT 1000
 
 hevc_dec_frame_rate_t string_to_fr(const std::string& str)
 {
@@ -119,262 +96,205 @@ bool bin_exists(const std::string& bin, const std::string& arg)
 {
     std::string cmd = bin + " " + arg;
 
-#ifdef WIN32
-    // wrap command in extra quotations to ensure windows calls it properly
-    cmd = "\"" + cmd + "\"";
-#endif
-
-    int rt = system(cmd.c_str());
-    return (rt == 0);
+    int ret_code = 0;
+    int status = systemWithTimeout(cmd, ret_code, BINARY_CHECK_TIMEOUT);
+    if (status != SYSCALL_STATUS_OK)
+    {
+        return false;
+    }
+    else
+    {
+        return (ret_code == 0);
+    }
 }
 
 void run_cmd_thread_func(std::string cmd, hevc_dec_ffmpeg_data_t* decoding_data)
 {
-#ifdef WIN32
-    // wrap command in extra quotations to ensure windows calls it properly
-    cmd = "\"" + cmd + "\"";
-#endif
-
-    int ret_code = system(cmd.c_str());
+    int ret_code = 0;
+    systemWithKillswitch(cmd, ret_code, decoding_data->kill_ffmpeg);
     decoding_data->ffmpeg_ret_code = ret_code;
-    if (ret_code)
-    {
-        decoding_data->force_stop_writing_thread = true;
-        decoding_data->force_stop_reading_thread = true;
-    }
+    decoding_data->ffmpeg_running = false;
 }
 
-void writer_thread_func(hevc_dec_ffmpeg_data_t* decoding_data)
+void init_picture_buffer(hevc_dec_ffmpeg_data_t* data)
 {
-    if (decoding_data->in_pipe.connectPipe() != 0)
-    {
-        return;
-    }
-
-    while (decoding_data->stop_writing_thread == false || decoding_data->in_buffer.size() > 0)
-    {
-        if (decoding_data->force_stop_writing_thread)
-        {
-            break;
-        }
-
-        decoding_data->in_buffer_mutex.lock();
-        if (decoding_data->in_buffer.empty())
-        {
-            decoding_data->in_buffer_mutex.unlock();
-            continue;
-        }
-        BufferBlob* front = decoding_data->in_buffer.front();
-        decoding_data->in_buffer.pop_front();
-        decoding_data->in_buffer_mutex.unlock();
-
-        char* data_to_write = front->data;
-        size_t data_size = front->data_size;
-        size_t left_to_write = data_size;
-
-        size_t bytes_written;
-        while (left_to_write > 0)
-        {
-            if (decoding_data->in_pipe.writeToPipe(data_to_write, left_to_write, &bytes_written) != 0)
-            {
-                // error writing to pipe
-                bytes_written = 0;
-                decoding_data->force_stop_writing_thread = true;
-            }
-            left_to_write -= bytes_written;
-            data_to_write += bytes_written;
-            if (bytes_written == 0 && decoding_data->force_stop_writing_thread) break;
-        }
-        delete front;
-    }
-
-    decoding_data->in_pipe.closePipe();
-}
-
-void reader_thread_func(hevc_dec_ffmpeg_data_t* decoding_data)
-{
-    if (decoding_data->out_pipe.connectPipe() != 0)
-    {
-        return;
-    }
-
-    size_t last_read_size = 0;
-    char* read_data = new char[READ_BUFFER_SIZE];
-
-    do
-    {
-        if (decoding_data->force_stop_reading_thread)
-        {
-            break;
-        }
-
-        if (decoding_data->out_pipe.readFromPipe(read_data, READ_BUFFER_SIZE, &last_read_size) != 0)
-        {
-            // error reading from pipe
-            last_read_size = 0;
-            decoding_data->stop_reading_thread = true;
-        }
-
-        if (last_read_size > 0)
-        {
-            decoding_data->out_buffer_mutex.lock();
-            decoding_data->out_buffer.push_back(new BufferBlob(read_data, last_read_size));
-            decoding_data->out_buffer_mutex.unlock();
-        }
-    }
-    while (decoding_data->stop_reading_thread == false || last_read_size > 0);
-
-    decoding_data->out_pipe.closePipe();
-
-    delete[] read_data;
-}
-
-int extract_bytes(std::list<BufferBlob*>& blob_list, size_t byte_num, char* buffer)
-{
-    size_t bytes_to_read = byte_num;
-    size_t pos = 0;
-
-    // make sure we have enough data in the blob list
-    size_t blob_list_size = 0;
-    std::list<BufferBlob*>::iterator it = blob_list.begin();
-    while (blob_list_size < bytes_to_read)
-    {
-        if (it == blob_list.end())
-        {
-            // not enough data in blob list!
-            return -1;
-        }
-
-        blob_list_size += (*it)->data_size;
-
-        it++;
-    }
-
-    while (bytes_to_read > 0)
-    {
-        if (blob_list.size() == 0)
-        {
-            // not enough data in blob list!
-            return -1;
-        }
-
-        BufferBlob* temp_blob = blob_list.front();
-        blob_list.pop_front();
-
-        size_t blob_size = temp_blob->data_size;
-        if (blob_size <= bytes_to_read)
-        {
-            memcpy(buffer + pos, temp_blob->data, blob_size);
-            pos += blob_size;
-            bytes_to_read -= blob_size;
-        }
-        else
-        {
-            memcpy(buffer + pos, temp_blob->data, bytes_to_read);
-
-            BufferBlob* new_blob = new BufferBlob(temp_blob->data + bytes_to_read, blob_size - bytes_to_read);
-            blob_list.push_front(new_blob);
-
-            bytes_to_read = 0;
-        }
-
-        delete temp_blob;
-    }
-
-    return 0;
-}
-
-size_t get_buf_size(std::list<BufferBlob*>& blob_list)
-{
-    size_t blob_list_size = 0;
-    std::list<BufferBlob*>::iterator it;
-    for (it = blob_list.begin(); it != blob_list.end(); it++)
-    {
-        blob_list_size += (*it)->data_size;
-    }
-
-    return blob_list_size;
-}
-
-std::string run_cmd_get_output(std::string cmd)
-{
-#ifdef WIN32
-    // wrap command in extra quotations to ensure windows calls it properly
-    cmd = "\"" + cmd + "\"";
-#endif
-
-    char* buffer = new char[READ_BUFFER_SIZE];
-    std::string result;
-
-#ifdef WIN32
-    std::shared_ptr<FILE> pipe(_popen(cmd.c_str(), "r"), _pclose);
-#else
-    std::shared_ptr<FILE> pipe(popen(cmd.c_str(), "r"), pclose);
-#endif
-
-    if (!pipe)
-    {
-        delete[] buffer;
-        return "";
-    }
-    while (!feof(pipe.get()))
-    {
-        if (fgets(buffer, READ_BUFFER_SIZE, pipe.get()) != NULL)
-            result += buffer;
-    }
-
-    delete[] buffer;
-    return result;
-}
-
-int extract_pictures_from_buffer(hevc_dec_ffmpeg_data_t* data)
-{
-    data->out_buffer_mutex.lock();
-
     // ONLY YUV 420 8 and 10 bit supported
     int byte_num = data->output_bitdepth > 8 ? 2 : 1;
-    size_t y_size = data->width * data->height * byte_num;
-    size_t c_size = (data->width * data->height * byte_num) / 4;
+    data->plane_size[0] = data->width * data->height * byte_num;
+    data->plane_size[1] = (data->width * data->height * byte_num) / 4;
+    data->plane_size[2] = data->plane_size[1];
 
-    while (get_buf_size(data->out_buffer) >= y_size + 2 * c_size)
+    data->decoded_picture.bit_depth = data->output_bitdepth;
+    data->decoded_picture.chroma_size = data->plane_size[1];
+    data->decoded_picture.luma_size = data->plane_size[0];
+    data->decoded_picture.color_space = data->chroma_format;
+    data->decoded_picture.frame_rate = data->frame_rate_ext;
+    data->decoded_picture.frame_type = HEVC_DEC_FRAME_TYPE_AUTO;
+    data->decoded_picture.height = data->height;
+    data->decoded_picture.width = data->width;
+    data->decoded_picture.matrix_coeffs = 0;
+    data->decoded_picture.transfer_characteristics = 0;
+    data->decoded_picture.stride[0] = data->width * byte_num;
+    data->decoded_picture.stride[1] = (data->width * byte_num) / 2;
+    data->decoded_picture.stride[2] = (data->width * byte_num) / 2;
+    data->decoded_picture.plane[0] = malloc(data->plane_size[0]);
+    data->decoded_picture.plane[1] = malloc(data->plane_size[1]);
+    data->decoded_picture.plane[2] = malloc(data->plane_size[2]);
+}
+
+void clean_picture_buffer(hevc_dec_ffmpeg_data_t* data)
+{
+    if (data->decoded_picture.plane[0] != NULL) free(data->decoded_picture.plane[0]);
+    if (data->decoded_picture.plane[1] != NULL) free(data->decoded_picture.plane[1]);
+    if (data->decoded_picture.plane[2] != NULL) free(data->decoded_picture.plane[2]);
+}
+
+hevc_dec_status_t write_to_ffmpeg(hevc_dec_ffmpeg_data_t* data, void* stream_buffer, const size_t buffer_size)
+{
+    piping_status_t status;
+
+    //printf("!!! writing to ffmpeg !!!\n");
+    if (data->encoded_blobs.empty())
     {
-        hevc_dec_picture_t new_pic;
-        new_pic.bit_depth = data->output_bitdepth;
-        new_pic.chroma_size = c_size;
-        new_pic.luma_size = y_size;
-        new_pic.color_space = data->chroma_format;
-        new_pic.frame_rate = data->frame_rate_ext;
-        new_pic.frame_type = HEVC_DEC_FRAME_TYPE_AUTO;
-        new_pic.height = data->height;
-        new_pic.width = data->width;
-        new_pic.matrix_coeffs = 0;
-        new_pic.transfer_characteristics = 0;
-        new_pic.stride[0] = data->width * byte_num;
-        new_pic.stride[1] = (data->width * byte_num) / 2;
-        new_pic.stride[2] = (data->width * byte_num) / 2;
-        new_pic.plane[0] = malloc(y_size);
-        new_pic.plane[1] = malloc(c_size);
-        new_pic.plane[2] = malloc(c_size);
-
-        int ret_code = 0;
-        ret_code += extract_bytes(data->out_buffer, y_size, (char*)new_pic.plane[0]);
-        ret_code += extract_bytes(data->out_buffer, c_size, (char*)new_pic.plane[1]);
-        ret_code += extract_bytes(data->out_buffer, c_size, (char*)new_pic.plane[2]);
-
-        if (ret_code != 0)
+        size_t bytes_written = 0;
+        status = data->piping_mgr.writeToPipe(data->in_pipe_id, stream_buffer, buffer_size, bytes_written);
+        
+        if (status != PIPE_MGR_OK)
         {
-            free(new_pic.plane[0]);
-            free(new_pic.plane[1]);
-            free(new_pic.plane[2]);
-            data->msg += "\nError reading data from output buffer.";
-            return -1;
+            data->msg = "Input pipe error " + std::to_string(status) + ".";
+            data->piping_error = true;
+            return HEVC_DEC_ERROR;
+        }
+        
+        if (bytes_written < buffer_size)
+        {
+            std::vector<char> new_blob;
+            new_blob.assign((char*)stream_buffer + bytes_written, (char*)stream_buffer + buffer_size);
+            data->encoded_blobs.push_back(new_blob);
         }
 
-        data->decoded_pictures.push_back(new_pic);
-    }
-    data->out_buffer_mutex.unlock();
+        //printf("!!! blobs left: %d !!!\n", data->encoded_blobs.size());
 
-    return 0;
+        return HEVC_DEC_OK;
+    }
+    else
+    {
+        std::vector<char> new_blob;
+        new_blob.assign((char*)stream_buffer, (char*)stream_buffer + buffer_size);
+        data->encoded_blobs.push_back(new_blob);
+
+        size_t bytes_written = 0;
+        size_t bytes_to_write = 0;
+        do
+        {
+            std::vector<char> blob_to_write = data->encoded_blobs.front();
+            data->encoded_blobs.pop_front();
+            bytes_to_write = blob_to_write.size();
+            status = data->piping_mgr.writeToPipe(data->in_pipe_id, blob_to_write.data(), bytes_to_write, bytes_written);
+
+            if (status != PIPE_MGR_OK)
+            {
+                data->msg = "Input pipe error " + std::to_string(status) + ".";
+                data->piping_error = true;
+                return HEVC_DEC_ERROR;
+            }
+
+            if (bytes_written < bytes_to_write)
+            {
+                //printf("!!! removing from blob: %d, blobs: %d !!!\n", bytes_written, data->encoded_blobs.size());
+                blob_to_write.erase(blob_to_write.begin(), blob_to_write.begin() + bytes_written);
+                data->encoded_blobs.push_front(blob_to_write);
+            }
+        } 
+        while (bytes_written == bytes_to_write && data->encoded_blobs.empty() == false);
+
+       // printf("!!! blobs left: %d !!!\n", data->encoded_blobs.size());
+
+        return HEVC_DEC_OK;
+    }
+}
+
+hevc_dec_status_t flush_to_ffmpeg(hevc_dec_ffmpeg_data_t* data)
+{
+    piping_status_t status;
+
+    //printf("!!! writing to ffmpeg !!!\n");
+    if (data->encoded_blobs.empty())
+    {
+        return HEVC_DEC_PICTURE_NOT_READY;
+    }
+    else
+    {
+        size_t bytes_written = 0;
+        size_t bytes_to_write = 0;
+        do
+        {
+            std::vector<char> blob_to_write = data->encoded_blobs.front();
+            data->encoded_blobs.pop_front();
+            bytes_to_write = blob_to_write.size();
+            status = data->piping_mgr.writeToPipe(data->in_pipe_id, blob_to_write.data(), bytes_to_write, bytes_written);
+
+            if (status != PIPE_MGR_OK)
+            {
+                data->msg = "Input pipe error " + std::to_string(status) + ".";
+                data->piping_error = true;
+                return HEVC_DEC_ERROR;
+            }
+
+            if (bytes_written < bytes_to_write)
+            {
+                //printf("!!! removing from blob: %d, blobs: %d !!!\n", bytes_written, data->encoded_blobs.size());
+                blob_to_write.erase(blob_to_write.begin(), blob_to_write.begin() + bytes_written);
+                data->encoded_blobs.push_front(blob_to_write);
+            }
+        } while (bytes_written == bytes_to_write && data->encoded_blobs.empty() == false);
+
+        //printf("!!! blobs left: %d !!!\n", data->encoded_blobs.size());
+
+        return HEVC_DEC_OK;
+    }
+}
+
+hevc_dec_status_t read_pic_from_ffmpeg(hevc_dec_ffmpeg_data_t* data)
+{
+    size_t bytes_ready_to_read = 0;
+    size_t bytes_read = 0;
+    piping_status_t status;
+    data->piping_mgr.pipeDataReady(data->out_pipe_id, bytes_ready_to_read);
+
+    if (bytes_ready_to_read >= data->plane_size[0] + data->plane_size[1] + data->plane_size[2])
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            status = data->piping_mgr.readFromPipe(data->out_pipe_id, data->decoded_picture.plane[i], data->plane_size[i], bytes_read);
+            if ((status != PIPE_MGR_OK && status != PIPE_MGR_PIPE_CLOSED) || bytes_read != data->plane_size[i])
+            {
+                data->msg = "output pipe error " + std::to_string(status) + ".";
+                data->piping_error = true;
+                return HEVC_DEC_ERROR;
+            }
+        }
+        return HEVC_DEC_OK;
+    }
+    else
+    {
+        return HEVC_DEC_PICTURE_NOT_READY;
+    }
+}
+
+static void
+escape_backslashes(std::string& str)
+{
+    size_t index = 0;
+    for(;;)
+    {
+        index = str.find("\\", index);
+        if (index == std::string::npos) break;
+
+        str.replace(index, 1, "\\\\");
+
+        index += 2;
+    }
 }
 
 bool
@@ -383,17 +303,52 @@ write_cfg_file(hevc_dec_ffmpeg_data_t* data, const std::string& file)
     std::ofstream cfg_file(file);
     if (cfg_file.is_open())
     {
-        cfg_file << "output_bitdepth=" << data->output_bitdepth << "\n";
-        cfg_file << "width=" << data->width << "\n";
-        cfg_file << "height=" << data->height << "\n";
-        cfg_file << "input_file=\"" << data->in_pipe.getPath() << "\"\n";
-        cfg_file << "output_file=\"" << data->out_pipe.getPath() << "\"\n";
-        cfg_file << "ffmpeg_bin=\"" << data->ffmpeg_bin << "\"\n";
+        cfg_file << "{\n";
+        cfg_file << "    \"plugin_config\": {\n";
+        cfg_file << "        \"output_bitdepth\": \""   << data->output_bitdepth                    << "\",\n";
+        cfg_file << "        \"width\": \""             << data->width                              << "\",\n";
+        cfg_file << "        \"height\": \""            << data->height                             << "\",\n";
+        escape_backslashes(data->in_pipe_path);
+        cfg_file << "        \"input_file\": \""        << "\\\"" << data->in_pipe_path   << "\\\"" << "\",\n";
+        escape_backslashes(data->out_pipe_path);
+        cfg_file << "        \"output_file\": \""       << "\\\"" << data->out_pipe_path  << "\\\"" << "\",\n";
+        escape_backslashes(data->ffmpeg_bin);
+        cfg_file << "        \"ffmpeg_bin\": \""        << "\\\"" << data->ffmpeg_bin     << "\\\"" << "\"\n";
+        cfg_file << "    }\n";
+        cfg_file << "}\n";
         cfg_file.close();
         return true;
     }
     else
     {
         return false;
+    }
+}
+
+bool
+strip_header(std::string& cmd)
+{
+    std::string header = "FFMPEG DECODING CMD: ";
+    if( header != cmd &&
+        header.size() < cmd.size() &&
+        cmd.substr(0, header.size()) == header)
+    {
+        cmd = cmd.substr(header.size(), cmd.size());
+        return true;
+    }
+
+    return false;
+}
+
+void
+strip_newline(std::string& str)
+{
+    size_t index = 0;
+    for(;;)
+    {
+         index = str.find("\n", index);
+         if (index == std::string::npos) break;
+
+         str.replace(index, 1, "");
     }
 }

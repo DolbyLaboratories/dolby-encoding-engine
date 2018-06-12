@@ -37,8 +37,10 @@
 #include <mutex>
 #include "hevc_enc_ffmpeg_utils.h"
 
-#define READ_BUFFER_SIZE 1024
 #define AUD_NAL_UNIT_TYPE 35
+
+#define PIPE_BUFFER_SIZE 1024 * 1024 * 64 // 64MB of buffer is enough to store an UHD 444 10bit frame
+#define PIPE_TIMEOUT 600000
 
 static
 std::map<std::string, int> color_primaries_map = {
@@ -68,18 +70,6 @@ std::map<std::string, int> matrix_coefficients_map = {
     { "bt_2020", 9 },
 };
 
-BufferBlob::BufferBlob(void* data_to_copy, size_t size)
-{
-    data = new char[size];
-    data_size = size;
-    memcpy(data, data_to_copy, size);
-}
-
-BufferBlob::~BufferBlob()
-{
-    delete[] data;
-}
-
 void
 init_defaults(hevc_enc_ffmpeg_t* state)
 {
@@ -91,6 +81,8 @@ init_defaults(hevc_enc_ffmpeg_t* state)
     state->data->range = "full";
     state->data->pass_num = 0;
     state->data->data_rate = 15000;
+    state->data->max_vbv_data_rate = 15000;
+    state->data->vbv_buffer_size = 30000;
     state->data->max_output_data = 0;
 
     state->data->light_level_information_sei_present = false;
@@ -127,163 +119,41 @@ init_defaults(hevc_enc_ffmpeg_t* state)
     state->data->interpreter = "python";
 #endif
     state->data->cmd_gen = "";
+    state->data->user_params_file = "";
 
-    state->data->stop_writing_thread = false;
-    state->data->stop_reading_thread = false;
-    state->data->force_stop_writing_thread = false;
-    state->data->force_stop_reading_thread = false;
+    state->data->kill_ffmpeg = false;
+    state->data->ffmpeg_running = false;
+    state->data->piping_error = false;
 
     state->data->ffmpeg_ret_code = 0;
+
+    state->data->piping_mgr.setTimeout(PIPE_TIMEOUT);
+    state->data->piping_mgr.setMaxbuf(PIPE_BUFFER_SIZE);
 }
 
-std::string
-run_cmd_get_output(std::string cmd)
+inline std::string& rtrim(std::string& s, const char* t = " \t\n\r\f\v")
 {
-#ifdef WIN32
-    // wrap command in extra quotations to ensure windows calls it properly
-    cmd = "\"" + cmd + "\"";
-#endif
-
-    char buffer[READ_BUFFER_SIZE];
-    std::string result;
-#ifdef WIN32
-    std::shared_ptr<FILE> pipe(_popen(cmd.c_str(), "r"), _pclose);
-#else
-    std::shared_ptr<FILE> pipe(popen(cmd.c_str(), "r"), pclose);
-#endif
-    if (!pipe)
-    {
-        return "";
-    }
-    while (!feof(pipe.get()))
-    {
-        if (fgets(buffer, READ_BUFFER_SIZE, pipe.get()) != NULL)
-            result += buffer;
-    }
-    return result;
-}
-
-
-void
-check_ffmpeg_status(hevc_enc_ffmpeg_data_t* data)
-{
-    data->check_mutex.lock();
-    if (data->ffmpeg_ret_code)
-    {
-        data->force_stop_reading_thread = true;
-        data->force_stop_writing_thread = true;
-    }
-    data->check_mutex.unlock();
+    s.erase(s.find_last_not_of(t) + 1);
+    return s;
 }
 
 void
 run_cmd_thread_func(std::string cmd, hevc_enc_ffmpeg_data_t* encoding_data)
 {
-#ifdef WIN32
-    // wrap command in extra quotations to ensure windows calls it properly
-    cmd = "\"" + cmd + "\"";
-#endif
-
-    int ret_code = system(cmd.c_str());
+    int ret_code = 0;
+    systemWithKillswitch(cmd, ret_code, encoding_data->kill_ffmpeg);
     encoding_data->ffmpeg_ret_code = ret_code;
-    check_ffmpeg_status(encoding_data);
+    encoding_data->ffmpeg_running = false;
 }
 
-void
-writer_thread_func(hevc_enc_ffmpeg_data_t* encoding_data)
+void 
+clear_nalu_buffer(hevc_enc_ffmpeg_data_t* data)
 {
-    if (encoding_data->in_pipe.connectPipe() != 0)
+    for (unsigned int i = 0; i < data->nalus.size(); i++)
     {
-        return;
+        free(data->nalus[i].payload);
     }
-
-    while (encoding_data->stop_writing_thread == false || encoding_data->in_buffer.size() > 0)
-    {
-        check_ffmpeg_status(encoding_data);
-        if (encoding_data->force_stop_writing_thread)
-        {
-            break;
-        }
-
-        encoding_data->in_buffer_mutex.lock();
-        if (encoding_data->in_buffer.empty())
-        {
-            encoding_data->in_buffer_mutex.unlock();
-            continue;
-        }
-
-        BufferBlob* front = encoding_data->in_buffer.front();
-        encoding_data->in_buffer.pop_front();
-        encoding_data->in_buffer_mutex.unlock();
-
-        char* data_to_write = front->data;
-        size_t data_size = front->data_size;
-        size_t left_to_write = data_size;
-
-        while (left_to_write > 0)
-        {
-            check_ffmpeg_status(encoding_data);
-            size_t bytes_written = 0;
-            if (encoding_data->in_pipe.writeToPipe(data_to_write, left_to_write, &bytes_written) != 0)
-            {
-                // error writing to pipe
-                bytes_written = 0;
-                encoding_data->force_stop_writing_thread = true;
-            }
-
-            if (bytes_written > left_to_write)
-            {
-                encoding_data->force_stop_writing_thread = true;
-                bytes_written = 0;
-            }
-
-            left_to_write -= bytes_written;
-            data_to_write += bytes_written;
-            check_ffmpeg_status(encoding_data);
-
-            if (encoding_data->force_stop_writing_thread) break;
-        }
-
-        delete front;
-    }
-
-    encoding_data->in_pipe.closePipe();
-}
-
-void
-reader_thread_func(hevc_enc_ffmpeg_data_t* encoding_data)
-{
-    if (encoding_data->out_pipe.connectPipe() != 0)
-    {
-        return;
-    }
-
-    size_t last_read_size = 0;
-    while (encoding_data->stop_reading_thread == false || last_read_size > 0)
-    {
-        check_ffmpeg_status(encoding_data);
-        if (encoding_data->force_stop_reading_thread)
-        {
-            break;
-        }
-
-        char read_data[READ_BUFFER_SIZE];
-        if (encoding_data->out_pipe.readFromPipe(read_data, READ_BUFFER_SIZE, &last_read_size) != 0)
-        {
-            // error reading from pipe
-            last_read_size = 0;
-            encoding_data->stop_reading_thread = true;
-        }
-        check_ffmpeg_status(encoding_data);
-        if (last_read_size > 0)
-        {
-            encoding_data->out_buffer_mutex.lock();
-            encoding_data->out_buffer.push_back(new BufferBlob(read_data, last_read_size));
-            encoding_data->out_buffer_mutex.unlock();
-        }
-    }
-
-    encoding_data->out_pipe.closePipe();
+    data->nalus.clear();
 }
 
 bool
@@ -461,6 +331,10 @@ parse_init_params
         {
             state->data->cmd_gen = value;
         }
+        else if ("user_params_file" == name)
+        {
+            state->data->user_params_file = value;
+        }
         else if ("multi_pass" == name)
         {
             if (value != "off"
@@ -588,7 +462,7 @@ parse_init_params
                 continue;
             }
             state->data->color_description_present = true;
-            state->data->color_primaries = value;
+            state->data->color_primaries = std::to_string((*it).second);
         }
         else if ("transfer_characteristics" == name)
         {
@@ -599,7 +473,7 @@ parse_init_params
                 continue;
             }
             state->data->color_description_present = true;
-            state->data->transfer_characteristics = value;
+            state->data->transfer_characteristics = std::to_string((*it).second);
         }
         else if ("matrix_coefficients" == name)
         {
@@ -610,7 +484,7 @@ parse_init_params
                 continue;
             }
             state->data->color_description_present = true;
-            state->data->matrix_coefficients = value;
+            state->data->matrix_coefficients = std::to_string((*it).second);
         }
         // generate_mastering_display_color_volume_sei
         else if ("mastering_display_sei_x1" == name)
@@ -805,44 +679,74 @@ parse_init_params
     return state->data->msg.empty();
 }
 
+static void
+escape_backslashes(std::string& str)
+{
+    size_t index = 0;
+    for(;;)
+    {
+         index = str.find("\\", index);
+         if (index == std::string::npos) break;
+
+         str.replace(index, 1, "\\\\");
+
+         index += 2;
+    }
+}
+
 bool
 write_cfg_file(hevc_enc_ffmpeg_data_t* data, const std::string& file)
 {
     std::ofstream cfg_file(file);
     if (cfg_file.is_open())
     {
-        cfg_file << "bit_depth="                        << data->bit_depth                      << "\n";
-        cfg_file << "width="                            << data->width                          << "\n";
-        cfg_file << "height="                           << data->height                         << "\n";
-        cfg_file << "color_space="                      << data->color_space                    << "\n";
-        cfg_file << "frame_rate="                       << fps_to_num_denom(data->frame_rate)   << "\n";
-        cfg_file << "data_rate="                        << data->data_rate                      << "\n";
-        cfg_file << "max_vbv_data_rate="                << data->max_vbv_data_rate              << "\n";
-        cfg_file << "vbv_buffer_size="                  << data->vbv_buffer_size                << "\n";
-        cfg_file << "range="                            << data->range                          << "\n";
-        cfg_file << "multipass="                        << data->multi_pass                     << "\n";
-        cfg_file << "stats_file="                       << data->stats_file                     << "\n";
-        cfg_file << "color_description_present="        << data->color_description_present      << "\n";
-        cfg_file << "color_primaries="                  << color_primaries_map.find(data->color_primaries)->second << "\n";
-        cfg_file << "transfer_characteristics="         << transfer_characteristics_map.find(data->transfer_characteristics)->second << "\n";
-        cfg_file << "matrix_coefficients="              << matrix_coefficients_map.find(data->matrix_coefficients)->second << "\n";
-        cfg_file << "mastering_display_sei_present="    << data->mastering_display_sei_present  << "\n";
-        cfg_file << "mastering_display_sei_x1="         << data->mastering_display_sei_x1       << "\n";
-        cfg_file << "mastering_display_sei_y1="         << data->mastering_display_sei_y1       << "\n";
-        cfg_file << "mastering_display_sei_x2="         << data->mastering_display_sei_x2       << "\n";
-        cfg_file << "mastering_display_sei_y2="         << data->mastering_display_sei_y2       << "\n";
-        cfg_file << "mastering_display_sei_x3="         << data->mastering_display_sei_x3       << "\n";
-        cfg_file << "mastering_display_sei_y3="         << data->mastering_display_sei_y3       << "\n";
-        cfg_file << "mastering_display_sei_wx="         << data->mastering_display_sei_wx       << "\n";
-        cfg_file << "mastering_display_sei_wy="         << data->mastering_display_sei_wy       << "\n";
-        cfg_file << "mastering_display_sei_max_lum="    << data->mastering_display_sei_max_lum  << "\n";
-        cfg_file << "mastering_display_sei_min_lum="    << data->mastering_display_sei_min_lum  << "\n";
-        cfg_file << "light_level_information_sei_present=" << data->light_level_information_sei_present << "\n";
-        cfg_file << "light_level_max_content="          << data->light_level_max_content        << "\n";
-        cfg_file << "light_level_max_frame_average="    << data->light_level_max_frame_average  << "\n";
-        cfg_file << "input_file=\""                     << data->in_pipe.getPath()              << "\"\n";
-        cfg_file << "output_file=\""                    << data->out_pipe.getPath()             << "\"\n";
-        cfg_file << "ffmpeg_bin=\""                     << data->ffmpeg_bin                     << "\"\n";
+        cfg_file << "{\n";
+        cfg_file << "    \"plugin_config\": {\n";
+        cfg_file << "        \"bit_depth\": \""                             << data->bit_depth                              << "\",\n";
+        cfg_file << "        \"width\": \""                                 << data->width                                  << "\",\n";
+        cfg_file << "        \"height\": \""                                << data->height                                 << "\",\n";
+        escape_backslashes(data->color_space);
+        cfg_file << "        \"color_space\": \""                           << data->color_space                            << "\",\n";
+        escape_backslashes(data->frame_rate);
+        cfg_file << "        \"frame_rate\": \""                            << fps_to_num_denom(data->frame_rate)           << "\",\n";
+        cfg_file << "        \"data_rate\": \""                             << data->data_rate                              << "\",\n";
+        cfg_file << "        \"max_vbv_data_rate\": \""                     << data->vbv_buffer_size                        << "\",\n";
+        cfg_file << "        \"vbv_buffer_size\": \""                       << data->vbv_buffer_size                        << "\",\n";
+        escape_backslashes(data->range);
+        cfg_file << "        \"range\": \""                                 << data->range                                  << "\",\n";
+        escape_backslashes(data->multi_pass);
+        cfg_file << "        \"multipass\": \""                             << data->multi_pass                             << "\",\n";
+        escape_backslashes(data->stats_file);
+        cfg_file << "        \"stats_file\": \""                            << "\\\"" << data->stats_file << "\\\""         << "\",\n";
+        cfg_file << "        \"color_description_present\": \""             << data->color_description_present              << "\",\n";
+        escape_backslashes(data->color_primaries);
+        cfg_file << "        \"color_primaries\": \""                       << data->color_primaries                        << "\",\n";
+        escape_backslashes(data->transfer_characteristics);
+        cfg_file << "        \"transfer_characteristics\": \""              << data->transfer_characteristics               << "\",\n";
+        escape_backslashes(data->matrix_coefficients);
+        cfg_file << "        \"matrix_coefficients\": \""                   << data->matrix_coefficients                    << "\",\n";
+        cfg_file << "        \"mastering_display_sei_present\": \""         << data->mastering_display_sei_present          << "\",\n";
+        cfg_file << "        \"mastering_display_sei_x1\": \""              << data->mastering_display_sei_x1               << "\",\n";
+        cfg_file << "        \"mastering_display_sei_y1\": \""              << data->mastering_display_sei_y1               << "\",\n";
+        cfg_file << "        \"mastering_display_sei_x2\": \""              << data->mastering_display_sei_x2               << "\",\n";
+        cfg_file << "        \"mastering_display_sei_y2\": \""              << data->mastering_display_sei_y2               << "\",\n";
+        cfg_file << "        \"mastering_display_sei_x3\": \""              << data->mastering_display_sei_x3               << "\",\n";
+        cfg_file << "        \"mastering_display_sei_y3\": \""              << data->mastering_display_sei_y3               << "\",\n";
+        cfg_file << "        \"mastering_display_sei_wx\": \""              << data->mastering_display_sei_wx               << "\",\n";
+        cfg_file << "        \"mastering_display_sei_wy\": \""              << data->mastering_display_sei_wy               << "\",\n";
+        cfg_file << "        \"mastering_display_sei_max_lum\": \""         << data->mastering_display_sei_max_lum          << "\",\n";
+        cfg_file << "        \"mastering_display_sei_min_lum\": \""         << data->mastering_display_sei_min_lum          << "\",\n";
+        cfg_file << "        \"light_level_information_sei_present\": \""   << data->light_level_information_sei_present    << "\",\n";
+        cfg_file << "        \"light_level_max_content\": \""               << data->light_level_max_content                << "\",\n";
+        cfg_file << "        \"light_level_max_frame_average\": \""         << data->light_level_max_frame_average          << "\",\n";
+        escape_backslashes(data->in_pipe_path);
+        cfg_file << "        \"input_file\": \""                            << "\\\"" << data->in_pipe_path     << "\\\""   << "\",\n";
+        escape_backslashes(data->out_pipe_path);
+        cfg_file << "        \"output_file\": \""                           << "\\\"" << data->out_pipe_path    << "\\\""   << "\",\n";
+        escape_backslashes(data->ffmpeg_bin);
+        cfg_file << "        \"ffmpeg_bin\": \""                            << "\\\"" << data->ffmpeg_bin       << "\\\""   << "\"\n";
+        cfg_file << "    }\n";
+        cfg_file << "}\n";
         cfg_file.close();
         return true;
     }
@@ -860,4 +764,32 @@ fps_to_num_denom
     else if ("29.97" == fps) return "30000/1001";
     else if ("59.94" == fps) return "60000/1001";
     return std::to_string(std::stoi(fps))+"/1";
+}
+
+bool
+strip_header(std::string& cmd)
+{
+    std::string header = "FFMPEG ENCODING CMD: ";
+    if( header != cmd &&
+        header.size() < cmd.size() &&
+        cmd.substr(0, header.size()) == header)
+    {
+        cmd = cmd.substr(header.size(), cmd.size());
+        return true;
+    }
+
+    return false;
+}
+
+void
+strip_newline(std::string& str)
+{
+    size_t index = 0;
+    for(;;)
+    {
+         index = str.find("\n", index);
+         if (index == std::string::npos) break;
+
+         str.replace(index, 1, "");
+    }
 }

@@ -46,8 +46,7 @@ typedef enum
 /** @brief  Property read/write structure */
 typedef struct
 {
-    char*   name;           /**< Name of property */
-    size_t  max_name_sz;    /**< Size of buffer pointed by 'name' */
+    const char*   name;     /**< Name of property */
     char*   value;          /**< Value of property */
     size_t  max_value_sz;   /**< Size of buffer pointed by 'value' */     
 } property_t;

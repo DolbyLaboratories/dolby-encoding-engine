@@ -39,7 +39,7 @@
 extern "C" {
 #endif
 
-/* Framework sets/gets following properties. Each scaling plugin should handle them. 
+/* Framework sets/gets following properties. Each scaling plugin should handle them.
 *      PROPERTY : TYPE : VALUES : WHERE : COMMENT
 * -----------------------------------------------------------------------------
 *      format : enum : [rgb_16,yuv420_10] : scaling_flt_init : rgb_16 support is obligatory, yuv420_10 is required only if plugin will be used with multi-resolution encoding feature
@@ -49,6 +49,15 @@ extern "C" {
 *      target_height : integer : n/a : scaling_flt_init
 *      temp_file_num : integer : n/a : scaling_flt_get_property : accessed before scaling_flt_init, optional, should be used if plugin needs some temp files
 *      temp_file : string : n/a : scaling_flt_init : occurs multiple times, according to value retrieved from 'temp_file_num'
+*      source_offset_top : integer : n/a : scaling_flt_init : the active area padding for the top of the picture
+*      source_offset_bottom : integer : n/a : scaling_flt_init : the active area padding for the bottom of the picture
+*      source_offset_left : integer : n/a : scaling_flt_init : the active area padding for the left of the picture
+*      source_offset_right : integer : n/a : scaling_flt_init : the active area padding for the right of the picture
+*      allow_crop : bool : n/a : scaling_flt_init : when set to false the plugin should not do any cropping or padding
+*      get_target_offset_top : integer : n/a : scaling_flt_get_property : accessed to get the active area top offset size after scaling
+*      get_target_offset_bottom : integer : n/a : scaling_flt_get_property : accessed to get the active area bottom offset size after scaling
+*      get_target_offset_left : integer : n/a : scaling_flt_get_property : accessed to get the active area left offset size after scaling
+*      get_target_offset_right : integer : n/a : scaling_flt_get_property : accessed to get the active area right offset size after scaling
 *
 * Additionally, scaling_flt_init_params_t structure will contain all plugin-specific properties set via XML interface (ACCESS_TYPE_USER).
 *

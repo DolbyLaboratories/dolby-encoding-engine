@@ -36,33 +36,14 @@
 #include <thread>
 #include <memory>
 #include <mutex>
+#include <atomic>
+#include "SystemCalls.h"
+#include "PipingManager.h"
 #include "hevc_enc_api.h"
-#include "NamedPipe.h"
 
-#ifdef WIN32
-
-#include <windows.h>
-#define PIPE_BUFFER_SIZE 1024 * 1024
-
-#else
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-
-#endif
+#define READ_BUFFER_SIZE 1024
 
 #include <iostream>
-
-struct BufferBlob
-{
-    char*   data;
-    size_t  data_size;
-
-    BufferBlob(void* data_to_copy, size_t size);
-    ~BufferBlob();
-};
 
 typedef struct
 {
@@ -81,6 +62,7 @@ typedef struct
     std::vector<std::string>    command_line;
     std::vector<char>           output_bytestream;
     std::vector<hevc_enc_nal_t> nalus;
+    char                        output_temp_buf[READ_BUFFER_SIZE];
 
     bool                        light_level_information_sei_present;
     int                         light_level_max_content;
@@ -103,18 +85,7 @@ typedef struct
     int                         mastering_display_sei_max_lum;
     int                         mastering_display_sei_min_lum;
 
-    std::thread                 writer_thread;
-    std::thread                 reader_thread;
     std::thread                 ffmpeg_thread;
-    std::list<BufferBlob*>      in_buffer;
-    std::list<BufferBlob*>      out_buffer;
-    std::mutex                  in_buffer_mutex;
-    std::mutex                  out_buffer_mutex;
-    std::mutex                  check_mutex;
-    bool                        stop_writing_thread;
-    bool                        stop_reading_thread;
-    bool                        force_stop_writing_thread;
-    bool                        force_stop_reading_thread;
     int                         ffmpeg_ret_code;
 
     int                         max_pass_num;
@@ -126,9 +97,17 @@ typedef struct
     std::string                 ffmpeg_bin;
     std::string                 interpreter;
     std::string                 cmd_gen;
+    std::string                 user_params_file;
+    std::atomic_bool            kill_ffmpeg;
+    std::atomic_bool            ffmpeg_running;
 
-    NamedPipe                   in_pipe;
-    NamedPipe                   out_pipe;
+    std::string                 in_pipe_path;
+    std::string                 out_pipe_path;
+    PipingManager               piping_mgr;
+    int                         in_pipe_id;
+    int                         out_pipe_id;
+    bool                        piping_error;
+
 } hevc_enc_ffmpeg_data_t;
 
 typedef struct
@@ -143,20 +122,14 @@ bool get_aud_from_bytestream(std::vector<char> &bitstream, std::vector<hevc_enc_
 
 bool parse_init_params(hevc_enc_ffmpeg_t* state, const hevc_enc_init_params_t* init_params);
 
-void writer_thread_func(hevc_enc_ffmpeg_data_t* data);
-
-void reader_thread_func(hevc_enc_ffmpeg_data_t* data);
-
 void run_cmd_thread_func(std::string cmd, hevc_enc_ffmpeg_data_t* encoding_data);
-
-bool create_pipes(hevc_enc_ffmpeg_data_t* data);
-
-bool close_pipes(hevc_enc_ffmpeg_data_t* data);
 
 bool write_cfg_file(hevc_enc_ffmpeg_data_t* data, const std::string& file);
 
-std::string run_cmd_get_output(std::string cmd);
+void clear_nalu_buffer(hevc_enc_ffmpeg_data_t* data);
 
 std::string fps_to_num_denom(const std::string& fps);
 
-void check_ffmpeg_status(hevc_enc_ffmpeg_data_t* data);
+bool strip_header(std::string& cmd);
+
+void strip_newline(std::string& str);

@@ -176,7 +176,7 @@ get_config_msg
 
 int
 frametype_to_slicetype
-    (frame_type_t in_type);
+    (hevc_enc_frame_type_t in_type);
 
 bool
 filter_native_params

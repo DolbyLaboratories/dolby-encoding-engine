@@ -1,0 +1,28 @@
+{
+    "user_config": {
+        "x265": {
+            "preset": "slow",
+            "tune": "grain",
+            "open-gop": "False",
+            "keyint": "48",
+            "min-keyint": "48",
+            "scenecut": "0",
+            "scenecut-bias": "0",
+            "intra-refresh": "False",
+            "bframes": "4",
+            "rc-lookahead": "48",
+            "info": "False",
+            "frame_threads": "0",
+            "nr_inter": "400",
+            "nr_intra": "100",
+            "cbqpoffs": "0",
+            "crqpoffs": "3",
+            "min_cu_size": "8",
+            "ctu": "64",
+            "qg_size": "32",
+            "rc_grain": "True",
+            "level_idc": "0",
+            "psy_rd": "0"
+        }
+    }
+}

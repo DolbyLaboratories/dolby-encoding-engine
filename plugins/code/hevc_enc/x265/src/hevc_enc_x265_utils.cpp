@@ -125,29 +125,29 @@ get_matrix_coefficients_number(std::string matrix)
 }
 
 int
-frametype_to_slicetype(frame_type_t in_type)
+frametype_to_slicetype(hevc_enc_frame_type_t in_type)
 {
     int ret_val;
 
     switch (in_type)
     {
-    case FRAME_TYPE_IDR:
+    case HEVC_ENC_FRAME_TYPE_IDR:
         ret_val = X265_TYPE_IDR;
         break;
-    case FRAME_TYPE_I:
+    case HEVC_ENC_FRAME_TYPE_I:
         ret_val = X265_TYPE_I;
         break;
-    case FRAME_TYPE_P:
+    case HEVC_ENC_FRAME_TYPE_P:
         ret_val = X265_TYPE_P;
         break;
-    case FRAME_TYPE_B:
+    case HEVC_ENC_FRAME_TYPE_B:
         ret_val = X265_TYPE_B;
         break;
-    case FRAME_TYPE_BREF:
+    case HEVC_ENC_FRAME_TYPE_BREF:
         ret_val = X265_TYPE_BREF;
         break;
     default:
-    case FRAME_TYPE_AUTO:
+    case HEVC_ENC_FRAME_TYPE_AUTO:
         ret_val = X265_TYPE_AUTO;
         break;
     }

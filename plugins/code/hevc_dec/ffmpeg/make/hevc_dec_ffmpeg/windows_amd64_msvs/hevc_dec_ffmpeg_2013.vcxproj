@@ -42,7 +42,7 @@
 <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='release|x64'">false</LinkIncremental></PropertyGroup>
 <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
 <ClCompile>
-<AdditionalIncludeDirectories>..\..\..\..\..\common;..\..\..\src;..\..\..\..</AdditionalIncludeDirectories>
+<AdditionalIncludeDirectories>..\..\..\..\..\common\PipingManager;..\..\..\..\..\common\SystemCalls;..\..\..\..\..\common;..\..\..\src;..\..\..\..</AdditionalIncludeDirectories>
 <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
 <BufferSecurityCheck>true</BufferSecurityCheck>
 <CompileAs>Default</CompileAs>
@@ -72,7 +72,7 @@
 <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers></Link></ItemDefinitionGroup>
 <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
 <ClCompile>
-<AdditionalIncludeDirectories>..\..\..\..\..\common;..\..\..\src;..\..\..\..</AdditionalIncludeDirectories>
+<AdditionalIncludeDirectories>..\..\..\..\..\common\PipingManager;..\..\..\..\..\common\SystemCalls;..\..\..\..\..\common;..\..\..\src;..\..\..\..</AdditionalIncludeDirectories>
 <BasicRuntimeChecks>Default</BasicRuntimeChecks>
 <BufferSecurityCheck>false</BufferSecurityCheck>
 <CompileAs>Default</CompileAs>
@@ -101,12 +101,14 @@
 <TargetMachine>MachineX64</TargetMachine>
 <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers></Link></ItemDefinitionGroup>
 <ItemGroup>
-<ClCompile Include="..\..\..\src\NamedPipe.cpp" />
+<ClCompile Include="..\..\..\..\..\common\PipingManager\PipingManager.cpp" />
+<ClCompile Include="..\..\..\..\..\common\SystemCalls\SystemCalls.cpp" />
 <ClCompile Include="..\..\..\src\hevc_dec_ffmpeg.cpp" />
 <ClCompile Include="..\..\..\src\hevc_dec_ffmpeg_utils.cpp" /></ItemGroup>
 <ItemGroup>
+<ClInclude Include="..\..\..\..\..\common\PipingManager\PipingManager.h" />
+<ClInclude Include="..\..\..\..\..\common\SystemCalls\SystemCalls.h" />
 <ClInclude Include="..\..\..\..\..\common\common.h" />
-<ClInclude Include="..\..\..\src\NamedPipe.h" />
 <ClInclude Include="..\..\..\src\hevc_dec_ffmpeg_utils.h" />
 <ClInclude Include="..\..\..\..\hevc_dec_api.h" /></ItemGroup>
 <ItemGroup />

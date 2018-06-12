@@ -5,6 +5,10 @@
 <UniqueIdentifier>{cf162038-ec02-32ca-94b6-8c927f3cfc25}</UniqueIdentifier></Filter>
 <Filter Include="code\common">
 <UniqueIdentifier>{58e986a2-7e7e-314b-93a5-53c87fc426e3}</UniqueIdentifier></Filter>
+<Filter Include="code\common\PipingManager">
+<UniqueIdentifier>{09200381-5452-3dfa-9679-47d56f5ffd5d}</UniqueIdentifier></Filter>
+<Filter Include="code\common\SystemCalls">
+<UniqueIdentifier>{ef7ead36-d902-3706-8175-e02750a15327}</UniqueIdentifier></Filter>
 <Filter Include="code\hevc_enc">
 <UniqueIdentifier>{0ee6e19f-aa96-38d6-997f-98e0dbc14753}</UniqueIdentifier></Filter>
 <Filter Include="code\hevc_enc\ffmpeg">
@@ -12,17 +16,21 @@
 <Filter Include="code\hevc_enc\ffmpeg\src">
 <UniqueIdentifier>{f42f128b-1e8c-3153-b584-f8da2d07e1a1}</UniqueIdentifier></Filter></ItemGroup>
 <ItemGroup>
-<ClCompile Include="..\..\..\src\NamedPipe.cpp">
-<Filter>code\hevc_enc\ffmpeg\src</Filter></ClCompile>
+<ClCompile Include="..\..\..\..\..\common\PipingManager\PipingManager.cpp">
+<Filter>code\common\PipingManager</Filter></ClCompile>
+<ClCompile Include="..\..\..\..\..\common\SystemCalls\SystemCalls.cpp">
+<Filter>code\common\SystemCalls</Filter></ClCompile>
 <ClCompile Include="..\..\..\src\hevc_enc_ffmpeg.cpp">
 <Filter>code\hevc_enc\ffmpeg\src</Filter></ClCompile>
 <ClCompile Include="..\..\..\src\hevc_enc_ffmpeg_utils.cpp">
 <Filter>code\hevc_enc\ffmpeg\src</Filter></ClCompile></ItemGroup>
 <ItemGroup>
+<ClInclude Include="..\..\..\..\..\common\PipingManager\PipingManager.h">
+<Filter>code\common\PipingManager</Filter></ClInclude>
+<ClInclude Include="..\..\..\..\..\common\SystemCalls\SystemCalls.h">
+<Filter>code\common\SystemCalls</Filter></ClInclude>
 <ClInclude Include="..\..\..\..\..\common\common.h">
 <Filter>code\common</Filter></ClInclude>
-<ClInclude Include="..\..\..\src\NamedPipe.h">
-<Filter>code\hevc_enc\ffmpeg\src</Filter></ClInclude>
 <ClInclude Include="..\..\..\src\hevc_enc_ffmpeg_utils.h">
 <Filter>code\hevc_enc\ffmpeg\src</Filter></ClInclude>
 <ClInclude Include="..\..\..\..\hevc_enc_api.h">

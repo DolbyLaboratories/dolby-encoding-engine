@@ -34,7 +34,7 @@
 #include "hevc_enc_ffmpeg_utils.h"
 #include <fstream>
 
-#define MAX_BUFFERED_PLANES 12
+#define MAX_BUFFERED_BYTESTREAM 1024 * 1024 * 64 // na NAL should ever be larger than 64MB which is enough to store an UHD 444 10bit frame
 
 static
 const
@@ -82,6 +82,7 @@ property_info_t hevc_enc_ffmpeg_info[] =
     , { "ffmpeg_bin", PROPERTY_TYPE_STRING, "Path to ffmpeg binary.", "ffmpeg", NULL, 0, 1, ACCESS_TYPE_USER }
     , { "command_line", PROPERTY_TYPE_STRING, "Command line to be inserted into the ffmpeg command between the input and output specification.", NULL, NULL, 0, 100, ACCESS_TYPE_USER }
     , { "cmd_gen", PROPERTY_TYPE_STRING, "Path to a script that can generate an ffmpeg command line using the config file as input.", NULL, NULL, 0, 1, ACCESS_TYPE_USER }
+    , { "user_params_file", PROPERTY_TYPE_STRING, "Path to a file with user's parameters. Path is passed to cmd gen script. If script provided with DEE is used it must be JSON database with following keys \"user_config\": \"x265\". For details see provided examples.", NULL, NULL, 0, 1, ACCESS_TYPE_USER }
     , { "interpreter", PROPERTY_TYPE_STRING, "Path to binary used to read the cmd_gen script.", "python", NULL, 0, 1, ACCESS_TYPE_USER }
 };
 
@@ -128,12 +129,21 @@ ffmpeg_init
     }
 
 
-    if (state->data->in_pipe.createPipe(state->data->temp_file[0], true, false) == -1)
+    state->data->in_pipe_id = state->data->piping_mgr.createNamedPipe(state->data->temp_file[0], INPUT_PIPE);
+    state->data->out_pipe_id = state->data->piping_mgr.createNamedPipe(state->data->temp_file[1], OUTPUT_PIPE);
+
+    if (state->data->in_pipe_id == -1 || state->data->out_pipe_id == -1)
     {
         state->data->msg = "Creating pipes failed.";
         return STATUS_ERROR;
     }
-    if (state->data->out_pipe.createPipe(state->data->temp_file[1], false, true) == -1)
+
+    if (state->data->piping_mgr.getPipePath(state->data->in_pipe_id, state->data->in_pipe_path) != PIPE_MGR_OK)
+    {
+        state->data->msg = "Creating pipes failed.";
+        return STATUS_ERROR;
+    }
+    if (state->data->piping_mgr.getPipePath(state->data->out_pipe_id, state->data->out_pipe_path) != PIPE_MGR_OK)
     {
         state->data->msg = "Creating pipes failed.";
         return STATUS_ERROR;
@@ -163,7 +173,7 @@ ffmpeg_init
 
         // INPUT
         ffmpeg_call += " -i ";
-        ffmpeg_call += "\"" + state->data->in_pipe.getPath() + "\"";
+        ffmpeg_call += "\"" + state->data->in_pipe_path + "\"";
 
         // user specified commandline
         ffmpeg_call += " " + state->data->command_line[state->data->pass_num];
@@ -176,7 +186,7 @@ ffmpeg_init
 
         // OUTPUT
         ffmpeg_call += " -f hevc ";
-        ffmpeg_call += "\"" + state->data->out_pipe.getPath() + "\"";
+        ffmpeg_call += "\"" + state->data->out_pipe_path + "\"";
     }
     else
     {
@@ -192,26 +202,35 @@ ffmpeg_init
             return STATUS_ERROR;
         }
 
-        std::string generate_cmd_call = "\"" + state->data->interpreter + "\" \"" + state->data->cmd_gen + "\" \"" + state->data->temp_file[2] + "\"";
-        ffmpeg_call = run_cmd_get_output(generate_cmd_call);
+        if (state->data->user_params_file.empty())
+        {
+            state->data->msg = "No user parameters file provided. Use \'user_params_file\' XML parameter.";
+            return STATUS_ERROR;
+        }
 
-        if (ffmpeg_call.empty())
+        std::string generate_cmd_call = "\"" + state->data->interpreter + "\" \"" + state->data->cmd_gen + "\" \"" + state->data->temp_file[2] + "\" \"" + state->data->user_params_file + "\"";
+
+        if (systemWithStdout(generate_cmd_call, ffmpeg_call) != SYSCALL_STATUS_OK)
         {
             state->data->msg = "Error building ffmpeg command line by calling: " + generate_cmd_call;
             return STATUS_ERROR;
         }
     }
 
+    strip_newline(ffmpeg_call);
+
+    if(!strip_header(ffmpeg_call))
+    {
+        state->data->msg = "cmd_gen script error: " + ffmpeg_call;
+        return STATUS_ERROR;
+    }
+
     if (state->data->msg.empty())
     {
-        // LAUNCH THREADS //
-
+        // LAUNCH THREAD //
+        state->data->ffmpeg_running = true;
         state->data->ffmpeg_thread = std::thread(run_cmd_thread_func, ffmpeg_call, state->data);
-        state->data->writer_thread = std::thread(writer_thread_func, state->data);
-        state->data->reader_thread = std::thread(reader_thread_func, state->data);
-
         state->data->msg = "FFMPEG launched with the following command line: " + ffmpeg_call;
-
         return STATUS_OK;
     }
     else
@@ -228,36 +247,22 @@ ffmpeg_close
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
 
-    for (unsigned int i = 0; i < state->data->nalus.size(); i++)
-    {
-        free(state->data->nalus[i].payload);
-    }
-    state->data->nalus.clear();
+    clear_nalu_buffer(state->data);
 
     bool plugin_failed = false;
-    if (state->data->ffmpeg_ret_code != 0)
+    
+    if (state->data->piping_error)
     {
-        state->data->force_stop_writing_thread = true;
-        state->data->force_stop_reading_thread = true;
-        plugin_failed = true;
-    }
-
-    if (state->data->writer_thread.joinable())
-    {
-        state->data->writer_thread.join();
+        state->data->kill_ffmpeg = true;
     }
     if (state->data->ffmpeg_thread.joinable())
     {
         state->data->ffmpeg_thread.join();
     }
-    if (state->data->reader_thread.joinable())
-    {
-        state->data->reader_thread.join();
-    }
-
-    delete state->data;
 
     if (state->data->ffmpeg_ret_code != 0) plugin_failed = true;
+
+    delete state->data;
     return plugin_failed ? STATUS_ERROR: STATUS_OK;
 }
 
@@ -271,12 +276,11 @@ ffmpeg_process
 )
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
+    piping_status_t status;
 
     if (state->data->ffmpeg_ret_code != 0)
     {
-        state->data->msg = "ffmpeg runtime error.";
-        state->data->force_stop_writing_thread = true;
-        state->data->force_stop_reading_thread = true;
+        state->data->msg = "FFMPEG runtime error.";
         return STATUS_ERROR;
     }
 
@@ -285,60 +289,72 @@ ffmpeg_process
         hevc_enc_picture_t current_pic = picture[i];
 
         int byte_num = current_pic.bit_depth == 8 ? 1 : 2;
-        size_t plane_0_size = current_pic.width * current_pic.height * byte_num;
-        size_t plane_1_size = plane_0_size;
-        size_t plane_2_size = plane_0_size;
+        size_t plane_size[3];
+        plane_size[0] = current_pic.width * current_pic.height * byte_num;
+        plane_size[1] = plane_size[0];
+        plane_size[2] = plane_size[0];
 
-        if (current_pic.color_space == COLOR_SPACE_I420)
+        if (current_pic.color_space == HEVC_ENC_COLOR_SPACE_I420)
         {
-            plane_1_size /= 4;
-            plane_2_size /= 4;
+            plane_size[1] /= 4;
+            plane_size[2] /= 4;
         }
-        else if (current_pic.color_space == COLOR_SPACE_I422)
+        else if (current_pic.color_space == HEVC_ENC_COLOR_SPACE_I422)
         {
-            plane_1_size /= 2;
-            plane_2_size /= 2;
+            plane_size[1] /= 2;
+            plane_size[2] /= 2;
         }
-        else if (current_pic.color_space != COLOR_SPACE_I444)
+        else if (current_pic.color_space != HEVC_ENC_COLOR_SPACE_I444)
         {
-            state->data->force_stop_writing_thread = true;
-            state->data->force_stop_reading_thread = true;
             return STATUS_ERROR;
         }
 
-        bool picture_written_flag = false;
-        while (state->data->ffmpeg_thread.joinable() && picture_written_flag == false)
+        for (int i = 0; i < 3; i++)
         {
-            if (state->data->ffmpeg_ret_code != 0) break;
-            state->data->in_buffer_mutex.lock();
-            if (state->data->in_buffer.size() < MAX_BUFFERED_PLANES)
+            bool plane_written_flag = false;
+            size_t plane_data_written = 0;
+            while (state->data->ffmpeg_running && plane_written_flag == false)
             {
-                state->data->in_buffer.push_back(new BufferBlob(current_pic.plane[0], plane_0_size));
-                state->data->in_buffer.push_back(new BufferBlob(current_pic.plane[1], plane_1_size));
-                state->data->in_buffer.push_back(new BufferBlob(current_pic.plane[2], plane_2_size));
-                picture_written_flag = true;
+                if (state->data->ffmpeg_ret_code != 0) break;
+
+                size_t bytes_written = 0;
+                status = state->data->piping_mgr.writeToPipe(state->data->in_pipe_id, (void*)((char*)current_pic.plane[i] + plane_data_written), plane_size[i] - plane_data_written, bytes_written);
+                plane_data_written += bytes_written;
+                if (status != PIPE_MGR_OK)
+                {
+					state->data->msg = "Input pipe error " + std::to_string(status) + ".";
+                    state->data->piping_error = true;
+                    return STATUS_ERROR;
+                }
+
+                if (plane_data_written == plane_size[i])
+                {
+                    plane_written_flag = true;
+                }
             }
-            state->data->in_buffer_mutex.unlock();
         }
     }
 
-    state->data->out_buffer_mutex.lock();
-    while (state->data->out_buffer.size() > 0)
+    size_t bytes_read = 0;
+    do
     {
-        if (state->data->ffmpeg_ret_code != 0) break;
-        BufferBlob* out_blob = state->data->out_buffer.front();
-        state->data->output_bytestream.insert(state->data->output_bytestream.end(), out_blob->data, out_blob->data + out_blob->data_size);
-        delete out_blob;
-        state->data->out_buffer.pop_front();
-    }
-    state->data->out_buffer_mutex.unlock();
+        if (state->data->output_bytestream.size() >= MAX_BUFFERED_BYTESTREAM) break;
 
-    for (unsigned int i = 0; i < state->data->nalus.size(); i++)
-    {
-        free(state->data->nalus[i].payload);
-    }
-    state->data->nalus.clear();
+        status = state->data->piping_mgr.readFromPipe(state->data->out_pipe_id, state->data->output_temp_buf, READ_BUFFER_SIZE, bytes_read);
+        if (status != PIPE_MGR_OK && status != PIPE_MGR_PIPE_CLOSED)
+        {
+            state->data->msg = "Output pipe error " + std::to_string(status) + ".";
+            state->data->piping_error = true;
+            return STATUS_ERROR;
+        }
+        if (bytes_read > 0)
+        {
+            state->data->output_bytestream.insert(state->data->output_bytestream.end(), state->data->output_temp_buf, state->data->output_temp_buf + bytes_read);
+        }
+    } 
+    while (bytes_read > 0);
 
+    clear_nalu_buffer(state->data);
     if (get_aud_from_bytestream(state->data->output_bytestream, state->data->nalus, false, state->data->max_output_data) == true)
     {
         output->nal = state->data->nalus.data();
@@ -362,60 +378,43 @@ ffmpeg_flush
 )
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
+    piping_status_t status;
 
-    if (state->data->ffmpeg_ret_code != 0)
-    {
-        state->data->msg = "ffmpeg runtime error.";
-        state->data->force_stop_writing_thread = true;
-        state->data->force_stop_reading_thread = true;
-        *is_empty = 1;
-        return STATUS_ERROR;
-    }
-
-    state->data->stop_writing_thread = true;
-    if (state->data->writer_thread.joinable())
-    {
-        state->data->writer_thread.join();
-    }
-
-    if (state->data->ffmpeg_thread.joinable())
-    {
-        state->data->ffmpeg_thread.join();
-    }
-
-    state->data->stop_reading_thread = true;
-    if (state->data->reader_thread.joinable())
-    {
-        state->data->reader_thread.join();
-    }
-
-    if (state->data->ffmpeg_ret_code != 0)
-    {
-        state->data->msg = "ffmpeg runtime error.";
-        *is_empty = 1;
-        return STATUS_ERROR;
-    }
+    // close input pipe to let FFMPEG know we finished sending input
+    state->data->piping_mgr.closePipe(state->data->in_pipe_id);
 
     *is_empty = 0;
 
-    while (state->data->out_buffer.size() > 0)
+    size_t bytes_read = 0;
+    do
     {
-        BufferBlob* out_blob = state->data->out_buffer.front();
-        state->data->output_bytestream.insert(state->data->output_bytestream.end(), out_blob->data, out_blob->data + out_blob->data_size);
-        delete out_blob;
-        state->data->out_buffer.pop_front();
-    }
+        if (state->data->output_bytestream.size() >= MAX_BUFFERED_BYTESTREAM) break;
 
-    for (unsigned int i = 0; i < state->data->nalus.size(); i++)
-    {
-        free(state->data->nalus[i].payload);
-    }
-    state->data->nalus.clear();
+        status = state->data->piping_mgr.readFromPipe(state->data->out_pipe_id, state->data->output_temp_buf, READ_BUFFER_SIZE, bytes_read);
+        if (status != PIPE_MGR_OK && status != PIPE_MGR_PIPE_CLOSED)
+        {
+            state->data->msg = "output pipe error " + std::to_string(status) + ".";
+            state->data->piping_error = true;
+            return STATUS_ERROR;
+        }
+        if (bytes_read > 0)
+        {
+            state->data->output_bytestream.insert(state->data->output_bytestream.end(), state->data->output_temp_buf, state->data->output_temp_buf + bytes_read);
+        }
+    } 
+    while (bytes_read > 0);
 
+    clear_nalu_buffer(state->data);
     if (get_aud_from_bytestream(state->data->output_bytestream, state->data->nalus, true, state->data->max_output_data) == true)
     {
         output->nal = state->data->nalus.data();
         output->nal_num = state->data->nalus.size();
+    }
+    else if (state->data->ffmpeg_running)
+    {
+        output->nal = NULL;
+        output->nal_num = 0;
+        *is_empty = 0;
     }
     else
     {
@@ -424,7 +423,17 @@ ffmpeg_flush
         *is_empty = 1;
     }
 
-    return STATUS_OK;
+    if (state->data->ffmpeg_ret_code != 0)
+    {
+        state->data->msg = "FFMPEG runtime error.";
+        *is_empty = 1;
+        return STATUS_ERROR;
+    }
+    else
+    {
+        return STATUS_OK;
+    }
+
 }
 
 static

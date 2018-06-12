@@ -32,30 +32,18 @@
 
 #include <string>
 #include <vector>
-#include <deque>
 #include <list>
 #include <thread>
-#include <memory>
-#include <mutex>
+#include <atomic>
 #include "hevc_dec_api.h"
-#include "NamedPipe.h"
-
-#define READ_BUFFER_SIZE 1024 * 1024
-
-struct BufferBlob
-{
-    char*   data;
-    size_t  data_size;
-
-    BufferBlob(const void* data_to_copy, size_t size);
-    ~BufferBlob();
-};
+#include "PipingManager.h"
 
 typedef struct
 {
     int                         output_bitdepth;
     int                         width;
     int                         height;
+    int                         byte_num;
     hevc_dec_color_space_t      chroma_format;
     hevc_dec_frame_rate_t       frame_rate;
     hevc_dec_frame_rate_t       frame_rate_ext;
@@ -64,29 +52,26 @@ typedef struct
     int                         matrix_coeffs;
     std::string                 msg;
 
-    std::deque<hevc_dec_picture_t> decoded_pictures;
-    size_t                      decoded_pictures_to_discard;
+    hevc_dec_picture_t              decoded_picture;
+    std::list<std::vector<char>>    encoded_blobs;
+    size_t                          plane_size[3];
 
-    std::thread                 writer_thread;
-    std::thread                 reader_thread;
     std::thread                 ffmpeg_thread;
-    std::list<BufferBlob*>      in_buffer;
-    std::list<BufferBlob*>      out_buffer;
-    std::mutex                  in_buffer_mutex;
-    std::mutex                  out_buffer_mutex;
-    bool                        stop_writing_thread;
-    bool                        stop_reading_thread;
-    bool                        force_stop_writing_thread;
-    bool                        force_stop_reading_thread;
     int                         ffmpeg_ret_code;
 
     std::vector<std::string>    temp_file;
     std::string                 ffmpeg_bin;
     std::string                 interpreter;
     std::string                 cmd_gen;
+    std::atomic_bool            kill_ffmpeg;
+    std::atomic_bool            ffmpeg_running;
 
-    NamedPipe                   in_pipe;
-    NamedPipe                   out_pipe;
+    std::string                 in_pipe_path;
+    std::string                 out_pipe_path;
+    PipingManager               piping_mgr;
+    int                         in_pipe_id;
+    int                         out_pipe_id;
+    bool                        piping_error;
 
     // Benchamrk
     unsigned long long missed_calls;
@@ -94,7 +79,9 @@ typedef struct
 
 } hevc_dec_ffmpeg_data_t;
 
-void remove_pictures(hevc_dec_ffmpeg_data_t* data);
+void init_picture_buffer(hevc_dec_ffmpeg_data_t* data);
+
+void clean_picture_buffer(hevc_dec_ffmpeg_data_t* data);
 
 hevc_dec_frame_rate_t string_to_fr(const std::string& str);
 
@@ -102,16 +89,14 @@ bool bin_exists(const std::string& bin, const std::string& arg);
 
 void run_cmd_thread_func(std::string cmd, hevc_dec_ffmpeg_data_t* decoding_data);
 
-void writer_thread_func(hevc_dec_ffmpeg_data_t* decoding_data);
+hevc_dec_status_t read_pic_from_ffmpeg(hevc_dec_ffmpeg_data_t* data);
 
-void reader_thread_func(hevc_dec_ffmpeg_data_t* decoding_data);
+hevc_dec_status_t write_to_ffmpeg(hevc_dec_ffmpeg_data_t* data, void* stream_buffer, const size_t buffer_size);
 
-int extract_bytes(std::list<BufferBlob*>& blob_list, size_t byte_num, char* buffer);
+hevc_dec_status_t flush_to_ffmpeg(hevc_dec_ffmpeg_data_t* data);
 
-size_t get_buf_size(std::list<BufferBlob*>& blob_list);
+bool strip_header(std::string& cmd);
 
-int extract_pictures_from_buffer(hevc_dec_ffmpeg_data_t* data);
+void strip_newline(std::string& str);
 
 bool write_cfg_file(hevc_dec_ffmpeg_data_t* data, const std::string& file);
-
-std::string run_cmd_get_output(std::string cmd);
