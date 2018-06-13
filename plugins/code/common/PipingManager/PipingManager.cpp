@@ -1,3 +1,35 @@
+/*
+* BSD 3-Clause License
+*
+* Copyright (c) 2018, Dolby Laboratories
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+* * Redistributions of source code must retain the above copyright notice, this
+*   list of conditions and the following disclaimer.
+*
+* * Redistributions in binary form must reproduce the above copyright notice,
+*   this list of conditions and the following disclaimer in the documentation
+*   and/or other materials provided with the distribution.
+*
+* * Neither the name of the copyright holder nor the names of its
+*   contributors may be used to endorse or promote products derived from
+*   this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <thread>
 #include <chrono>
 #include <map>
@@ -13,7 +45,7 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h> 
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #endif
@@ -86,7 +118,7 @@ public:
     }
     int PopFront(char* buffer, size_t size)
     {
-        if (PeekFront(buffer, size) != 0) 
+        if (PeekFront(buffer, size) != 0)
             return -1;
         mStart = (mStart + size) % mSize;
         mFree += size;
@@ -94,7 +126,7 @@ public:
     }
     int PopFront(size_t size)
     {
-        if (size > Taken()) 
+        if (size > Taken())
             return -1;
         mStart = (mStart + size) % mSize;
         mFree += size;
@@ -156,7 +188,7 @@ int get_flag(pipe_type_t type)
     else if (type == OUTPUT_PIPE)
     {
         return O_RDONLY;
-	}
+    }
     else
     {
         return O_RDWR;
@@ -186,9 +218,9 @@ int pipe_write_func(PipeData* data)
     int bytes_written = write(data->mHandle, data->mTempBuf.data(), data_size);
     if (bytes_written < 0)
     {
-		if (errno != EAGAIN)
-			status = PIPE_MGR_WRITE_ERROR;
-		bytes_written = 0;
+        if (errno != EAGAIN)
+            status = PIPE_MGR_WRITE_ERROR;
+        bytes_written = 0;
     }
 #endif
 
@@ -212,7 +244,7 @@ static
 int pipe_read_func(PipeData* data)
 {
     piping_status_t status = PIPE_MGR_OK;
-	size_t outBufSize = data->mOutBuf.Free();
+    size_t outBufSize = data->mOutBuf.Free();
 
     if (outBufSize == 0) return 0;
 
@@ -232,9 +264,9 @@ int pipe_read_func(PipeData* data)
     int bytes_read = read(data->mHandle, data->mTempBuf.data(), outBufSize);
     if (bytes_read < 0)
     {
-		if (errno != EAGAIN)
-			status = PIPE_MGR_READ_ERROR;
-		bytes_read = 0;
+        if (errno != EAGAIN)
+            status = PIPE_MGR_READ_ERROR;
+        bytes_read = 0;
     }
 #endif
 
@@ -259,7 +291,7 @@ void pipe_thread_func(PipeData* data)
     data->mThreadRunning = true;
 
     // connect the pipe
-#ifdef WIN32  
+#ifdef WIN32
     if (ConnectNamedPipe(data->mHandle, NULL) == NULL)
     {
         DWORD last_error = GetLastError();
@@ -267,20 +299,20 @@ void pipe_thread_func(PipeData* data)
         data->mStatus = PIPE_MGR_CONNECT_ERROR;
     }
 #else
-	signal(SIGPIPE, SIG_IGN); // ignore sigpipe, we handle errors in another way
-	while ((data->mHandle = open(data->mName.c_str(), get_flag(data->mType) | O_NONBLOCK )) == -1)
-	{
-		if (errno != ENXIO) // ENXIO means the other end of the pipe is not ready and we need to try again
-		{
-			data->mStatus = PIPE_MGR_CONNECT_ERROR;
-			break;
-		}
-		if (data->mStop == true)
-		{
-			data->mStatus = PIPE_MGR_CONNECT_ERROR;
-			break;
-		}
-	}
+    signal(SIGPIPE, SIG_IGN); // ignore sigpipe, we handle errors in another way
+    while ((data->mHandle = open(data->mName.c_str(), get_flag(data->mType) | O_NONBLOCK )) == -1)
+    {
+        if (errno != ENXIO) // ENXIO means the other end of the pipe is not ready and we need to try again
+        {
+            data->mStatus = PIPE_MGR_CONNECT_ERROR;
+            break;
+        }
+        if (data->mStop == true)
+        {
+            data->mStatus = PIPE_MGR_CONNECT_ERROR;
+            break;
+        }
+    }
 #endif
 
     if (data->mStatus != PIPE_MGR_OK)
@@ -294,37 +326,37 @@ void pipe_thread_func(PipeData* data)
     {
         if ((data->mType == INPUT_PIPE || data->mType == DUPLEX_PIPE) && data->mInBuf.Taken() > 0)
         {
-			int written_bytes = pipe_write_func(data);
-            if (written_bytes < 0) 
+            int written_bytes = pipe_write_func(data);
+            if (written_bytes < 0)
             {
                 break;
             }
-            else if (written_bytes > 0) 
+            else if (written_bytes > 0)
                 data->mKillTimer = 0;
         }
         if ((data->mType == OUTPUT_PIPE || data->mType == DUPLEX_PIPE) && data->mOutBuf.Free() > 0)
         {
-			int read_bytes = pipe_read_func(data);
+            int read_bytes = pipe_read_func(data);
             if (read_bytes < 0)
             {
                 break;
             }
-            else if (read_bytes > 0) 
+            else if (read_bytes > 0)
                 data->mKillTimer = 0;
         }
-        
+
         if (data->mCloseIfEmpty && data->mInBuf.Taken() == 0 && data->mOutBuf.Taken() == 0)
         {
-			break;
-		}
+            break;
+        }
     }
-    
+
 #ifdef WIN32
     CloseHandle(data->mHandle);
 #else
     close(data->mHandle);
 #endif
-    
+
     data->mStatus = PIPE_MGR_PIPE_CLOSED;
     data->mThreadRunning = false;
 }
@@ -452,11 +484,11 @@ void piping_manager_thread_func(PipingManagerData* data)
         for (it = data->mPipes.begin(); it != data->mPipes.end(); ++it)
         {
             PipeData* pipe = it->second;
-			if (pipe->mStatus != PIPE_MGR_OK)
-			{
-				continue;
-			}
-			pipe->mKillTimer = pipe->mKillTimer + timeDiff.count();
+            if (pipe->mStatus != PIPE_MGR_OK)
+            {
+                continue;
+            }
+            pipe->mKillTimer = pipe->mKillTimer + timeDiff.count();
             if (pipe->mKillTimer >= data->mPipeTimeout && data->mGlobalTimeout == false && pipe->mStatus != PIPE_MGR_PIPE_CLOSED)
             {
                 pipe->closeThread();
@@ -529,7 +561,7 @@ piping_status_t PipingManager::destroyNamedPipe(int pipe_id)
 
 piping_status_t PipingManager::closePipe(int pipe_id)
 {
-	std::map<int, PipeData*>::iterator it = mData->mPipes.find(pipe_id);
+    std::map<int, PipeData*>::iterator it = mData->mPipes.find(pipe_id);
     if (it == mData->mPipes.end())
     {
         return PIPE_MGR_PIPE_NOT_FOUND;
@@ -567,22 +599,22 @@ piping_status_t PipingManager::writeToPipe(int pipe_id, void* buffer, size_t dat
     {
         PipeData* pipe = it->second;
         std::lock_guard<std::mutex> lock(pipe->mMutex);
-        
+
         size_t data_to_write = data_size;
         if (data_to_write > pipe->mInBuf.Free())
         {
             data_to_write = pipe->mInBuf.Free();
-		}
-        
-		if (pipe->mStatus != PIPE_MGR_OK)
-		{
-			status = pipe->mStatus;
-		}
-		else if (data_to_write > 0)
-		{
-			pipe->mInBuf.Append((char*)buffer, data_to_write);
-			bytes_written = data_to_write;
-		}
+        }
+
+        if (pipe->mStatus != PIPE_MGR_OK)
+        {
+            status = pipe->mStatus;
+        }
+        else if (data_to_write > 0)
+        {
+            pipe->mInBuf.Append((char*)buffer, data_to_write);
+            bytes_written = data_to_write;
+        }
     }
 
     return status;

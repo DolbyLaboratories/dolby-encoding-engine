@@ -26,7 +26,7 @@
                 <prepend_frames>0</prepend_frames>
                 <target_width>0</target_width>
                 <target_height>0</target_height>
-                <max_scene_frames>256</max_scene_frames>
+                <max_scene_frames>240</max_scene_frames>
                 <data_rate>16000</data_rate>
                 <max_vbv_data_rate>16000</max_vbv_data_rate>
                 <vbv_buffer_size>32000</vbv_buffer_size>
