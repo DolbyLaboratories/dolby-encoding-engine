@@ -363,11 +363,15 @@ hevc_dec_ffmpeg_process
     if (state->data->ffmpeg_ret_code != 0)
     {
         state->data->msg = "Ffmpeg runtime error.";
+        state->data->msg += print_ffmpeg_state(state->data);
+        state->data->msg += state->data->piping_mgr.printInternalState();
         return HEVC_DEC_ERROR;
     }
 
     if (write_to_ffmpeg(state->data, (void*)stream_buffer, buffer_size) == HEVC_DEC_ERROR)
     {
+        state->data->msg += print_ffmpeg_state(state->data);
+        state->data->msg += state->data->piping_mgr.printInternalState();
         return HEVC_DEC_ERROR;
     }
 
@@ -397,12 +401,6 @@ hevc_dec_ffmpeg_flush
         state->data->piping_mgr.closePipe(state->data->in_pipe_id);
     }
 
-    if (state->data->ffmpeg_ret_code != 0)
-    {
-        state->data->msg = "Ffmpeg runtime error.";
-        return HEVC_DEC_ERROR;
-    }
-
     hevc_dec_status_t reading_status = read_pic_from_ffmpeg(state->data);
 
     if (reading_status == HEVC_DEC_OK)
@@ -419,10 +417,19 @@ hevc_dec_ffmpeg_flush
     else if (reading_status == HEVC_DEC_PICTURE_NOT_READY)
     {
         *is_empty = true;
+        if (state->data->ffmpeg_ret_code != 0)
+        {
+            state->data->msg = "Ffmpeg runtime error.";
+            state->data->msg += print_ffmpeg_state(state->data);
+            state->data->msg += state->data->piping_mgr.printInternalState();
+            return HEVC_DEC_ERROR;
+        }
         return HEVC_DEC_PICTURE_NOT_READY;
     }
     else
     {
+        state->data->msg += print_ffmpeg_state(state->data);
+        state->data->msg += state->data->piping_mgr.printInternalState();
         return HEVC_DEC_ERROR;
     }
 }

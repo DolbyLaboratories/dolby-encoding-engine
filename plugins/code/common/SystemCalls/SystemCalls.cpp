@@ -273,7 +273,7 @@ int systemWithKillswitch(std::string command, int& return_code, std::atomic_bool
     }
 
     TerminateProcess(pid, 1);
-    return_code = 0;
+    return_code = -1;
     return SYSCALL_STATUS_KILLED;
 
 #else
@@ -337,7 +337,7 @@ int systemWithKillswitch(std::string command, int& return_code, std::atomic_bool
     
     kill(pid, SIGKILL);
     waitpid(pid, &status, WNOHANG | WUNTRACED); 
-    return_code = 0;
+    return_code = -1;
     return SYSCALL_STATUS_KILLED;
 
 #endif

@@ -71,6 +71,7 @@ public:
     piping_status_t readFromPipe(int pipe_id, void* buffer, size_t buffer_size, size_t& bytes_read);
     piping_status_t pipeDataReady(int pipe_id, size_t& bytes_ready);
     piping_status_t getPipeStatus(int pipe_id);
+    std::string printInternalState();
 private:
     PipingManagerData* mData;
 };

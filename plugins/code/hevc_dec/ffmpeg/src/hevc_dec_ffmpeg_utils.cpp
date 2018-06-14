@@ -153,12 +153,11 @@ hevc_dec_status_t write_to_ffmpeg(hevc_dec_ffmpeg_data_t* data, void* stream_buf
 {
     piping_status_t status;
 
-    //printf("!!! writing to ffmpeg !!!\n");
     if (data->encoded_blobs.empty())
     {
         size_t bytes_written = 0;
         status = data->piping_mgr.writeToPipe(data->in_pipe_id, stream_buffer, buffer_size, bytes_written);
-        
+
         if (status != PIPE_MGR_OK)
         {
             data->msg = "Input pipe error " + std::to_string(status) + ".";
@@ -172,8 +171,6 @@ hevc_dec_status_t write_to_ffmpeg(hevc_dec_ffmpeg_data_t* data, void* stream_buf
             new_blob.assign((char*)stream_buffer + bytes_written, (char*)stream_buffer + buffer_size);
             data->encoded_blobs.push_back(new_blob);
         }
-
-        //printf("!!! blobs left: %d !!!\n", data->encoded_blobs.size());
 
         return HEVC_DEC_OK;
     }
@@ -201,14 +198,11 @@ hevc_dec_status_t write_to_ffmpeg(hevc_dec_ffmpeg_data_t* data, void* stream_buf
 
             if (bytes_written < bytes_to_write)
             {
-                //printf("!!! removing from blob: %d, blobs: %d !!!\n", bytes_written, data->encoded_blobs.size());
                 blob_to_write.erase(blob_to_write.begin(), blob_to_write.begin() + bytes_written);
                 data->encoded_blobs.push_front(blob_to_write);
             }
         } 
         while (bytes_written == bytes_to_write && data->encoded_blobs.empty() == false);
-
-       // printf("!!! blobs left: %d !!!\n", data->encoded_blobs.size());
 
         return HEVC_DEC_OK;
     }
@@ -220,7 +214,7 @@ hevc_dec_status_t flush_to_ffmpeg(hevc_dec_ffmpeg_data_t* data)
 
     //printf("!!! writing to ffmpeg !!!\n");
     if (data->encoded_blobs.empty())
-    {
+    { 
         return HEVC_DEC_PICTURE_NOT_READY;
     }
     else
@@ -243,13 +237,10 @@ hevc_dec_status_t flush_to_ffmpeg(hevc_dec_ffmpeg_data_t* data)
 
             if (bytes_written < bytes_to_write)
             {
-                //printf("!!! removing from blob: %d, blobs: %d !!!\n", bytes_written, data->encoded_blobs.size());
                 blob_to_write.erase(blob_to_write.begin(), blob_to_write.begin() + bytes_written);
                 data->encoded_blobs.push_front(blob_to_write);
             }
         } while (bytes_written == bytes_to_write && data->encoded_blobs.empty() == false);
-
-        //printf("!!! blobs left: %d !!!\n", data->encoded_blobs.size());
 
         return HEVC_DEC_OK;
     }
@@ -262,6 +253,14 @@ hevc_dec_status_t read_pic_from_ffmpeg(hevc_dec_ffmpeg_data_t* data)
     piping_status_t status;
     data->piping_mgr.pipeDataReady(data->out_pipe_id, bytes_ready_to_read);
 
+    status = data->piping_mgr.getPipeStatus(data->out_pipe_id);
+    if (status != PIPE_MGR_OK && status != PIPE_MGR_PIPE_CLOSED)
+    {
+        data->msg = "Output pipe error " + std::to_string(status) + ".";
+        data->piping_error = true;
+        return HEVC_DEC_ERROR;
+    }
+
     if (bytes_ready_to_read >= data->plane_size[0] + data->plane_size[1] + data->plane_size[2])
     {
         for (int i = 0; i < 3; i++)
@@ -269,7 +268,7 @@ hevc_dec_status_t read_pic_from_ffmpeg(hevc_dec_ffmpeg_data_t* data)
             status = data->piping_mgr.readFromPipe(data->out_pipe_id, data->decoded_picture.plane[i], data->plane_size[i], bytes_read);
             if ((status != PIPE_MGR_OK && status != PIPE_MGR_PIPE_CLOSED) || bytes_read != data->plane_size[i])
             {
-                data->msg = "output pipe error " + std::to_string(status) + ".";
+                data->msg = "Output pipe error " + std::to_string(status) + ".";
                 data->piping_error = true;
                 return HEVC_DEC_ERROR;
             }
@@ -280,6 +279,13 @@ hevc_dec_status_t read_pic_from_ffmpeg(hevc_dec_ffmpeg_data_t* data)
     {
         return HEVC_DEC_PICTURE_NOT_READY;
     }
+}
+
+std::string print_ffmpeg_state(hevc_dec_ffmpeg_data_t* data)
+{
+    std::string output = "FFMPEG running: " + std::to_string(data->ffmpeg_running) + "\n";
+    output += "FFMPEG return code: " + std::to_string(data->ffmpeg_ret_code) + "\n";
+    return output;
 }
 
 static void

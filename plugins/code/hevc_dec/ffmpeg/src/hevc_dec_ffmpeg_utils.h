@@ -79,6 +79,8 @@ typedef struct
 
 } hevc_dec_ffmpeg_data_t;
 
+std::string print_ffmpeg_state(hevc_dec_ffmpeg_data_t* data);
+
 void init_picture_buffer(hevc_dec_ffmpeg_data_t* data);
 
 void clean_picture_buffer(hevc_dec_ffmpeg_data_t* data);

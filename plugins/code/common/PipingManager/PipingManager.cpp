@@ -590,7 +590,9 @@ piping_status_t PipingManager::getPipePath(int pipe_id, std::string& path)
 piping_status_t PipingManager::writeToPipe(int pipe_id, void* buffer, size_t data_size, size_t& bytes_written)
 {
     piping_status_t status = PIPE_MGR_OK;
+    bytes_written = 0;
     std::map<int, PipeData*>::iterator it = mData->mPipes.find(pipe_id);
+
     if (it == mData->mPipes.end())
     {
         status = PIPE_MGR_PIPE_NOT_FOUND;
@@ -724,4 +726,23 @@ PipingManager::~PipingManager()
     }
 
     delete mData;
+}
+
+std::string PipingManager::printInternalState()
+{
+    std::string message = "Piping manager state: \n";
+    message += "    Thread running: " + std::to_string(mData->mThreadRunning) + "\n";
+
+    std::map<int, PipeData*>::iterator it;
+    for (it = mData->mPipes.begin(); it != mData->mPipes.end(); ++it)
+    {
+        PipeData* pipe = it->second;
+        message += "    Pipe " + pipe->mName + ":\n";
+        message += "        Running: " + std::to_string(pipe->mThreadRunning) + "\n";
+        message += "        Status: " + std::to_string(pipe->mStatus) + "\n";
+        message += "        Inbuffer: " + std::to_string(pipe->mInBuf.Taken()) + "/" + std::to_string(pipe->mInBuf.Size()) + "\n";
+        message += "        Outbuffer: " + std::to_string(pipe->mOutBuf.Taken()) + "/" + std::to_string(pipe->mOutBuf.Size()) + "\n";
+    }
+
+    return message;
 }
