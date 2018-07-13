@@ -818,6 +818,7 @@ parse_init_params
                 {
                     param_name = i.substr(0, found);
                     param_value = i.substr(found+1);
+                    std::replace(param_value.begin(), param_value.end(), ';', ':');
                 }
                 state->data->internal_params.push_back({param_name, param_value});
             }

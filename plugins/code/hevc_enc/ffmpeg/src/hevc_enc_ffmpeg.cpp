@@ -54,7 +54,7 @@ property_info_t hevc_enc_ffmpeg_info[] =
     , { "absolute_pass_num", PROPERTY_TYPE_INTEGER, NULL, "0", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT }
     , { "stats_file", PROPERTY_TYPE_STRING, NULL, NULL, NULL, 0, 1, ACCESS_TYPE_WRITE_INIT }
     , { "multi_pass", PROPERTY_TYPE_STRING, NULL, "off", "off:1st:nth:last", 0, 1, ACCESS_TYPE_WRITE_INIT }
-    , { "temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "3", NULL, 0, 1, ACCESS_TYPE_READ}
+    , { "temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "4", NULL, 0, 1, ACCESS_TYPE_READ}
     , { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, 3, 3, ACCESS_TYPE_WRITE_INIT }
 
     // generate_vui_param_videosignaltype
@@ -84,6 +84,7 @@ property_info_t hevc_enc_ffmpeg_info[] =
     , { "cmd_gen", PROPERTY_TYPE_STRING, "Path to a script that can generate an ffmpeg command line using the config file as input.", NULL, NULL, 0, 1, ACCESS_TYPE_USER }
     , { "user_params_file", PROPERTY_TYPE_STRING, "Path to a file with user's parameters. Path is passed to cmd gen script. If script provided with DEE is used it must be JSON database with following keys \"user_config\": \"x265\". For details see provided examples.", NULL, NULL, 0, 1, ACCESS_TYPE_USER }
     , { "interpreter", PROPERTY_TYPE_STRING, "Path to binary used to read the cmd_gen script.", "python", NULL, 0, 1, ACCESS_TYPE_USER }
+    , { "redirect_stdout", PROPERTY_TYPE_BOOLEAN, "If set to true, terminal output from FFmpeg binary will be redirected to a temporary file.", "false", NULL, 0, 1, ACCESS_TYPE_USER }
 };
 
 static
@@ -231,6 +232,8 @@ ffmpeg_init
         state->data->ffmpeg_running = true;
         state->data->ffmpeg_thread = std::thread(run_cmd_thread_func, ffmpeg_call, state->data);
         state->data->msg = "FFMPEG launched with the following command line: " + ffmpeg_call;
+        if (state->data->redirect_stdout)
+            state->data->msg += "\nFFMPEG log file: " + state->data->temp_file[3];
         return STATUS_OK;
     }
     else
@@ -251,16 +254,20 @@ ffmpeg_close
 
     bool plugin_failed = false;
     
-    if (state->data->piping_error)
+    state->data->piping_mgr.close();
+    if(state->data->ffmpeg_running)
     {
         state->data->kill_ffmpeg = true;
     }
+    else
+    {
+        if (state->data->ffmpeg_ret_code != 0) plugin_failed = true;
+    }
+
     if (state->data->ffmpeg_thread.joinable())
     {
         state->data->ffmpeg_thread.join();
     }
-
-    if (state->data->ffmpeg_ret_code != 0) plugin_failed = true;
 
     delete state->data;
     return plugin_failed ? STATUS_ERROR: STATUS_OK;
@@ -277,6 +284,7 @@ ffmpeg_process
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
     piping_status_t status;
+    state->data->msg.clear();
 
     if (state->data->ffmpeg_ret_code != 0)
     {
@@ -306,6 +314,7 @@ ffmpeg_process
         }
         else if (current_pic.color_space != HEVC_ENC_COLOR_SPACE_I444)
         {
+            state->data->msg = "YUV444 is not supported.";
             return STATUS_ERROR;
         }
 
@@ -322,7 +331,7 @@ ffmpeg_process
                 plane_data_written += bytes_written;
                 if (status != PIPE_MGR_OK)
                 {
-					state->data->msg = "Input pipe error " + std::to_string(status) + ".";
+                    state->data->msg = "Input pipe error " + std::to_string(status) + ".";
                     state->data->piping_error = true;
                     return STATUS_ERROR;
                 }
@@ -366,6 +375,10 @@ ffmpeg_process
         output->nal_num = 0;
     }
 
+    if (state->data->ffmpeg_ret_code)
+    {
+        state->data->msg += "FFMPEG exited with code " + std::to_string(state->data->ffmpeg_ret_code);
+    }
     return (state->data->ffmpeg_ret_code != 0) ? STATUS_ERROR : STATUS_OK;
 }
 
@@ -480,7 +493,7 @@ ffmpeg_get_property
         }
         else if ("temp_file_num" == name)
         {
-            strcpy(property->value, "3");
+            strcpy(property->value, "4");
             return STATUS_OK;
         }
     }

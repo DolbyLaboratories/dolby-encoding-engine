@@ -35,7 +35,7 @@
 #include <SystemCalls.h>
 #include "hevc_dec_ffmpeg_utils.h"
 
-#define BINARY_CHECK_TIMEOUT 1000
+#define BINARY_CHECK_TIMEOUT (10000)
 
 hevc_dec_frame_rate_t string_to_fr(const std::string& str)
 {
@@ -92,12 +92,12 @@ hevc_dec_frame_rate_t string_to_fr(const std::string& str)
     return fr;
 }
 
-bool bin_exists(const std::string& bin, const std::string& arg)
+bool bin_exists(const std::string& bin, const std::string& arg, const std::string& log)
 {
     std::string cmd = bin + " " + arg;
 
     int ret_code = 0;
-    int status = systemWithTimeout(cmd, ret_code, BINARY_CHECK_TIMEOUT);
+    int status = systemWithTimeout(cmd, ret_code, BINARY_CHECK_TIMEOUT, log);
     if (status != SYSCALL_STATUS_OK)
     {
         return false;
@@ -111,7 +111,14 @@ bool bin_exists(const std::string& bin, const std::string& arg)
 void run_cmd_thread_func(std::string cmd, hevc_dec_ffmpeg_data_t* decoding_data)
 {
     int ret_code = 0;
-    systemWithKillswitch(cmd, ret_code, decoding_data->kill_ffmpeg);
+    if (decoding_data->redirect_stdout)
+    {
+        systemWithKillswitch(cmd, ret_code, decoding_data->kill_ffmpeg, decoding_data->temp_file[3]);
+    }
+    else
+    {
+        systemWithKillswitch(cmd, ret_code, decoding_data->kill_ffmpeg, "");
+    }
     decoding_data->ffmpeg_ret_code = ret_code;
     decoding_data->ffmpeg_running = false;
 }
@@ -147,6 +154,20 @@ void clean_picture_buffer(hevc_dec_ffmpeg_data_t* data)
     if (data->decoded_picture.plane[0] != NULL) free(data->decoded_picture.plane[0]);
     if (data->decoded_picture.plane[1] != NULL) free(data->decoded_picture.plane[1]);
     if (data->decoded_picture.plane[2] != NULL) free(data->decoded_picture.plane[2]);
+}
+
+
+uint64_t encoded_blob_size(hevc_dec_ffmpeg_data_t* data)
+{
+    auto it = data->encoded_blobs.begin();
+    uint64_t total_size = 0;
+
+    for (; it != data->encoded_blobs.end(); it++)
+    {
+        total_size += it->size();
+    }
+
+    return total_size;
 }
 
 hevc_dec_status_t write_to_ffmpeg(hevc_dec_ffmpeg_data_t* data, void* stream_buffer, const size_t buffer_size)
@@ -283,7 +304,7 @@ hevc_dec_status_t read_pic_from_ffmpeg(hevc_dec_ffmpeg_data_t* data)
 
 std::string print_ffmpeg_state(hevc_dec_ffmpeg_data_t* data)
 {
-    std::string output = "FFMPEG running: " + std::to_string(data->ffmpeg_running) + "\n";
+    std::string output = "\nFFMPEG running: " + std::to_string(data->ffmpeg_running) + "\n";
     output += "FFMPEG return code: " + std::to_string(data->ffmpeg_ret_code) + "\n";
     return output;
 }

@@ -41,18 +41,27 @@
 #include <Windows.h>
 #include <WinBase.h>
 
-typedef HANDLE Pid;
+struct ProcessData
+{
+    STARTUPINFO startupInfo;
+    PROCESS_INFORMATION processInfo;
+};
 
 #else
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
 #include <list>
 
-typedef pid_t Pid;
+struct ProcessData
+{
+    pid_t pid;
+};
 
 #endif
 
@@ -92,33 +101,118 @@ std::string& trim(std::string& s, const char* t = "\"\n\t ")
     return s;
 }
 
-int systemWithTimeout(std::string command, int& return_code, int timeout)
+static
+system_call_status_t startProcess(std::string command, std::string logfile, ProcessData& processData)
+{
+#ifdef WIN32
+
+    std::string command_line = trim(command, "\n");
+
+    ZeroMemory(&processData.startupInfo, sizeof(processData.startupInfo));
+    processData.startupInfo.cb = sizeof(processData.startupInfo);
+
+    ZeroMemory(&processData.processInfo, sizeof(processData.processInfo));
+
+    HANDLE log_handle = NULL;
+    if (!logfile.empty())
+    {
+        SECURITY_ATTRIBUTES sa;
+        sa.nLength = sizeof(sa);
+        sa.lpSecurityDescriptor = NULL;
+        sa.bInheritHandle = TRUE;
+
+        log_handle = CreateFile(logfile.c_str(),
+            FILE_APPEND_DATA,
+            FILE_SHARE_WRITE | FILE_SHARE_READ,
+            &sa,
+            OPEN_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL);
+
+        processData.startupInfo.dwFlags |= STARTF_USESTDHANDLES;
+        processData.startupInfo.hStdInput = NULL;
+        processData.startupInfo.hStdOutput = log_handle;
+        processData.startupInfo.hStdError = log_handle;
+    }
+
+    BOOL status = CreateProcess(NULL, (LPSTR)(command_line.c_str()), NULL, NULL, TRUE, 0, NULL, NULL, &processData.startupInfo, &processData.processInfo);
+    // closing unneeded handles
+    CloseHandle(processData.processInfo.hThread);
+    CloseHandle(processData.startupInfo.hStdInput);
+    CloseHandle(log_handle);
+    if (status == 0)
+    {
+        return SYSCALL_STATUS_CALL_ERROR;
+    }
+
+    return SYSCALL_STATUS_OK;
+
+#else
+
+    processData.pid = ::fork();
+    if (processData.pid < 0)
+    {
+        return SYSCALL_STATUS_CALL_ERROR;
+    }
+    else if (processData.pid == 0)
+    {
+        // parsing the command into binary and a table of arguments
+        std::vector<std::string> split_command = splitString(command, ' ');
+
+        if (split_command.empty()) exit(-1);
+
+        std::string trimmed_command = trim(split_command[0]);
+
+        char** argv = new char*[split_command.size() + 1];
+        unsigned int i = 0;
+        unsigned int j = 0;
+        std::list<std::string> trimmed_args;
+        for (; i < split_command.size(); i++)
+        {
+            std::string trimmed = trim(split_command[i]);
+
+            if (!trimmed.empty())
+            {
+                trimmed_args.push_back(trimmed);
+                argv[j] = const_cast<char*>(trimmed_args.back().c_str());
+                j++;
+            }
+        }
+        argv[j] = NULL;
+
+        if (!logfile.empty())
+        {
+            int logfile_handle = open(logfile.c_str(), O_WRONLY | O_CREAT, S_IRWXU);
+            // closing original STDOUT and STDERR handles
+            close(STDOUT_FILENO);
+            close(STDERR_FILENO);
+            // replacing STDOUT and STDERR handles with logfile handle in the forked process
+            dup2(logfile_handle, STDOUT_FILENO);
+            dup2(logfile_handle, STDERR_FILENO);
+            // closing the original file handle
+            close(logfile_handle);
+        }
+
+        execvp(trimmed_command.c_str(), argv);
+        exit(-1);
+    }
+
+    return SYSCALL_STATUS_OK;
+
+#endif
+}
+
+int systemWithTimeout(std::string command, int& return_code, int timeout, std::string logfile)
 {
     return_code = -1;
 
 #ifdef WIN32
 
-    std::string command_line = trim(command, "\n");
-
-    STARTUPINFO startupInfo;
-    ZeroMemory(&startupInfo, sizeof(startupInfo));
-    startupInfo.cb = sizeof(startupInfo);
-
-    PROCESS_INFORMATION processInfo;
-    ZeroMemory(&processInfo, sizeof(processInfo));
-
-    BOOL status = CreateProcess(NULL, (LPSTR)(command_line.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo);
-    CloseHandle(startupInfo.hStdInput);
-    CloseHandle(startupInfo.hStdOutput);
-    CloseHandle(startupInfo.hStdError);
-    CloseHandle(processInfo.hThread);
-    if (status == 0)
-    {
-        //DWORD error_code = GetLastError();
+    ProcessData processData;
+    if (startProcess(command, logfile, processData) != SYSCALL_STATUS_OK)
         return SYSCALL_STATUS_CALL_ERROR;
-    }
-    
-    Pid pid = processInfo.hProcess;
+
+    HANDLE pid = processData.processInfo.hProcess;
 
     DWORD rc = WaitForSingleObject(pid, timeout);
     if (rc == WAIT_OBJECT_0)
@@ -132,7 +226,7 @@ int systemWithTimeout(std::string command, int& return_code, int timeout)
             return SYSCALL_STATUS_RUNTIME_ERROR;
         }
         return_code = (int)exitCode;
-        return SYSCALL_STATUS_OK;;
+        return SYSCALL_STATUS_OK;
     }
     else if (rc == WAIT_TIMEOUT)
     {
@@ -149,39 +243,11 @@ int systemWithTimeout(std::string command, int& return_code, int timeout)
 
 #else
 
-    Pid pid = ::fork();
-    if (pid < 0) 
-    {
+    ProcessData processData;
+    if (startProcess(command, logfile, processData) != SYSCALL_STATUS_OK)
         return SYSCALL_STATUS_CALL_ERROR;
-    }
-    else if (pid == 0)
-    {
-        std::vector<std::string> split_command = splitString(command, ' ');
-        
-        if (split_command.empty()) exit(-1);
-        
-        std::string trimmed_command = trim(split_command[0]);
 
-        char** argv = new char*[split_command.size() + 1];
-        unsigned int i = 0;
-        unsigned int j = 0;
-        std::list<std::string> trimmed_args;
-        for (; i < split_command.size(); i++)
-        {
-            std::string trimmed = trim(split_command[i]);
-            
-            if (!trimmed.empty())
-            {
-                trimmed_args.push_back(trimmed);
-                argv[j] = const_cast<char*>(trimmed_args.back().c_str());
-                j++;
-            }
-        }
-        argv[i] = NULL;
-
-        execvp(trimmed_command.c_str(), argv);
-        exit(-1);
-    }
+    pid_t pid = processData.pid;
 
     int rc;
     int status;
@@ -194,11 +260,13 @@ int systemWithTimeout(std::string command, int& return_code, int timeout)
         {
             if (WIFEXITED(status))
             {
+                // process exited
                 return_code = WEXITSTATUS(status);
                 return SYSCALL_STATUS_OK;
             }
             else if (WIFSIGNALED(status))
             {
+                // process interrupted by a signal
                 return SYSCALL_STATUS_RUNTIME_ERROR;
             }
         }
@@ -213,34 +281,17 @@ int systemWithTimeout(std::string command, int& return_code, int timeout)
 #endif
 }
 
-int systemWithKillswitch(std::string command, int& return_code, std::atomic_bool& killswitch)
+int systemWithKillswitch(std::string command, int& return_code, std::atomic_bool& killswitch, std::string logfile)
 {
     return_code = -1;
 
 #ifdef WIN32
-
-    std::string command_line = trim(command, "\n");
-
-    STARTUPINFO startupInfo;
-    ZeroMemory(&startupInfo, sizeof(startupInfo));
-    startupInfo.cb = sizeof(startupInfo);
-
-    PROCESS_INFORMATION processInfo;
-    ZeroMemory(&processInfo, sizeof(processInfo));
-
-    BOOL status = CreateProcess(NULL, (LPSTR)(command_line.c_str()), NULL, NULL, TRUE, 0, NULL, NULL, &startupInfo, &processInfo);
-    //DWORD error_code = GetLastError();
-    CloseHandle(startupInfo.hStdInput);
-    CloseHandle(startupInfo.hStdOutput);
-    CloseHandle(startupInfo.hStdError);
-    CloseHandle(processInfo.hThread);
-    if (status == 0)
-    {
-        return_code = -1;
+    
+    ProcessData processData;
+    if (startProcess(command, logfile, processData) != SYSCALL_STATUS_OK)
         return SYSCALL_STATUS_CALL_ERROR;
-    }
 
-    Pid pid = processInfo.hProcess;
+    HANDLE pid = processData.processInfo.hProcess;
 
     while (killswitch == false)
     {
@@ -278,39 +329,11 @@ int systemWithKillswitch(std::string command, int& return_code, std::atomic_bool
 
 #else
 
-    Pid pid = fork();
-    if (pid < 0)
-    {
-        return_code = -1;
+    ProcessData processData;
+    if (startProcess(command, logfile, processData) != SYSCALL_STATUS_OK)
         return SYSCALL_STATUS_CALL_ERROR;
-    }
-    else if (pid == 0)
-    {
-        std::vector<std::string> split_command = splitString(command, ' ');
-        
-        if (split_command.empty()) exit(-1);
-        
-        std::string trimmed_command = trim(split_command[0]);
-        char** argv = new char*[split_command.size() + 1];
-        unsigned int i = 0;
-        unsigned int j = 0;
-        std::list<std::string> trimmed_args;
-        for (; i < split_command.size(); i++)
-        {
-            std::string trimmed = trim(split_command[i]);
-            
-            if (!trimmed.empty())
-            {
-                trimmed_args.push_back(trimmed);
-                argv[j] = const_cast<char*>(trimmed_args.back().c_str());
-                j++;
-            }
-        }
-        argv[j] = NULL;
-        
-        execvp(trimmed_command.c_str(), argv);
-        exit(-1);
-    }
+
+    pid_t pid = processData.pid;
 
     int rc;
     int status;
@@ -321,11 +344,13 @@ int systemWithKillswitch(std::string command, int& return_code, std::atomic_bool
         {
             if (WIFEXITED(status))
             {
+                // process exited
                 return_code = WEXITSTATUS(status);
                 return SYSCALL_STATUS_OK;
             }
             else if (WIFSIGNALED(status))
             {
+                // process interrupted by a signal
                 return_code = -1;
                 return SYSCALL_STATUS_RUNTIME_ERROR;
             }
@@ -334,9 +359,8 @@ int systemWithKillswitch(std::string command, int& return_code, std::atomic_bool
     }
 
     // killswitch engaged
-    
     kill(pid, SIGKILL);
-    waitpid(pid, &status, WNOHANG | WUNTRACED); 
+    waitpid(pid, &status, WNOHANG | WUNTRACED);
     return_code = -1;
     return SYSCALL_STATUS_KILLED;
 

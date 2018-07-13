@@ -39,8 +39,8 @@
 
 #define AUD_NAL_UNIT_TYPE 35
 
-#define PIPE_BUFFER_SIZE 1024 * 1024 * 64 // 64MB of buffer is enough to store an UHD 444 10bit frame
-#define PIPE_TIMEOUT 600000
+#define PIPE_BUFFER_SIZE (1024*1024*64) // 64MB of buffer is enough to store an UHD 444 10bit frame
+#define PIPE_TIMEOUT (600000)
 
 static
 std::map<std::string, int> color_primaries_map = {
@@ -120,6 +120,7 @@ init_defaults(hevc_enc_ffmpeg_t* state)
 #endif
     state->data->cmd_gen = "";
     state->data->user_params_file = "";
+    state->data->redirect_stdout = false;
 
     state->data->kill_ffmpeg = false;
     state->data->ffmpeg_running = false;
@@ -141,7 +142,14 @@ void
 run_cmd_thread_func(std::string cmd, hevc_enc_ffmpeg_data_t* encoding_data)
 {
     int ret_code = 0;
-    systemWithKillswitch(cmd, ret_code, encoding_data->kill_ffmpeg);
+    if (encoding_data->redirect_stdout)
+    {
+        systemWithKillswitch(cmd, ret_code, encoding_data->kill_ffmpeg, encoding_data->temp_file[3]);
+    }
+    else
+    {
+        systemWithKillswitch(cmd, ret_code, encoding_data->kill_ffmpeg, "");
+    }
     encoding_data->ffmpeg_ret_code = ret_code;
     encoding_data->ffmpeg_running = false;
 }
@@ -627,6 +635,22 @@ parse_init_params
         else if ("command_line" == name)
         {
             state->data->command_line.push_back(value);
+        }
+        else if ("redirect_stdout" == name)
+        {
+            if (value == "true")
+            {
+                state->data->redirect_stdout = true;
+            }
+            else if (value == "false")
+            {
+                state->data->redirect_stdout = false;
+            }
+            else
+            {
+                state->data->msg += "\nInvalid 'redirect_stdout' value.";
+                continue;
+            }
         }
         else
         {

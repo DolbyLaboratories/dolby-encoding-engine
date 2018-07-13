@@ -33,11 +33,11 @@
 #include "SystemCalls.h"
 #include "hevc_dec_ffmpeg_utils.h"
 
-#define TEMP_BUFFER 1024
-#define REQUIRED_TEMP_FILE_NUM 3
+#define TEMP_BUFFER (1024)
+#define REQUIRED_TEMP_FILE_NUM (4)
 
-#define PIPE_BUFFER_SIZE 1024 * 1024 * 64 // 64MB of buffer is enough to store an UHD 444 10bit frame
-#define PIPE_TIMEOUT 60000
+#define PIPE_BUFFER_SIZE (1024*1024*64) // 64MB of buffer is enough to store an UHD 444 10bit frame
+#define PIPE_TIMEOUT (600000)
 
 static
 const
@@ -45,7 +45,7 @@ property_info_t hevc_dec_ffmpeg_info[] =
 {
       { "output_format", PROPERTY_TYPE_STRING, NULL, "any", "any:yuv420_10", 1, 1, ACCESS_TYPE_WRITE_INIT }
     , { "frame_rate", PROPERTY_TYPE_DECIMAL, NULL, "24", "23.976:24:25:29.97:30:48:50:59.94:60", 1, 1, ACCESS_TYPE_WRITE_INIT }
-    , { "temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "2", NULL, 0, 1, ACCESS_TYPE_READ }
+    , { "temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "4", NULL, 0, 1, ACCESS_TYPE_READ }
     , { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, 3, 3, ACCESS_TYPE_WRITE_INIT }
 
     // Only properties below (ACCESS_TYPE_USER) can be modified
@@ -54,8 +54,8 @@ property_info_t hevc_dec_ffmpeg_info[] =
     , { "height", PROPERTY_TYPE_INTEGER, "Height of output in pixels.", "0", NULL, 1, 1, ACCESS_TYPE_USER }
     , { "cmd_gen", PROPERTY_TYPE_STRING, "Path to a script that can generate an ffmpeg command line using the config file as input.", NULL, NULL, 1, 1, ACCESS_TYPE_USER }
     , { "interpreter", PROPERTY_TYPE_STRING, "Path to binary used to read the cmd_gen script.", "python", NULL, 0, 1, ACCESS_TYPE_USER }
+    , { "redirect_stdout", PROPERTY_TYPE_BOOLEAN, "If set to true, terminal output from FFmpeg binary will be redirected to a temporary file.", "false", NULL, 0, 1, ACCESS_TYPE_USER }
 };
-
 
 /* This structure can contain only pointers and simple types */
 typedef struct
@@ -114,6 +114,7 @@ hevc_dec_ffmpeg_init
 #endif
 
     state->data->ffmpeg_ret_code = 0;
+    state->data->redirect_stdout = false;
 
     state->data->kill_ffmpeg = false;
     state->data->ffmpeg_running = false;
@@ -121,9 +122,6 @@ hevc_dec_ffmpeg_init
 
     state->data->piping_mgr.setTimeout(PIPE_TIMEOUT);
     state->data->piping_mgr.setMaxbuf(PIPE_BUFFER_SIZE);
-
-    state->data->missed_calls = 0;
-    state->data->calls = 0;
 
     for (int i = 0; i < (int)init_params->count; i++)
     {
@@ -191,6 +189,22 @@ hevc_dec_ffmpeg_init
         {
             state->data->temp_file.push_back(value);
         }
+        else if ("redirect_stdout" == name)
+        {
+            if (value == "true")
+            {
+                state->data->redirect_stdout = true;
+            }
+            else if (value == "false")
+            {
+                state->data->redirect_stdout = false;
+            }
+            else
+            {
+                state->data->msg += "\nInvalid 'redirect_stdout' value.";
+                continue;
+            }
+        }
         else
         {
             state->data->msg += "\nUnknown XML property: " + name;
@@ -205,10 +219,12 @@ hevc_dec_ffmpeg_init
     {
         state->data->msg += "Path to ffmpeg binary is not set.";
     }
-    if (!bin_exists(state->data->ffmpeg_bin, "-version"))
+
+    if (!bin_exists(state->data->ffmpeg_bin, "-version", ""))
     {
         state->data->msg += "Cannot access ffmpeg binary.";
     }
+
     if (state->data->interpreter.empty())
     {
         state->data->msg += "Path to interpreter binary is not set.";
@@ -284,6 +300,8 @@ hevc_dec_ffmpeg_init
         state->data->ffmpeg_running = true;
         state->data->ffmpeg_thread = std::thread(run_cmd_thread_func, ffmpeg_call, state->data);
         state->data->msg = "FFMPEG launched with the following command line: " + ffmpeg_call;
+        if (state->data->redirect_stdout)
+            state->data->msg += "\nFFMPEG log file: " + state->data->temp_file[3];
         return HEVC_DEC_OK;
     }
     else
@@ -302,42 +320,24 @@ hevc_dec_ffmpeg_close
 
     bool plugin_failed = false;
 
-    // close input pipe to let FFMPEG know we finished decoding
-    state->data->piping_mgr.closePipe(state->data->in_pipe_id);
-    
-    // empty the output buffer and pipe so that ffmpeg can close gracefully
-    size_t bytes_read = 0;
-    char temp_buf[TEMP_BUFFER];
-    piping_status_t status;
-    do
+    state->data->piping_mgr.close();
+    if(state->data->ffmpeg_running == true)
     {
-        status = state->data->piping_mgr.readFromPipe(state->data->out_pipe_id, temp_buf, TEMP_BUFFER, bytes_read);
-        if (status != PIPE_MGR_OK && status != PIPE_MGR_PIPE_CLOSED)
-        {
-            state->data->msg = "Output pipe error " + std::to_string(status) + ".";
-            state->data->piping_error = true;
-            break;
-        }
-        // if we closed the input and there is no more output but ffmpeg still runs we need to terminate it
-        else if (bytes_read == 0 && state->data->piping_mgr.getPipeStatus(state->data->in_pipe_id) == PIPE_MGR_PIPE_CLOSED)
-        {
-            state->data->kill_ffmpeg = true;
-        }
-    } 
-    while (state->data->ffmpeg_running == true);
+        state->data->kill_ffmpeg = true;
+    }
+    else
+    {
+        if (state->data->ffmpeg_ret_code != 0) plugin_failed = true;
+    }
 
     if (state->data->piping_error)
     {
         state->data->kill_ffmpeg = true;
+        plugin_failed = true;
     }
     if (state->data->ffmpeg_thread.joinable())
     {
         state->data->ffmpeg_thread.join();
-    }
-
-    if (state->data->ffmpeg_ret_code != 0 || state->data->piping_error)
-    {
-        plugin_failed = true;
     }
 
     if (state->data)

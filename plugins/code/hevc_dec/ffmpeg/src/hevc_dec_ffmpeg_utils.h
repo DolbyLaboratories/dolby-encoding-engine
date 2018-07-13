@@ -72,10 +72,7 @@ typedef struct
     int                         in_pipe_id;
     int                         out_pipe_id;
     bool                        piping_error;
-
-    // Benchamrk
-    unsigned long long missed_calls;
-    unsigned long long calls;
+    bool                        redirect_stdout;
 
 } hevc_dec_ffmpeg_data_t;
 
@@ -85,9 +82,11 @@ void init_picture_buffer(hevc_dec_ffmpeg_data_t* data);
 
 void clean_picture_buffer(hevc_dec_ffmpeg_data_t* data);
 
+uint64_t encoded_blob_size(hevc_dec_ffmpeg_data_t* data);
+
 hevc_dec_frame_rate_t string_to_fr(const std::string& str);
 
-bool bin_exists(const std::string& bin, const std::string& arg);
+bool bin_exists(const std::string& bin, const std::string& arg, const std::string& log);
 
 void run_cmd_thread_func(std::string cmd, hevc_dec_ffmpeg_data_t* decoding_data);
 

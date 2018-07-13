@@ -50,9 +50,12 @@
 #include <errno.h>
 #endif
 
-#define DEFAULT_TIMEOUT 10000
-#define DEFAULT_BUFFER 1024*128
-#define NAMED_PIPE_BUFFER 1024*64
+#define DEFAULT_TIMEOUT (10000)
+#define DEFAULT_BUFFER (1024*128)
+#define NAMED_PIPE_BUFFER (1024*64)
+#define WRITE_SIZE (16*1024)
+#define READ_SIZE (16*1024)
+
 
 using namespace std::chrono;
 using std::vector;
@@ -202,24 +205,28 @@ int pipe_write_func(PipeData* data)
     piping_status_t status = PIPE_MGR_OK;
 
     data->mMutex.lock();
-    size_t data_size = data->mInBuf.Taken();
-    data->mInBuf.PeekFront(data->mTempBuf.data(), data_size);
+    size_t writeSize = data->mInBuf.Taken();
+    if (writeSize > WRITE_SIZE) writeSize = WRITE_SIZE;
+    data->mInBuf.PeekFront(data->mTempBuf.data(), writeSize);
     data->mMutex.unlock();
 
 #ifdef WIN32
     DWORD bytes_written = 0;
-    if (WriteFile(data->mHandle, data->mTempBuf.data(), (DWORD)data_size, &bytes_written, NULL) == FALSE)
+    if (WriteFile(data->mHandle, data->mTempBuf.data(), (DWORD)writeSize, &bytes_written, NULL) == FALSE)
     {
         DWORD last_error = GetLastError();
         data->mErrorString = std::to_string(last_error);
         status = PIPE_MGR_WRITE_ERROR;
     }
 #else
-    int bytes_written = write(data->mHandle, data->mTempBuf.data(), data_size);
+    int bytes_written = write(data->mHandle, data->mTempBuf.data(), writeSize);
     if (bytes_written < 0)
     {
         if (errno != EAGAIN)
+        {
+            data->mErrorString = "write returned " + std::to_string(bytes_written) + " (errno=" + std::to_string((int)errno) + ").";
             status = PIPE_MGR_WRITE_ERROR;
+        }
         bytes_written = 0;
     }
 #endif
@@ -244,14 +251,14 @@ static
 int pipe_read_func(PipeData* data)
 {
     piping_status_t status = PIPE_MGR_OK;
-    size_t outBufSize = data->mOutBuf.Free();
-
-    if (outBufSize == 0) return 0;
+    size_t readSize = data->mOutBuf.Free();
+    if (readSize > READ_SIZE) readSize = READ_SIZE;
+    if (readSize == 0) return 0;
 
     // try to read from pipe (up to the size available in the buffer) and write that to the buffer
 #ifdef WIN32
     DWORD bytes_read;
-    if (ReadFile(data->mHandle, data->mTempBuf.data(), (DWORD)(outBufSize), &bytes_read, NULL) == FALSE)
+    if (ReadFile(data->mHandle, data->mTempBuf.data(), (DWORD)(readSize), &bytes_read, NULL) == FALSE)
     {
         DWORD last_error = GetLastError();
         data->mErrorString = std::to_string(last_error);
@@ -261,11 +268,14 @@ int pipe_read_func(PipeData* data)
             status = PIPE_MGR_READ_ERROR;
     }
 #else
-    int bytes_read = read(data->mHandle, data->mTempBuf.data(), outBufSize);
+    int bytes_read = read(data->mHandle, data->mTempBuf.data(), readSize);
     if (bytes_read < 0)
     {
         if (errno != EAGAIN)
+        {
+            data->mErrorString = "read returned " + std::to_string(bytes_read) + " (errno=" + std::to_string((int)errno) + ").";
             status = PIPE_MGR_READ_ERROR;
+        }
         bytes_read = 0;
     }
 #endif
@@ -304,6 +314,7 @@ void pipe_thread_func(PipeData* data)
     {
         if (errno != ENXIO) // ENXIO means the other end of the pipe is not ready and we need to try again
         {
+            data->mErrorString = "open failed (errno=" + std::to_string((int)errno) + ").";
             data->mStatus = PIPE_MGR_CONNECT_ERROR;
             break;
         }
@@ -712,20 +723,31 @@ PipingManager::PipingManager()
     mData->mLastId = 0;
     mData->mGlobalTimeout = true;
     mData->mThread = std::thread(piping_manager_thread_func, mData);
+    opened = true;
 }
 
 PipingManager::~PipingManager()
 {
-    mData->mStopThread = true;
-    mData->mThread.join();
+    close();
+}
 
-    std::map<int, PipeData*>::iterator it;
-    for (it = mData->mPipes.begin(); it != mData->mPipes.end(); ++it)
+void
+PipingManager::close()
+{
+    if(opened)
     {
-        delete it->second;
-    }
+        mData->mStopThread = true;
+        mData->mThread.join();
 
-    delete mData;
+        std::map<int, PipeData*>::iterator it;
+        for (it = mData->mPipes.begin(); it != mData->mPipes.end(); ++it)
+        {
+            delete it->second;
+        }
+
+        delete mData;
+        opened = false;
+    }
 }
 
 std::string PipingManager::printInternalState()
@@ -742,6 +764,7 @@ std::string PipingManager::printInternalState()
         message += "        Status: " + std::to_string(pipe->mStatus) + "\n";
         message += "        Inbuffer: " + std::to_string(pipe->mInBuf.Taken()) + "/" + std::to_string(pipe->mInBuf.Size()) + "\n";
         message += "        Outbuffer: " + std::to_string(pipe->mOutBuf.Taken()) + "/" + std::to_string(pipe->mOutBuf.Size()) + "\n";
+        message += "        Error message: " + pipe->mErrorString + "\n";
     }
 
     return message;

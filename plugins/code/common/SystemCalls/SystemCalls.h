@@ -42,8 +42,8 @@ typedef enum
     SYSCALL_STATUS_KILLED
 } system_call_status_t;
 
-int systemWithTimeout(std::string command, int& return_code, int timeout);
+int systemWithTimeout(std::string command, int& return_code, int timeout, std::string logfile);
 
-int systemWithKillswitch(std::string command, int& return_code, std::atomic_bool& killswitch);
+int systemWithKillswitch(std::string command, int& return_code, std::atomic_bool& killswitch, std::string logfile);
 
 int systemWithStdout(std::string cmd, std::string& output);

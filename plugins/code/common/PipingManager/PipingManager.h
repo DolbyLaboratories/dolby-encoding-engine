@@ -60,6 +60,7 @@ class PipingManager
 public:
     PipingManager();
     ~PipingManager();
+    void close();
     void setTimeout(int timeout);
     void setMaxbuf(size_t maxbuf);
     void setGlobalTimeout(bool global_timeout);
@@ -73,5 +74,6 @@ public:
     piping_status_t getPipeStatus(int pipe_id);
     std::string printInternalState();
 private:
+    bool opened;
     PipingManagerData* mData;
 };

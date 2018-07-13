@@ -107,6 +107,7 @@ typedef struct
     int                         in_pipe_id;
     int                         out_pipe_id;
     bool                        piping_error;
+    bool                        redirect_stdout;
 
 } hevc_enc_ffmpeg_data_t;
 

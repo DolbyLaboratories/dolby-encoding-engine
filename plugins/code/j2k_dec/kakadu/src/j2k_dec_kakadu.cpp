@@ -210,6 +210,7 @@ kakadu_init
     state->data->output_buffer = new kdu_int16[buffer_size];
     state->data->reorder_buffer = new short[buffer_size];
 
+    state->data->msg = "Initialized Kakadu j2k decoder version " + std::string(kdu_core::kdu_get_core_version());
     return STATUS_OK;
 }
 

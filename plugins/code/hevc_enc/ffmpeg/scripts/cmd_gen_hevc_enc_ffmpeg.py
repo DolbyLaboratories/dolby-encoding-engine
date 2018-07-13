@@ -193,7 +193,7 @@ def createFfmpegCmd(systemParameters, userParameters):
     if systemParameters["multipass"] == "off":
         encoder_pass_param = ""
     else:
-        encoder_pass_param = " -pass {num_pass} -passlogfile \"{stats_file}\" ".format(
+        encoder_pass_param = "-pass {num_pass} -passlogfile \"{stats_file}\" ".format(
             num_pass = "1" if systemParameters["multipass"] == "1st" else "2",
             stats_file = systemParameters["stats_file"])
 
