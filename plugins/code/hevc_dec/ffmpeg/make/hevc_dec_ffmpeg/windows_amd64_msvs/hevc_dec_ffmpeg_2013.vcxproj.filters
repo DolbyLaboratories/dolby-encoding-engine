@@ -5,6 +5,8 @@
 <UniqueIdentifier>{cf162038-ec02-32ca-94b6-8c927f3cfc25}</UniqueIdentifier></Filter>
 <Filter Include="code\common">
 <UniqueIdentifier>{58e986a2-7e7e-314b-93a5-53c87fc426e3}</UniqueIdentifier></Filter>
+<Filter Include="code\common\GenericPlugin">
+<UniqueIdentifier>{2dfd78d0-5e49-329e-85fc-bcb4901333e7}</UniqueIdentifier></Filter>
 <Filter Include="code\common\PipingManager">
 <UniqueIdentifier>{09200381-5452-3dfa-9679-47d56f5ffd5d}</UniqueIdentifier></Filter>
 <Filter Include="code\common\SystemCalls">
@@ -16,6 +18,8 @@
 <Filter Include="code\hevc_dec\ffmpeg\src">
 <UniqueIdentifier>{8705b42a-f196-3bf7-8749-f5a636641f30}</UniqueIdentifier></Filter></ItemGroup>
 <ItemGroup>
+<ClCompile Include="..\..\..\..\..\common\GenericPlugin\GenericPlugin.cpp">
+<Filter>code\common\GenericPlugin</Filter></ClCompile>
 <ClCompile Include="..\..\..\..\..\common\PipingManager\PipingManager.cpp">
 <Filter>code\common\PipingManager</Filter></ClCompile>
 <ClCompile Include="..\..\..\..\..\common\SystemCalls\SystemCalls.cpp">
@@ -25,6 +29,8 @@
 <ClCompile Include="..\..\..\src\hevc_dec_ffmpeg_utils.cpp">
 <Filter>code\hevc_dec\ffmpeg\src</Filter></ClCompile></ItemGroup>
 <ItemGroup>
+<ClInclude Include="..\..\..\..\..\common\GenericPlugin\GenericPlugin.h">
+<Filter>code\common\GenericPlugin</Filter></ClInclude>
 <ClInclude Include="..\..\..\..\..\common\PipingManager\PipingManager.h">
 <Filter>code\common\PipingManager</Filter></ClInclude>
 <ClInclude Include="..\..\..\..\..\common\SystemCalls\SystemCalls.h">

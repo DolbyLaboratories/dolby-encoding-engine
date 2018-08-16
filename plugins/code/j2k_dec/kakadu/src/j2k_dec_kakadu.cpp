@@ -61,6 +61,8 @@ static
 const
 property_info_t j2k_dec_kakadu_info[] =
 {
+    { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
+    { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "width", PROPERTY_TYPE_INTEGER, "Picture width", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "height", PROPERTY_TYPE_INTEGER, "Picture height", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
 };
@@ -186,6 +188,14 @@ kakadu_init
         else if ("height" == name)
         {
             state->data->height = std::stoi(value);
+        }
+        else if ("plugin_path" == name)
+        {
+            continue;
+        }
+        else if ("config_path" == name)
+        {
+            continue;
         }
         else
         {

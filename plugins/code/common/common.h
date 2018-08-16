@@ -85,6 +85,13 @@ typedef struct
     access_type_t   access;         /**< Type of access to property */
 } property_info_t;
 
+/** @brief Set of properties to init */
+typedef struct
+{
+    const property_t* property;     /**< Pointer to array of properties */       
+    size_t            count;        /**< Number of properties in array */
+} init_params_t;
+
 #ifdef __cplusplus
 #ifdef WIN32
 #ifdef __GNUC__

@@ -5,6 +5,8 @@
 <UniqueIdentifier>{cf162038-ec02-32ca-94b6-8c927f3cfc25}</UniqueIdentifier></Filter>
 <Filter Include="code\common">
 <UniqueIdentifier>{58e986a2-7e7e-314b-93a5-53c87fc426e3}</UniqueIdentifier></Filter>
+<Filter Include="code\common\GenericPlugin">
+<UniqueIdentifier>{2dfd78d0-5e49-329e-85fc-bcb4901333e7}</UniqueIdentifier></Filter>
 <Filter Include="code\j2k_dec">
 <UniqueIdentifier>{e7b95b62-229f-35d3-8538-347c5c86d501}</UniqueIdentifier></Filter>
 <Filter Include="code\j2k_dec\ffmpeg">
@@ -12,9 +14,13 @@
 <Filter Include="code\j2k_dec\ffmpeg\src">
 <UniqueIdentifier>{d8a37f98-100a-3726-bc61-a4254092149e}</UniqueIdentifier></Filter></ItemGroup>
 <ItemGroup>
+<ClCompile Include="..\..\..\..\..\common\GenericPlugin\GenericPlugin.cpp">
+<Filter>code\common\GenericPlugin</Filter></ClCompile>
 <ClCompile Include="..\..\..\src\j2k_dec_ffmpeg.cpp">
 <Filter>code\j2k_dec\ffmpeg\src</Filter></ClCompile></ItemGroup>
 <ItemGroup>
+<ClInclude Include="..\..\..\..\..\common\GenericPlugin\GenericPlugin.h">
+<Filter>code\common\GenericPlugin</Filter></ClInclude>
 <ClInclude Include="..\..\..\..\..\common\common.h">
 <Filter>code\common</Filter></ClInclude>
 <ClInclude Include="..\..\..\..\j2k_dec_api.h">

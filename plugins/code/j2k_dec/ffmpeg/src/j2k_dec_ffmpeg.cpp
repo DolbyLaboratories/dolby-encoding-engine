@@ -40,6 +40,7 @@
 #include <vector>
 
 #include "j2k_dec_api.h"
+#include "GenericPlugin.h"
 
 #define MAX_PLANES (3)
 static const int temp_file_num = 3;
@@ -50,7 +51,9 @@ static
 const
 property_info_t j2k_dec_ffmpeg_info[] =
 {
-    {"temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", temp_file_num_str.c_str(), NULL, 0, 1, ACCESS_TYPE_READ},
+    { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
+    { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
+    { "temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", temp_file_num_str.c_str(), NULL, 0, 1, ACCESS_TYPE_READ},
     { "width", PROPERTY_TYPE_INTEGER, "Picture width", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "height", PROPERTY_TYPE_INTEGER, "Picture height", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, temp_file_num, temp_file_num, ACCESS_TYPE_WRITE_INIT },
@@ -78,6 +81,7 @@ typedef struct
     std::vector<std::string>    temp_file;
     std::string                 vcodec;
     int                         instance_idx;
+    GenericPlugin               generic_plugin;
 } j2k_dec_ffmpeg_data_t;
 
 /* This structure can contain only pointers and simple types */
@@ -140,6 +144,8 @@ ffmpeg_init
         std::string name(init_params->property[i].name);
         std::string value(init_params->property[i].value);
 
+        if (state->data->generic_plugin.setProperty(&init_params->property[i]) == STATUS_OK) continue;
+
         if  ("ffmpeg_bin" == name)
         {
             state->data->ffmpeg_bin = value;
@@ -193,8 +199,17 @@ ffmpeg_init
 
     if (!bin_exists(state->data->ffmpeg_bin))
     {
-        state->data->msg = "Cannot access ffmpeg binary.";
-        return STATUS_ERROR;
+        // cannot resolve binary path so try to expand it into an absolute path
+        if (state->data->generic_plugin.expandPath(state->data->ffmpeg_bin) != STATUS_OK)
+        {
+            state->data->msg += "Cannot access ffmpeg binary.";
+            return STATUS_ERROR;
+        }
+        if (!bin_exists(state->data->ffmpeg_bin))
+        {
+            state->data->msg += "Cannot access ffmpeg binary.";
+            return STATUS_ERROR;
+        }
     }
 
     size_t buffer_size = state->data->width*state->data->height*MAX_PLANES;

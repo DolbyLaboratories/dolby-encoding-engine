@@ -308,6 +308,8 @@ parse_init_params
         std::string name(init_params->property[i].name);
         std::string value(init_params->property[i].value);
 
+        if (state->data->generic_plugin.setProperty(&init_params->property[i]) == STATUS_OK) continue;
+
         if ("bit_depth" == name)
         {
             if (value != "8" && value != "10")
@@ -692,12 +694,30 @@ parse_init_params
 
     if (!bin_exists(state->data->ffmpeg_bin, "-version"))
     {
-        state->data->msg += "Cannot access ffmpeg binary.";
+        // cannot resolve binary path so try to expand it into an absolute path
+        if (state->data->generic_plugin.expandPath(state->data->ffmpeg_bin) != STATUS_OK)
+        {
+            state->data->msg += "\nCannot access ffmpeg binary.";
+        }
+        if (!bin_exists(state->data->ffmpeg_bin, "-version"))
+        {
+            state->data->msg += "\nCannot access ffmpeg binary.";
+        }
     }
 
     if (state->data->interpreter.empty())
     {
-        state->data->msg += "Path to interpreter binary is not set.";
+        state->data->msg += "\nPath to interpreter binary is not set.";
+    }
+
+    if (state->data->generic_plugin.expandPath(state->data->cmd_gen) != STATUS_OK)
+    {
+        state->data->msg += "\nCannot find command generation script: " + state->data->cmd_gen;
+    }
+
+    if (state->data->generic_plugin.expandPath(state->data->user_params_file) != STATUS_OK)
+    {
+        state->data->msg += "\nCannot find user params file: " + state->data->user_params_file;
     }
 
     return state->data->msg.empty();

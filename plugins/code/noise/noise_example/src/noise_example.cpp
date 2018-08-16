@@ -40,6 +40,8 @@ typedef struct
     size_t                      source_height;
     noise_flt_pic_t             pic;
     std::string                 msg;
+    std::string                 plugin_path;
+    std::string                 config_path;
     int                         strength;
     std::vector<std::string>    temp_file;
 } noise_flt_example_data_t;
@@ -54,6 +56,8 @@ static
 const
 property_info_t scaling_base_info[] =
 {
+    { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
+    { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     {"temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "3", NULL, 0, 1, ACCESS_TYPE_READ},
     { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, 3, 3, ACCESS_TYPE_WRITE_INIT },
     { "source_width", PROPERTY_TYPE_INTEGER, "Source picture width.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
@@ -92,6 +96,8 @@ noise_example_init
     memset(&state->data->pic, 0, sizeof(noise_flt_pic_t));
 
     state->data->msg.clear();
+    state->data->plugin_path.clear();
+    state->data->config_path.clear();
     for (size_t i = 0; i < init_params->count; i++)
     {
         std::string name(init_params->property[i].name);
@@ -116,6 +122,14 @@ noise_example_init
         else if ("temp_file" == name)
         {
             state->data->temp_file.push_back(value);
+        }
+        else if ("plugin_path" == name)
+        {
+            state->data->plugin_path = value;
+        }
+        else if ("config_path" == name)
+        {
+            state->data->config_path = value;
         }
     }
 

@@ -39,6 +39,7 @@
 #include <atomic>
 #include "SystemCalls.h"
 #include "PipingManager.h"
+#include "GenericPlugin.h"
 #include "hevc_enc_api.h"
 
 #define READ_BUFFER_SIZE 1024
@@ -108,6 +109,8 @@ typedef struct
     int                         out_pipe_id;
     bool                        piping_error;
     bool                        redirect_stdout;
+
+    GenericPlugin               generic_plugin;
 
 } hevc_enc_ffmpeg_data_t;
 

@@ -118,6 +118,10 @@ typedef struct
     std::vector<nalu_t>::iterator                   last_used_nal;
     std::vector<hevc_enc_nal_t>                     output;
     std::list<std::pair<std::string,std::string>>   internal_params;
+
+    std::string         plugin_path;
+    std::string         config_path;
+
 } hevc_enc_x265_data_t;
 
 /* This structure can contain only pointers and simple types */

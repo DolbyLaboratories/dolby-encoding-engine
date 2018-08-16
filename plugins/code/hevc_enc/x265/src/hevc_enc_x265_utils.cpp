@@ -216,6 +216,9 @@ init_defaults(hevc_enc_x265_t* state)
     state->data->light_level_max_frame_average = 0;
 
     state->data->force_slice_type = false;
+
+    state->data->plugin_path.clear();
+    state->data->config_path.clear();
 }
 
 bool
@@ -822,6 +825,14 @@ parse_init_params
                 }
                 state->data->internal_params.push_back({param_name, param_value});
             }
+        }
+        else if ("plugin_path" == name)
+        {
+            state->data->plugin_path = value;
+        }
+        else if ("config_path" == name)
+        {
+            state->data->config_path = value;
         }
         else
         {

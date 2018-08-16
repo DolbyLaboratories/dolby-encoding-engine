@@ -43,7 +43,9 @@ static
 const
 property_info_t hevc_dec_ffmpeg_info[] =
 {
-      { "output_format", PROPERTY_TYPE_STRING, NULL, "any", "any:yuv420_10", 1, 1, ACCESS_TYPE_WRITE_INIT }
+      { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "output_format", PROPERTY_TYPE_STRING, NULL, "any", "any:yuv420_10", 1, 1, ACCESS_TYPE_WRITE_INIT }
     , { "frame_rate", PROPERTY_TYPE_DECIMAL, NULL, "24", "23.976:24:25:29.97:30:48:50:59.94:60", 1, 1, ACCESS_TYPE_WRITE_INIT }
     , { "temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "4", NULL, 0, 1, ACCESS_TYPE_READ }
     , { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, 3, 3, ACCESS_TYPE_WRITE_INIT }
@@ -127,6 +129,8 @@ hevc_dec_ffmpeg_init
     {
         std::string name(init_params->property[i].name);
         std::string value(init_params->property[i].value);
+
+        if (state->data->generic_plugin.setProperty(&init_params->property[i]) == STATUS_OK) continue;
 
         if ("output_format" == name)
         {
@@ -222,7 +226,15 @@ hevc_dec_ffmpeg_init
 
     if (!bin_exists(state->data->ffmpeg_bin, "-version", ""))
     {
-        state->data->msg += "Cannot access ffmpeg binary.";
+        // cannot resolve binary path so try to expand it into an absolute path
+        if (state->data->generic_plugin.expandPath(state->data->ffmpeg_bin) != STATUS_OK)
+        {
+            state->data->msg += "\nCannot access ffmpeg binary.";
+        }
+        if (!bin_exists(state->data->ffmpeg_bin, "-version", ""))
+        {
+            state->data->msg += "\nCannot access ffmpeg binary.";
+        }
     }
 
     if (state->data->interpreter.empty())
@@ -230,10 +242,16 @@ hevc_dec_ffmpeg_init
         state->data->msg += "Path to interpreter binary is not set.";
     }
 
+    if (state->data->generic_plugin.expandPath(state->data->cmd_gen) != STATUS_OK)
+    {
+        state->data->msg += "\nCannot find command generation script: " + state->data->cmd_gen;
+    }
+
     if (state->data->msg != "")
     {
         return HEVC_DEC_ERROR;
     }
+
 
     state->data->in_pipe_id = state->data->piping_mgr.createNamedPipe(state->data->temp_file[0], INPUT_PIPE);
     state->data->out_pipe_id = state->data->piping_mgr.createNamedPipe(state->data->temp_file[1], OUTPUT_PIPE);

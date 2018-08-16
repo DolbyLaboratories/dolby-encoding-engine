@@ -1,10 +1,10 @@
-build_plugins.py:
+build_plugins.py
 
-Dolby Encoding Engine Plugins Build Script.
-Please edit PLUGINS_DICT if you wish to disable some plugins from building.
+Dolby Encoding Engine Plugins Build Script
+Edit PLUGINS_DICT if you wish to disable some plugins from the build.
 
-Please call
+Call
     python build_plugins.py -h
-for the detailed help and examples.
+for detailed help and examples.
 
 

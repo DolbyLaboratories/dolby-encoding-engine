@@ -40,7 +40,9 @@ static
 const
 property_info_t hevc_enc_ffmpeg_info[] =
 {
-    { "max_pass_num", PROPERTY_TYPE_INTEGER, "Indicates how many passes encoder can perform (0 = unlimited).", "2", NULL, 0, 1, ACCESS_TYPE_READ }
+    { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
+    , { "max_pass_num", PROPERTY_TYPE_INTEGER, "Indicates how many passes encoder can perform (0 = unlimited).", "2", NULL, 0, 1, ACCESS_TYPE_READ }
     , { "max_output_data", PROPERTY_TYPE_INTEGER, "Limits number of output bytes (0 = unlimited).", "0", NULL, 0, 1, ACCESS_TYPE_WRITE }
     , { "bit_depth", PROPERTY_TYPE_STRING, NULL, NULL, "8:10", 1, 1, ACCESS_TYPE_WRITE_INIT }
     , { "width", PROPERTY_TYPE_INTEGER, NULL, NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
@@ -81,7 +83,7 @@ property_info_t hevc_enc_ffmpeg_info[] =
     // Only properties below (ACCESS_TYPE_USER) can be modified
     , { "ffmpeg_bin", PROPERTY_TYPE_STRING, "Path to ffmpeg binary.", "ffmpeg", NULL, 0, 1, ACCESS_TYPE_USER }
     , { "command_line", PROPERTY_TYPE_STRING, "Command line to be inserted into the ffmpeg command between the input and output specification.", NULL, NULL, 0, 100, ACCESS_TYPE_USER }
-    , { "cmd_gen", PROPERTY_TYPE_STRING, "Path to a script that can generate an ffmpeg command line using the config file as input.", NULL, NULL, 0, 1, ACCESS_TYPE_USER }
+    , { "cmd_gen", PROPERTY_TYPE_STRING, "Path to a script that can generate an ffmpeg command line using the config file as input.", NULL, NULL, 1, 1, ACCESS_TYPE_USER }
     , { "user_params_file", PROPERTY_TYPE_STRING, "Path to a file with user's parameters. Path is passed to cmd gen script. If script provided with DEE is used it must be JSON database with following keys \"user_config\": \"x265\". For details see provided examples.", NULL, NULL, 0, 1, ACCESS_TYPE_USER }
     , { "interpreter", PROPERTY_TYPE_STRING, "Path to binary used to read the cmd_gen script.", "python", NULL, 0, 1, ACCESS_TYPE_USER }
     , { "redirect_stdout", PROPERTY_TYPE_BOOLEAN, "If set to true, terminal output from FFmpeg binary will be redirected to a temporary file.", "false", NULL, 0, 1, ACCESS_TYPE_USER }

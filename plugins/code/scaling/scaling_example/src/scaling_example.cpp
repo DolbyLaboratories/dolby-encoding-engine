@@ -47,6 +47,9 @@ typedef struct
     std::vector<std::string>    temp_file;
     bool                        allow_crop;
 
+    std::string                 plugin_path;
+    std::string                 config_path;
+
     int                 source_offset_top;
     int                 source_offset_bottom;
     int                 source_offset_left;
@@ -68,6 +71,8 @@ static
 const
 property_info_t scaling_base_info[] =
 {
+    { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
+    { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     {"temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "3", NULL, 0, 1, ACCESS_TYPE_READ},
     { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, 3, 3, ACCESS_TYPE_WRITE_INIT },
     { "format", PROPERTY_TYPE_INTEGER, "Format of input picture.", "rgb_16", "rgb_16:yuv420_10", 1, 1, ACCESS_TYPE_WRITE_INIT },
@@ -153,6 +158,8 @@ scaling_example_init
     state->data->target_height = 0;    // 0 = same as source
     state->data->format = SCALING_FLT_RGB_16;
 
+    state->data->plugin_path.clear();
+    state->data->config_path.clear();
 
     state->data->msg.clear();
     for (size_t i = 0; i < init_params->count; i++)
@@ -217,6 +224,14 @@ scaling_example_init
                 state->data->msg += "\nInvalid property value: " + value;
                 return STATUS_ERROR;
             }
+        }
+        else if ("plugin_path" == name)
+        {
+            state->data->plugin_path = value;
+        }
+        else if ("config_path" == name)
+        {
+            state->data->config_path = value;
         }
         else
         {

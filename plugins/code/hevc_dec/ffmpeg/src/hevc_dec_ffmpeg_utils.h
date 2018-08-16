@@ -37,6 +37,7 @@
 #include <atomic>
 #include "hevc_dec_api.h"
 #include "PipingManager.h"
+#include "GenericPlugin.h"
 
 typedef struct
 {
@@ -73,6 +74,8 @@ typedef struct
     int                         out_pipe_id;
     bool                        piping_error;
     bool                        redirect_stdout;
+
+    GenericPlugin               generic_plugin;
 
 } hevc_dec_ffmpeg_data_t;
 
