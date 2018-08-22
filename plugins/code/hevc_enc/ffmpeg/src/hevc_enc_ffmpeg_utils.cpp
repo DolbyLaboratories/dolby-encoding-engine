@@ -754,7 +754,7 @@ write_cfg_file(hevc_enc_ffmpeg_data_t* data, const std::string& file)
         escape_backslashes(data->frame_rate);
         cfg_file << "        \"frame_rate\": \""                            << fps_to_num_denom(data->frame_rate)           << "\",\n";
         cfg_file << "        \"data_rate\": \""                             << data->data_rate                              << "\",\n";
-        cfg_file << "        \"max_vbv_data_rate\": \""                     << data->vbv_buffer_size                        << "\",\n";
+        cfg_file << "        \"max_vbv_data_rate\": \""                     << data->max_vbv_data_rate                      << "\",\n";
         cfg_file << "        \"vbv_buffer_size\": \""                       << data->vbv_buffer_size                        << "\",\n";
         escape_backslashes(data->range);
         cfg_file << "        \"range\": \""                                 << data->range                                  << "\",\n";
