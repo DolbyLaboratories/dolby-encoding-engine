@@ -32,6 +32,7 @@
                     <ffmpeg>
                         <ffmpeg_bin>/absolute/path/to/ffmpeg</ffmpeg_bin>
                         <cmd_gen>/absolute/path/to/cmd_gen_hevc_enc_ffmpeg.py</cmd_gen>
+                        <user_params_file>/absolute/path/to/profile_4_2.json</user_params_file>
                     </ffmpeg>
                 </hevc_enc>
             </sdr_to_dv_profile_4_2>
