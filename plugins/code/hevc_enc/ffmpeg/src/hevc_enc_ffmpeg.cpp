@@ -33,6 +33,8 @@
 #include "hevc_enc_api.h"
 #include "hevc_enc_ffmpeg_utils.h"
 #include <fstream>
+#include <chrono>
+#include <thread>
 
 #define MAX_BUFFERED_BYTESTREAM 1024 * 1024 * 64 // na NAL should ever be larger than 64MB which is enough to store an UHD 444 10bit frame
 
@@ -339,9 +341,10 @@ ffmpeg_process
                 }
 
                 if (plane_data_written == plane_size[i])
-                {
                     plane_written_flag = true;
-                }
+                
+                if (bytes_written == 0)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     }

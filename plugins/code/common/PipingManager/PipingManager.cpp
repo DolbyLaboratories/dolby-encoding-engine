@@ -332,12 +332,15 @@ void pipe_thread_func(PipeData* data)
         return;
     }
 
+    int written_bytes = 0;
+    int read_bytes = 0;
+
     // run main thread loop
     while (data->mStop == false)
     {
         if ((data->mType == INPUT_PIPE || data->mType == DUPLEX_PIPE) && data->mInBuf.Taken() > 0)
         {
-            int written_bytes = pipe_write_func(data);
+            written_bytes = pipe_write_func(data);
             if (written_bytes < 0)
             {
                 break;
@@ -347,7 +350,7 @@ void pipe_thread_func(PipeData* data)
         }
         if ((data->mType == OUTPUT_PIPE || data->mType == DUPLEX_PIPE) && data->mOutBuf.Free() > 0)
         {
-            int read_bytes = pipe_read_func(data);
+            read_bytes = pipe_read_func(data);
             if (read_bytes < 0)
             {
                 break;
@@ -360,6 +363,9 @@ void pipe_thread_func(PipeData* data)
         {
             break;
         }
+        
+        if (written_bytes == 0 && read_bytes == 0)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
 #ifdef WIN32

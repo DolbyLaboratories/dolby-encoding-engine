@@ -47,3 +47,4 @@ int systemWithTimeout(std::string command, int& return_code, int timeout, std::s
 int systemWithKillswitch(std::string command, int& return_code, std::atomic_bool& killswitch, std::string logfile);
 
 int systemWithStdout(std::string cmd, std::string& output);
+int systemWithStdout(std::string cmd, std::string& output, int& cmdReturnCode);
