@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -165,7 +165,7 @@ clear_nalu_buffer(hevc_enc_ffmpeg_data_t* data)
 }
 
 bool
-get_aud_from_bytestream(std::vector<char> &bytestream, std::vector<hevc_enc_nal_t> &nalus, bool flush, size_t max_data)
+get_aud_from_bytestream(std::vector<char> &bytestream, std::vector<HevcEncNal> &nalus, bool flush, size_t max_data)
 {
     unsigned int pos = 0;
 
@@ -259,7 +259,7 @@ get_aud_from_bytestream(std::vector<char> &bytestream, std::vector<hevc_enc_nal_
 
     for (unsigned int nal_idx = 0; nal_idx < nalu_start.size(); nal_idx++)
     {
-        hevc_enc_nal_t nal;
+        HevcEncNal nal;
 
         if (nal_idx == 0)
         {
@@ -283,32 +283,36 @@ get_aud_from_bytestream(std::vector<char> &bytestream, std::vector<hevc_enc_nal_
 }
 
 static bool
-bin_exists(const std::string& bin, const std::string& arg)
+bin_exists(const std::string& bin, const std::string& arg, std::string& output)
 {
-    std::string cmd = bin + " " + arg;
+    std::string cmd = "\"" + bin + "\" " + arg;
 
-#ifdef WIN32
-    // wrap command in extra quotations to ensure windows calls it properly
-    cmd = "\"" + cmd + "\"";
-#endif
+    int ret_code = 0;
+    int status = systemWithStdout(cmd, output, ret_code);
 
-    int rt = system(cmd.c_str());
-    return (rt == 0);
+    if (status != SYSCALL_STATUS_OK)
+    {
+        return false;
+    }
+    else
+    {
+        return (ret_code == 0);
+    }
 }
 
 bool
 parse_init_params
 (hevc_enc_ffmpeg_t*              state
-,const hevc_enc_init_params_t*   init_params
+,const HevcEncInitParams*        init_params
 )
 {
     state->data->msg.clear();
     for (unsigned int i = 0; i < init_params->count; i++)
     {
-        std::string name(init_params->property[i].name);
-        std::string value(init_params->property[i].value);
+        std::string name(init_params->properties[i].name);
+        std::string value(init_params->properties[i].value);
 
-        if (state->data->generic_plugin.setProperty(&init_params->property[i]) == STATUS_OK) continue;
+        if (state->data->generic_plugin.setProperty(&init_params->properties[i]) == STATUS_OK) continue;
 
         if ("bit_depth" == name)
         {
@@ -692,14 +696,14 @@ parse_init_params
         state->data->msg += "Path to ffmpeg binary is not set.";
     }
 
-    if (!bin_exists(state->data->ffmpeg_bin, "-version"))
+    if (!bin_exists(state->data->ffmpeg_bin, "-version", state->data->version_string))
     {
         // cannot resolve binary path so try to expand it into an absolute path
         if (state->data->generic_plugin.expandPath(state->data->ffmpeg_bin) != STATUS_OK)
         {
             state->data->msg += "\nCannot access ffmpeg binary.";
         }
-        if (!bin_exists(state->data->ffmpeg_bin, "-version"))
+        else if (!bin_exists(state->data->ffmpeg_bin, "-version", state->data->version_string))
         {
             state->data->msg += "\nCannot access ffmpeg binary.";
         }

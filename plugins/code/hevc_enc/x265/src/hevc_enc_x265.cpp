@@ -32,13 +32,12 @@
 
 #include "hevc_enc_api.h"
 #include "hevc_enc_x265_utils.h"
-#include "x265.h"
 #include <stdint.h>
 #include <map>
 
 static
 const
-property_info_t hevc_enc_x265_info[] = 
+PropertyInfo hevc_enc_x265_info[] = 
 {
 
      { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
@@ -91,7 +90,7 @@ property_info_t hevc_enc_x265_info[] =
     ,{"scenecut_bias", PROPERTY_TYPE_INTEGER, "Represents the percentage difference between the inter cost and intra cost of a frame used in scenecut detection. Values between 5 and 15 are recommended.", "5", "0:100", 0, 1, ACCESS_TYPE_USER}
     ,{"lookahead_frames", PROPERTY_TYPE_INTEGER, "Number of frames to look ahead. Must be between the maximum consecutive bframe count and 250.", "20", "0:250", 0, 1, ACCESS_TYPE_USER}
     ,{"info", PROPERTY_TYPE_BOOLEAN, "Enables informational SEI in the stream headers which describes the encoder version, build info, and encode parameters.", "false", NULL, 0, 1, ACCESS_TYPE_USER }
-    ,{"frame_threads", PROPERTY_TYPE_INTEGER, "Number of concurrently encoded frames (0 = autodetect).", "0", "0:16", 0, 1, ACCESS_TYPE_USER }
+    ,{"frame_threads", PROPERTY_TYPE_INTEGER, "Number of concurrently encoded frames (0 = autodetect). Value 1 can improve encode quality, but significantly reduces performance.", "0", "0:16", 0, 1, ACCESS_TYPE_USER }
     ,{"nr_inter", PROPERTY_TYPE_INTEGER, "Inter frame noise reduction strength (0 = disabled).", "0", "0:2000", 0, 1, ACCESS_TYPE_USER }
     ,{"nr_intra", PROPERTY_TYPE_INTEGER, "Intra frame noise reduction strength (0 = disabled).", "0", "0:2000", 0, 1, ACCESS_TYPE_USER }
     ,{"cbqpoffs", PROPERTY_TYPE_INTEGER, "Offset of Cb chroma QP from the luma QP selected by rate control.", "0", "-12:12", 0, 1, ACCESS_TYPE_USER }
@@ -111,11 +110,11 @@ property_info_t hevc_enc_x265_info[] =
 static
 size_t
 x265_get_info
-    (const property_info_t** info
+    (const PropertyInfo** info
     )
 {
     *info = hevc_enc_x265_info;
-    return sizeof(hevc_enc_x265_info)/sizeof(property_info_t);
+    return sizeof(hevc_enc_x265_info)/sizeof(PropertyInfo);
 }
 
 static
@@ -126,10 +125,10 @@ x265_get_size()
 }
 
 static
-status_t
+Status
 x265_init
-    (hevc_enc_handle_t handle
-    ,const hevc_enc_init_params_t* init_params
+    (HevcEncHandle handle
+    ,const HevcEncInitParams* init_params
     )
 {
     const x265_api* api;
@@ -330,9 +329,9 @@ x265_init
 }
 
 static
-status_t
+Status
 x265_close
-    (hevc_enc_handle_t handle
+    (HevcEncHandle handle
     )
 {
     hevc_enc_x265_t* state = (hevc_enc_x265_t*)handle;
@@ -359,12 +358,12 @@ x265_close
 }
 
 static
-status_t
+Status
 x265_process
-    (hevc_enc_handle_t          handle
-    ,const hevc_enc_picture_t*  picture
-    ,const size_t               picture_num
-    ,hevc_enc_output_t*         output
+    (HevcEncHandle          handle
+    ,const HevcEncPicture*  picture
+    ,const size_t           picture_num
+    ,HevcEncOutput*         output
     )
 {
     hevc_enc_x265_t* state = (hevc_enc_x265_t*)handle;
@@ -401,7 +400,7 @@ x265_process
     state->api->picture_init(state->param, &input_picture);
     for (size_t i = 0; i < picture_num; i++)
     {
-        input_picture.bitDepth = picture[i].bit_depth;
+        input_picture.bitDepth = picture[i].bitDepth;
         
         if (input_picture.bitDepth != state->data->bit_depth)
         {
@@ -409,8 +408,8 @@ x265_process
             return STATUS_ERROR;
         }
 
-        input_picture.colorSpace = picture[i].color_space;
-        input_picture.sliceType = frametype_to_slicetype(picture[i].frame_type);
+        input_picture.colorSpace = picture[i].colorSpace;
+        input_picture.sliceType = frametype_to_slicetype(picture[i].frameType);
         
         int width = (int)picture[i].width;
         int height = (int)picture[i].height;
@@ -456,7 +455,7 @@ x265_process
     state->data->output.clear();
     while (size_acc < state->data->max_output_data && nal_index < (int)state->data->output_buffer.size())
     {
-        hevc_enc_nal_t nal;
+        HevcEncNal nal;
         nal.type = state->data->output_buffer[nal_index].type;
         nal.payload = (void*)state->data->output_buffer[nal_index].payload.data();
         nal.size = state->data->output_buffer[nal_index].payload.size();
@@ -467,16 +466,16 @@ x265_process
     }
 
     output->nal = state->data->output.data();
-    output->nal_num = state->data->output.size();
+    output->nalNum = state->data->output.size();
     return STATUS_OK;
 }
 
 static
-status_t
+Status
 x265_flush
-    (hevc_enc_handle_t      handle
-    ,hevc_enc_output_t*     output
-    ,int*                   is_empty
+    (HevcEncHandle    	handle
+    ,HevcEncOutput*     output
+    ,int*               is_empty
     )
 {
     hevc_enc_x265_t* state = (hevc_enc_x265_t*)handle;
@@ -498,7 +497,7 @@ x265_flush
     else if (0 == num_encoded)
     {
         *is_empty = 1;
-        output->nal_num = 0;
+        output->nalNum = 0;
         output->nal = NULL;
         return STATUS_OK;
     }
@@ -519,7 +518,7 @@ x265_flush
     state->data->output.clear();
     while (size_acc < state->data->max_output_data && nal_index < (int)state->data->output_buffer.size())
     {
-        hevc_enc_nal_t nal;
+        HevcEncNal nal;
         nal.type = state->data->output_buffer[nal_index].type;
         nal.payload = (void*)state->data->output_buffer[nal_index].payload.data();
         nal.size = state->data->output_buffer[nal_index].payload.size();
@@ -530,17 +529,17 @@ x265_flush
     }
 
     output->nal = state->data->output.data();
-    output->nal_num = state->data->output.size();
+    output->nalNum = state->data->output.size();
     *is_empty = 0;
 
     return STATUS_OK;
 }
 
 static
-status_t
+Status
 x265_set_property
-    (hevc_enc_handle_t handle
-    ,const property_t* property
+    (HevcEncHandle   handle
+    ,const Property* property
     )
 {
     hevc_enc_x265_t* state = (hevc_enc_x265_t*)handle;
@@ -556,10 +555,10 @@ x265_set_property
 }
 
 static
-status_t
+Status
 x265_get_property
-    (hevc_enc_handle_t handle
-    ,property_t* property
+    (HevcEncHandle handle
+    ,Property* property
     )
 {
     hevc_enc_x265_t* state = (hevc_enc_x265_t*)handle;
@@ -580,7 +579,7 @@ x265_get_property
 static
 const char*
 x265_get_message
-    (hevc_enc_handle_t handle
+    (HevcEncHandle handle
     )
 {
     hevc_enc_x265_t* state = (hevc_enc_x265_t*)handle;
@@ -588,7 +587,7 @@ x265_get_message
 }
 
 static 
-hevc_enc_api_t x265_plugin_api = 
+HevcEncApi x265_plugin_api = 
 {    
     "x265"
     ,x265_get_info
@@ -603,7 +602,13 @@ hevc_enc_api_t x265_plugin_api =
 };
 
 DLB_EXPORT
-hevc_enc_api_t* hevc_enc_get_api()
+HevcEncApi* hevcEncGetApi()
 {
     return &x265_plugin_api;
+}
+
+DLB_EXPORT
+int hevcEncGetApiVersion()
+{
+    return HEVC_ENC_API_VERSION;
 }

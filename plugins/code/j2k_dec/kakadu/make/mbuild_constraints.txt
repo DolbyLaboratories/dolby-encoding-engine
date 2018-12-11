@@ -1,0 +1,31 @@
+*** INFO FOR DEVELOPERS REGARDING MAKEFILES AND PROJECTS REGENERATION WITH MBUILD (APPLICABLE ONLY FOR PLUGIN'S GITHUB MIRROR). INTERNAL ONLY - DO NOT UPLOAD TO GITHUB ***
+
+To build kakadu github plugin, environment variable '$KDUROOT' is used.
+MBuild is not capable to properly handle source files, using environment variables in path, so Makefiles and VS Projects must be edited by hand.
+Following example lines exists in project manifest:
+$(KDUROOT)/support/ssse3_stripe_transfer.cpp
+
+resulting in following lines within the Makefile:
+$(TMP)code/j2k_dec/kakadu/make/$(KDUROOT)/support/ssse3_stripe_transfer.j2k_dec_kakadu_linux_amd64_gnu_debug.o
+include $(wildcard $(TMP)code/j2k_dec/kakadu/make/$(KDUROOT)/support/ssse3_stripe_transfer.j2k_dec_kakadu_linux_amd64_gnu_debug.d)
+
+thus wrong path before environment variable '$(KDUROOT)' must be deleted:
+$(KDUROOT)/support/ssse3_stripe_transfer.j2k_dec_kakadu_linux_amd64_gnu_debug.o
+include $(wildcard $(KDUROOT)/support/ssse3_stripe_transfer.j2k_dec_kakadu_linux_amd64_gnu_debug.d)
+
+Additionaly following rules for compiler must be defined:
+
+$(KDUROOT)%.j2k_dec_kakadu_linux_amd64_gnu_debug.o: $(KDUROOT)%.cpp | $(TMP)%/..
+	$(CXXDEP) -MM $(INCLUDES) -MT $@ -o $(patsubst %.o,%.d,$@) $<
+	$(CXX) $(CXXFLAGS_debug) $(INCLUDES) -o $@ $<
+
+$(KDUROOT)%.j2k_dec_kakadu_linux_amd64_gnu_release.o: $(KDUROOT)%.cpp | $(TMP)%/..
+	$(CXXDEP) -MM $(DEFINES_release) $(INCLUDES) -MT $@ -o $(patsubst %.o,%.d,$@) $<
+	$(CXX) $(CXXFLAGS_release) $(DEFINES_release) $(INCLUDES) -o $@ $<
+
+Similar action has to be done with .vcxproj Visual Studio files.
+Following lines:
+<ClCompile Include="..\..\$(KDUROOT)\support\ssse3_stripe_transfer.cpp" />
+shall be transformed:
+<ClCompile Include="$(KDUROOT)\support\ssse3_stripe_transfer.cpp" />
+

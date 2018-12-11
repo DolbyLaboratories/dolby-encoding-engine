@@ -70,6 +70,7 @@ public:
     piping_status_t getPipePath(int pipe_id, std::string& path);
     piping_status_t writeToPipe(int pipe_id, void* buffer, size_t data_size, size_t& bytes_written);
     piping_status_t readFromPipe(int pipe_id, void* buffer, size_t buffer_size, size_t& bytes_read);
+    piping_status_t pipeBufferFree(int pipe_id, uint64_t& bytes_available);
     piping_status_t pipeDataReady(int pipe_id, size_t& bytes_ready);
     piping_status_t getPipeStatus(int pipe_id);
     std::string printInternalState();

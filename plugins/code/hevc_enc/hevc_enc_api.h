@@ -1,12 +1,12 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2018, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
-* 
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
-* 
+*
 * * Redistributions of source code must retain the above copyright notice, this
 *   list of conditions and the following disclaimer.
 *
@@ -17,7 +17,7 @@
 * * Neither the name of the copyright holder nor the names of its
 *   contributors may be used to endorse or promote products derived from
 *   this software without specific prior written permission.
-* 
+*
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -34,6 +34,8 @@
 #define __DEE_PLUGINS_HEVC_ENC_API_H__
 
 #include "common.h"
+
+#define HEVC_ENC_API_VERSION 2
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,52 +82,48 @@ extern "C" {
 */
 
 /** @brief Set of properties to init encoder */
-typedef struct
-{
-    const property_t* property;     /**< Pointer to array of properties */       
-    size_t            count;        /**< Number of properties in array */
-} hevc_enc_init_params_t;
- 
+typedef struct {
+    const Property* properties; /**< Pointer to array of properties */
+    size_t count;               /**< Number of properties in array */
+} HevcEncInitParams;
+
 /** @brief Color Space */
-typedef enum
-{
+typedef enum {
     HEVC_ENC_COLOR_SPACE_I400 = 0,
     HEVC_ENC_COLOR_SPACE_I420,
     HEVC_ENC_COLOR_SPACE_I422,
-    HEVC_ENC_COLOR_SPACE_I444
-} hevc_enc_color_space_t;
- 
+    HEVC_ENC_COLOR_SPACE_I444,
+} HevcEncColorSpace;
+
 /** @brief Type of video frame */
-typedef enum
-{
+typedef enum {
     HEVC_ENC_FRAME_TYPE_AUTO = 0,
     HEVC_ENC_FRAME_TYPE_IDR,
     HEVC_ENC_FRAME_TYPE_I,
     HEVC_ENC_FRAME_TYPE_P,
     HEVC_ENC_FRAME_TYPE_B,
-    HEVC_ENC_FRAME_TYPE_BREF
-} hevc_enc_frame_type_t;
- 
+    HEVC_ENC_FRAME_TYPE_BREF,
+} HevcEncFrameType;
+
 /** @brief Picture structure
  *  Points to video data and describes how it should be interpreted.
  */
-typedef struct
-{
-    size_t                  width;     
-    size_t                  height;
-    int                     bit_depth;      /**< 8 or 10 bits */
-    hevc_enc_color_space_t  color_space;   
-    hevc_enc_frame_type_t   frame_type;
-    void*                   plane[3];       /**< Pointers to Y, Cb and Cr planes */
-    int                     stride[3];      /**< Number of bytes between rows (for each plane) */
-} hevc_enc_picture_t;
+typedef struct {
+    int bitDepth;   /**< 8 or 10 bits */
+    void* plane[3]; /**< Pointers to Y, Cb and Cr planes */
+    int stride[3];  /**< Number of bytes between rows (for each plane) */
+
+    size_t width;
+    size_t height;
+    HevcEncColorSpace colorSpace;
+    HevcEncFrameType frameType;
+} HevcEncPicture;
 
 /** @brief NAL unit types.
  *         In DEE only HEVC_ENC_NAL_UNIT_ACCESS_UNIT_DELIMITER is important.
  *         All other NAL units can be set to HEVC_ENC_NAL_UNIT_OTHER.
  */
-typedef enum
-{
+typedef enum {
     HEVC_ENC_NAL_UNIT_CODED_SLICE_TRAIL_N = 0,
     HEVC_ENC_NAL_UNIT_CODED_SLICE_TRAIL_R,
     HEVC_ENC_NAL_UNIT_CODED_SLICE_TSA_N,
@@ -153,163 +151,116 @@ typedef enum
     HEVC_ENC_NAL_UNIT_SUFFIX_SEI,
     HEVC_ENC_NAL_UNIT_OTHER,
     HEVC_ENC_NAL_UNIT_INVALID = 64,
-} hevc_enc_nal_type_t;
+} HevcEncNalType;
 
 /** @brief NAL unit structure */
-typedef struct
-{
-    hevc_enc_nal_type_t type;       /**< Type of NAL unit */
-    size_t              size;       /**< Size of payload */
-    void*               payload;    /**< Pointer to payload */
-} hevc_enc_nal_t;
+typedef struct {
+    HevcEncNalType type; /**< Type of NAL unit */
+    size_t size;         /**< Size of payload */
+    void* payload;       /**< Pointer to payload */
+} HevcEncNal;
 
 /** @brief Output frame structure */
-typedef struct
-{
-    hevc_enc_nal_t* nal;        /**< Buffer of NAL units */       
-    size_t          nal_num;    /**< Number of units in buffer */
-} hevc_enc_output_t;
- 
+typedef struct {
+    HevcEncNal* nal; /**< Buffer of NAL units */
+    size_t nalNum;   /**< Number of units in buffer */
+} HevcEncOutput;
+
 /** @brief Handle to encoder instance
  *  hevc_enc_handle_t is actually pointer to encoder context
  *  defined by plugin's private type. Caller sees that as void*.
  */
-typedef void* hevc_enc_handle_t;
- 
+typedef void* HevcEncHandle;
+
 /** @brief Get info about supported properties
  *  @return Number of properties in info array
  */
-size_t
-hevc_enc_get_info
-    (const property_info_t** info    /**< [out] Pointer to array with property information */
-    );
-     
-/** @brief Definition of pointer to hevc_enc_get_info function */
-typedef size_t (*func_hevc_enc_get_info)(const property_info_t**);
- 
+typedef size_t (*HevcEncGetInfo)(const PropertyInfo** info); /**< [out] Pointer to array with property information */
+
 /** @brief Get size of encoder context
  *  @return Size in bytes
  */
-size_t
-hevc_enc_get_size(void);
- 
-/** @brief Definition of pointer to hevc_enc_get_size function */
-typedef size_t (*func_hevc_enc_get_size)(void);
- 
+typedef size_t (*HevcEncGetSize)(void);
+
 /** @brief Initialize encoder instance
- *  @return status code 
- */
-status_t
-hevc_enc_init
-    (hevc_enc_handle_t              handle          /**< [in/out] Encoder instance handle */
-    ,const hevc_enc_init_params_t*  init_params     /**< [in] Properties to init encoder instance */
-    );
-     
-/** @brief Definition of pointer to hevc_enc_init function */  
-typedef status_t (*func_hevc_enc_init)(hevc_enc_handle_t, const hevc_enc_init_params_t*);
- 
-/** @brief Close encoder instance 
  *  @return status code
  */
-status_t
-hevc_enc_close
-    (hevc_enc_handle_t handle   /**< [in/out] Encoder instance handle */
-    );
- 
-/** @brief Definition of pointer to hevc_enc_close function */ 
-typedef status_t (*func_hevc_enc_close)(hevc_enc_handle_t);
- 
+typedef Status (*HevcEncInit)(HevcEncHandle handle,                 /**< [in/out] Encoder instance handle */
+                              const HevcEncInitParams* initParams); /**< [in] Properties to init encoder instance */
+
+/** @brief Close encoder instance
+ *  @return status code
+ */
+typedef Status (*HevcEncClose)(HevcEncHandle handle); /**< [in/out] Encoder instance handle */
+
 /** @brief Encode array of pictures. In DEE picture_num is always '1'.
  *         Should produce complete access unit, if available.
  *         If buffer size (max_output_data) is too small to handle access unit,
  *         plugin must keep it until bigger buffer is available.
- *         Function sets pointer to output data, so it must 
+ *         Function sets pointer to output data, so it must
  *         stay in plugin's memory until next 'process' call.
  *  @return status code
  */
-status_t
-hevc_enc_process
-    (hevc_enc_handle_t          handle      /**< [in/out] Encoder instance handle */ 
-    ,const hevc_enc_picture_t*  picture     /**< [in] Pointer to array of pictures */
-    ,const size_t               picture_num /**< [in] Number of pictures in array */
-    ,hevc_enc_output_t*         output      /**< [out] Output buffer */
-    );
-     
-/** @brief Definition of pointer to hevc_enc_process function */
-typedef status_t (*func_hevc_enc_process)(hevc_enc_handle_t, const hevc_enc_picture_t*, const size_t, hevc_enc_output_t*);
- 
+typedef Status (*HevcEncProcess)(HevcEncHandle handle,          /**< [in/out] Encoder instance handle */
+                                 const HevcEncPicture* picture, /**< [in] Pointer to array of pictures */
+                                 const size_t pictureNum,       /**< [in] Number of pictures in array */
+                                 HevcEncOutput* output);        /**< [out] Output buffer */
+
 /** @brief Flush encoder
  *  @return status code
  */
-status_t
-hevc_enc_flush
-    (hevc_enc_handle_t      handle          /**< [in/out] Encoder instance handle */
-    ,hevc_enc_output_t*     output          /**< [in/out] Output buffer */
-    ,int*                   is_empty        /**< [out] Flush indicator */
-    );
- 
-/** @brief Definition of pointer to hevc_enc_flush function */
-typedef status_t (*func_hevc_enc_flush)(hevc_enc_handle_t, hevc_enc_output_t*, int*);
- 
+typedef Status (*HevcEncFlush)(HevcEncHandle handle,  /**< [in/out] Encoder instance handle */
+                               HevcEncOutput* output, /**< [in/out] Output buffer */
+                               int* isEmpty);         /**< [out] Flush indicator */
+
 /** @brief Property setter
  *  @return status code
- */ 
-status_t
-hevc_enc_set_property
-    (hevc_enc_handle_t handle       /**< [in/out] Encoder instance handle */
-    ,const property_t* property     /**< [in] Property to write */
-    ); 
- 
-/** @brief Definition of pointer to hevc_enc_set_property function */
-typedef status_t (*func_hevc_enc_set_property)(hevc_enc_handle_t, const property_t*);
- 
+ */
+typedef Status (*HevcEncSetProperty)(HevcEncHandle handle,      /**< [in/out] Encoder instance handle */
+                                     const Property* property); /**< [in] Property to write */
+
 /** @brief Property getter
  *  @return status code
- */ 
-status_t
-hevc_enc_get_property
-    (hevc_enc_handle_t handle       /**< [in/out] Encoder instance handle */
-    ,property_t* property           /**< [in/out] Property to read */
-    );
-     
-/** @brief Definition of pointer to hevc_enc_get_property function */  
-typedef status_t (*func_hevc_enc_get_property)(hevc_enc_handle_t, property_t*);
- 
+ */
+typedef Status (*HevcEncGetProperty)(HevcEncHandle handle, /**< [in/out] Encoder instance handle */
+                                     Property* property);  /**< [in/out] Property to read */
+
 /** @brief Get string describing last warning or error occurred
  *  @return Pointer to string with message
- */ 
-const char*
-hevc_enc_get_message
-    (hevc_enc_handle_t handle          /**< [in/out] Encoder instance handle */
-    );
-     
-/** @brief Definition of pointer to hevc_enc_get_property function */  
-typedef const char* (*func_hevc_enc_get_message)(hevc_enc_handle_t);
- 
+ */
+typedef const char* (*HevcEncGetMessage)(HevcEncHandle handle); /**< [in/out] Encoder instance handle */
+
 /** @brief Structure with pointers to all API functions */
-typedef struct
-{
-    const char*                        plugin_name;                   
-    func_hevc_enc_get_info             get_info;
-    func_hevc_enc_get_size             get_size; 
-    func_hevc_enc_init                 init;
-    func_hevc_enc_close                close;
-    func_hevc_enc_process              process;
-    func_hevc_enc_flush                flush;
-    func_hevc_enc_set_property         set_property;
-    func_hevc_enc_get_property         get_property;
-    func_hevc_enc_get_message          get_message;
-} hevc_enc_api_t;
- 
+typedef struct {
+    const char* pluginName;
+    HevcEncGetInfo getInfo;
+    HevcEncGetSize getSize;
+    HevcEncInit init;
+    HevcEncClose close;
+    HevcEncProcess process;
+    HevcEncFlush flush;
+    HevcEncSetProperty setProperty;
+    HevcEncGetProperty getProperty;
+    HevcEncGetMessage getMessage;
+} HevcEncApi;
+
 /** @brief Export symbol to access implementation of HEVC Encoder plugin
  *  @return pointer to hevc_enc_api_t
  */
 DLB_EXPORT
-hevc_enc_api_t* hevc_enc_get_api(void);
- 
-/** @brief Definition of pointer to hevc_enc_get_api function */
-typedef 
-hevc_enc_api_t* (*func_hevc_enc_get_api)(void);
+HevcEncApi* hevcEncGetApi(void);
+
+/** @brief Definition of pointer to hevcEncGetApi function */
+typedef HevcEncApi* (*HevcEncGetApi)(void);
+
+/** @brief Export symbol to access API version of HEVC Encoder plugin
+*  @return integer representing API version
+*/
+DLB_EXPORT
+int hevcEncGetApiVersion(void);
+
+/** @brief Definition of pointer to hevcEncGetApiVersion function */
+typedef int (*HevcEncGetApiVersion)(void);
 
 #ifdef __cplusplus
 }

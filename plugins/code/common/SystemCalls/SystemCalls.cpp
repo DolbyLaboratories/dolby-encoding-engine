@@ -33,8 +33,8 @@
 #include <SystemCalls.h>
 #include <vector>
 #include <sstream>
-
 #include <memory>
+#include <iterator>
 
 #ifdef WIN32
 
@@ -80,6 +80,49 @@ void splitString(const std::string &s, char delim, Out result)
     {
         *(result++) = item;
     }
+}
+
+static
+inline
+std::vector<std::string> splitQuotedString(const std::string &s, char delim)
+{
+    std::stringstream item;
+    std::vector<std::string> elems;
+
+    for (unsigned int i = 0; i < s.length(); i++)
+    {
+        char c = s[i];
+        if (c == delim)
+        {
+            if (item.str() != "")
+            {
+                elems.push_back(item.str());
+                item.str("");
+            }
+        }
+        else if (c == '\"')
+        {
+            do
+            {
+                item << s[i];
+                i++;
+            }
+            while (s[i] != '\"');
+            
+            item << s[i];
+            elems.push_back(item.str());
+            item.str("");
+        }
+        else
+        {
+            item << c;
+        }
+    }
+    
+    if (item.str() != "")
+        elems.push_back(item.str());
+
+    return elems;
 }
 
 static
@@ -157,7 +200,7 @@ system_call_status_t startProcess(std::string command, std::string logfile, Proc
     else if (processData.pid == 0)
     {
         // parsing the command into binary and a table of arguments
-        std::vector<std::string> split_command = splitString(command, ' ');
+        std::vector<std::string> split_command = splitQuotedString(command, ' ');
 
         if (split_command.empty()) exit(-1);
 
@@ -394,6 +437,43 @@ int systemWithStdout(std::string cmd, std::string& output)
             result += buffer;
     }
 
+    output = result;
+    return SYSCALL_STATUS_OK;
+}
+
+int systemWithStdout(std::string cmd, std::string& output, int& cmdReturnCode)
+{
+#ifdef WIN32
+    // wrap command in extra quotations to ensure windows calls it properly
+    cmd = "\"" + cmd + "\"";
+#endif
+
+    char buffer[TEMP_BUF];
+    std::string result;
+
+    FILE* pipe;
+#ifdef WIN32
+    pipe = _popen(cmd.c_str(), "r");
+#else
+    pipe = popen(cmd.c_str(), "r");
+#endif
+
+    if (!pipe)
+    {
+        return SYSCALL_STATUS_CALL_ERROR;
+    }
+
+    while (!feof(pipe))
+    {
+        if (fgets(buffer, TEMP_BUF, pipe) != NULL)
+            result += buffer;
+    }
+
+#ifdef WIN32
+    cmdReturnCode = _pclose(pipe);
+#else
+    cmdReturnCode = pclose(pipe);
+#endif
     output = result;
     return SYSCALL_STATUS_OK;
 }

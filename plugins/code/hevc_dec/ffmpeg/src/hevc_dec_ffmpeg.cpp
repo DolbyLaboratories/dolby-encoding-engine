@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@
 
 static
 const
-property_info_t hevc_dec_ffmpeg_info[] =
+PropertyInfo hevc_dec_ffmpeg_info[] =
 {
       { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
     , { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
@@ -69,11 +69,11 @@ typedef struct
 static
 size_t
 hevc_dec_ffmpeg_get_info
-(const property_info_t** info
+(const PropertyInfo** info
 )
 {
     *info = hevc_dec_ffmpeg_info;
-    return sizeof(hevc_dec_ffmpeg_info) / sizeof(property_info_t);
+    return sizeof(hevc_dec_ffmpeg_info) / sizeof(PropertyInfo);
 }
 
 static
@@ -84,10 +84,10 @@ hevc_dec_ffmpeg_get_size()
 }
 
 static
-hevc_dec_status_t
+HevcDecStatus
 hevc_dec_ffmpeg_init
-(hevc_dec_handle_t handle
-, const hevc_dec_init_params_t* init_params
+(HevcDecHandle handle
+, const HevcDecInitParams* init_params
 )
 {
     hevc_dec_ffmpeg_t* state = (hevc_dec_ffmpeg_t*)handle;
@@ -98,10 +98,10 @@ hevc_dec_ffmpeg_init
     state->data->height = 0;
     state->data->output_bitdepth = 8;
     state->data->chroma_format = HEVC_DEC_COLOR_SPACE_I420;
-    state->data->frame_rate.frame_period = 24000;
-    state->data->frame_rate.time_scale = 1000;
-    state->data->frame_rate_ext.frame_period = 24;
-    state->data->frame_rate_ext.time_scale = 1;
+    state->data->frame_rate.framePeriod = 24000;
+    state->data->frame_rate.timeScale = 1000;
+    state->data->frame_rate_ext.framePeriod = 24;
+    state->data->frame_rate_ext.timeScale = 1;
     state->data->output_format = "any";
     state->data->decoded_picture.plane[0] = NULL;
     state->data->decoded_picture.plane[1] = NULL;
@@ -122,15 +122,12 @@ hevc_dec_ffmpeg_init
     state->data->ffmpeg_running = false;
     state->data->piping_error = false;
 
-    state->data->piping_mgr.setTimeout(PIPE_TIMEOUT);
-    state->data->piping_mgr.setMaxbuf(PIPE_BUFFER_SIZE);
-
     for (int i = 0; i < (int)init_params->count; i++)
     {
-        std::string name(init_params->property[i].name);
-        std::string value(init_params->property[i].value);
+        std::string name(init_params->properties[i].name);
+        std::string value(init_params->properties[i].value);
 
-        if (state->data->generic_plugin.setProperty(&init_params->property[i]) == STATUS_OK) continue;
+        if (state->data->generic_plugin.setProperty(&init_params->properties[i]) == STATUS_OK) continue;
 
         if ("output_format" == name)
         {
@@ -224,14 +221,15 @@ hevc_dec_ffmpeg_init
         state->data->msg += "Path to ffmpeg binary is not set.";
     }
 
-    if (!bin_exists(state->data->ffmpeg_bin, "-version", ""))
+    std::string binCheckOutput = "";
+    if (!bin_exists(state->data->ffmpeg_bin, "-version", binCheckOutput))
     {
         // cannot resolve binary path so try to expand it into an absolute path
         if (state->data->generic_plugin.expandPath(state->data->ffmpeg_bin) != STATUS_OK)
         {
             state->data->msg += "\nCannot access ffmpeg binary.";
         }
-        if (!bin_exists(state->data->ffmpeg_bin, "-version", ""))
+        else if (!bin_exists(state->data->ffmpeg_bin, "-version", binCheckOutput))
         {
             state->data->msg += "\nCannot access ffmpeg binary.";
         }
@@ -252,6 +250,8 @@ hevc_dec_ffmpeg_init
         return HEVC_DEC_ERROR;
     }
 
+    state->data->piping_mgr.setTimeout(PIPE_TIMEOUT);
+    state->data->piping_mgr.setMaxbuf(PIPE_BUFFER_SIZE);
 
     state->data->in_pipe_id = state->data->piping_mgr.createNamedPipe(state->data->temp_file[0], INPUT_PIPE);
     state->data->out_pipe_id = state->data->piping_mgr.createNamedPipe(state->data->temp_file[1], OUTPUT_PIPE);
@@ -317,7 +317,8 @@ hevc_dec_ffmpeg_init
         // LAUNCH FFMPEG //
         state->data->ffmpeg_running = true;
         state->data->ffmpeg_thread = std::thread(run_cmd_thread_func, ffmpeg_call, state->data);
-        state->data->msg = "FFMPEG launched with the following command line: " + ffmpeg_call;
+        state->data->msg = "FFMPEG decoder version: " + binCheckOutput;
+        state->data->msg += "\nFFMPEG launched with the following command line: " + ffmpeg_call;
         if (state->data->redirect_stdout)
             state->data->msg += "\nFFMPEG log file: " + state->data->temp_file[3];
         return HEVC_DEC_OK;
@@ -329,9 +330,9 @@ hevc_dec_ffmpeg_init
 }
 
 static
-hevc_dec_status_t
+HevcDecStatus
 hevc_dec_ffmpeg_close
-(hevc_dec_handle_t handle
+(HevcDecHandle handle
 )
 {
     hevc_dec_ffmpeg_t* state = (hevc_dec_ffmpeg_t*)handle;
@@ -368,12 +369,13 @@ hevc_dec_ffmpeg_close
 }
 
 static
-hevc_dec_status_t
+HevcDecStatus
 hevc_dec_ffmpeg_process
-(hevc_dec_handle_t           handle
+(HevcDecHandle               handle
 , const void*                stream_buffer
 , const size_t               buffer_size
-, hevc_dec_picture_t*        output
+, HevcDecPicture*            output
+, int*                       bufferConsumed
 )
 {
     hevc_dec_ffmpeg_t* state = (hevc_dec_ffmpeg_t*)handle;
@@ -386,14 +388,30 @@ hevc_dec_ffmpeg_process
         return HEVC_DEC_ERROR;
     }
 
-    if (write_to_ffmpeg(state->data, (void*)stream_buffer, buffer_size) == HEVC_DEC_ERROR)
+    uint64_t pipeFree = 0;
+    state->data->piping_mgr.pipeBufferFree(state->data->in_pipe_id, pipeFree);
+
+    if (pipeFree >= (uint64_t)buffer_size)
     {
-        state->data->msg += print_ffmpeg_state(state->data);
-        state->data->msg += state->data->piping_mgr.printInternalState();
-        return HEVC_DEC_ERROR;
+        size_t bytes_written = 0;
+        piping_status_t status = state->data->piping_mgr.writeToPipe(state->data->in_pipe_id, (void*)stream_buffer, buffer_size, bytes_written);
+        *bufferConsumed = 1;
+
+        if (status != PIPE_MGR_OK)
+        {
+            state->data->msg += "Input pipe error " + std::to_string(status) + ".";
+            state->data->msg += print_ffmpeg_state(state->data);
+            state->data->msg += state->data->piping_mgr.printInternalState();
+            state->data->piping_error = true;
+            return HEVC_DEC_ERROR;
+        }
+    }
+    else
+    {
+        *bufferConsumed = 0;
     }
 
-    hevc_dec_status_t reading_status = read_pic_from_ffmpeg(state->data);
+    HevcDecStatus reading_status = read_pic_from_ffmpeg(state->data);
 
     if (reading_status == HEVC_DEC_OK)
     {
@@ -404,22 +422,19 @@ hevc_dec_ffmpeg_process
 }
 
 static
-hevc_dec_status_t
+HevcDecStatus
 hevc_dec_ffmpeg_flush
-(hevc_dec_handle_t      handle          /**< [in/out] Decoder instance handle */
-, hevc_dec_picture_t*   output          /**< [in/out] Output buffer */
-, int*                  is_empty        /**< [out] Flush indicator */
+(HevcDecHandle      handle          /**< [in/out] Decoder instance handle */
+, HevcDecPicture*   output          /**< [in/out] Output buffer */
+, int*              is_empty        /**< [out] Flush indicator */
 )
 {
     hevc_dec_ffmpeg_t* state = (hevc_dec_ffmpeg_t*)handle;
 
-    if (flush_to_ffmpeg(state->data) == HEVC_DEC_PICTURE_NOT_READY)
-    {
-        // close input pipe to let FFMPEG know we finished sending input once the buffer is flushed
-        state->data->piping_mgr.closePipe(state->data->in_pipe_id);
-    }
+    // close input pipe to let FFMPEG know we finished sending input once the buffer is flushed
+    state->data->piping_mgr.closePipe(state->data->in_pipe_id);
 
-    hevc_dec_status_t reading_status = read_pic_from_ffmpeg(state->data);
+    HevcDecStatus reading_status = read_pic_from_ffmpeg(state->data);
 
     if (reading_status == HEVC_DEC_OK)
     {
@@ -453,20 +468,20 @@ hevc_dec_ffmpeg_flush
 }
 
 static
-hevc_dec_status_t
+HevcDecStatus
 hevc_dec_ffmpeg_set_property
-(hevc_dec_handle_t
-,const property_t*
+(HevcDecHandle
+,const Property*
 )
 {
     return HEVC_DEC_ERROR;
 }
 
 static
-hevc_dec_status_t
+HevcDecStatus
 hevc_dec_ffmpeg_get_property
-(hevc_dec_handle_t
-,property_t* property
+(HevcDecHandle
+,Property* property
 )
 {
     if (NULL != property->name)
@@ -485,7 +500,7 @@ hevc_dec_ffmpeg_get_property
 static
 const char*
 hevc_dec_ffmpeg_get_message
-(hevc_dec_handle_t handle
+(HevcDecHandle handle
 )
 {
     hevc_dec_ffmpeg_t* state = (hevc_dec_ffmpeg_t*)handle;
@@ -493,7 +508,7 @@ hevc_dec_ffmpeg_get_message
 }
 
 static
-hevc_dec_api_t ffmpeg_plugin_api =
+HevcDecApi ffmpeg_plugin_api =
 {
     "ffmpeg"
     , hevc_dec_ffmpeg_get_info
@@ -508,7 +523,13 @@ hevc_dec_api_t ffmpeg_plugin_api =
 };
 
 DLB_EXPORT
-hevc_dec_api_t* hevc_dec_get_api()
+HevcDecApi* hevcDecGetApi()
 {
     return &ffmpeg_plugin_api;
+}
+
+DLB_EXPORT
+int hevcDecGetApiVersion()
+{
+    return HEVC_DEC_API_VERSION;
 }

@@ -30,19 +30,19 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "scaling_flt_api.h"
+#include "scaling_api.h"
 #include <string>
 #include <vector>
 
 typedef struct
 {
-    scaling_flt_pic_format_t    format;
+    ScalingPicFormat    	format;
     size_t                      source_width;
     size_t                      source_height;
     size_t                      target_width;
     size_t                      target_height;
-    scaling_flt_pic_t           source_pic;
-    scaling_flt_pic_t           target_pic;
+    ScalingPic           	source_pic;
+    ScalingPic           	target_pic;
     std::string                 msg;
     std::vector<std::string>    temp_file;
     bool                        allow_crop;
@@ -59,17 +59,17 @@ typedef struct
     int                 target_offset_bottom;
     int                 target_offset_left;
     int                 target_offset_right;
-} scaling_flt_example_data_t;
+} scaling_example_data_t;
 
 /* This structure can contain only pointers and simple types */
 typedef struct
 {
-    scaling_flt_example_data_t* data;
-} scaling_flt_example_t;
+    scaling_example_data_t* data;
+} scaling_example_t;
 
 static
 const
-property_info_t scaling_base_info[] =
+PropertyInfo scaling_base_info[] =
 {
     { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
@@ -94,25 +94,25 @@ property_info_t scaling_base_info[] =
 static
 size_t
 scaling_example_get_info
-(const property_info_t** info    /**< [out] Pointer to array with property information */
+(const PropertyInfo** info    /**< [out] Pointer to array with property information */
 )
 {
     *info = scaling_base_info;
-    return sizeof(scaling_base_info) / sizeof(property_info_t);
+    return sizeof(scaling_base_info) / sizeof(PropertyInfo);
 }
 
 static
 size_t
 scaling_example_get_size()
 {
-    return sizeof(scaling_flt_example_t);
+    return sizeof(scaling_example_t);
 }
 
 static
 void
-calculate_offsets(scaling_flt_handle_t handle)
+calculate_offsets(ScalingHandle handle)
 {
-    scaling_flt_example_t* state = (scaling_flt_example_t*)handle;
+    scaling_example_t* state = (scaling_example_t*)handle;
 
     /*
     *  Assuming the picture is just stretched, the offsets will be stretched too.
@@ -130,17 +130,17 @@ calculate_offsets(scaling_flt_handle_t handle)
 }
 
 static
-status_t
+Status
 scaling_example_init
-    (scaling_flt_handle_t               handle          /**< [in/out] filter instance handle */
-    , const scaling_flt_init_params_t*   init_params     /**< [in] Properties to init filter instance */
+    (ScalingHandle               handle          /**< [in/out] filter instance handle */
+    , const ScalingInitParams*   init_params     /**< [in] Properties to init filter instance */
     )
 {
-    scaling_flt_example_t* state = (scaling_flt_example_t*)handle;
+    scaling_example_t* state = (scaling_example_t*)handle;
 
-    state->data = new scaling_flt_example_data_t;
-    memset(&state->data->source_pic, 0, sizeof(scaling_flt_pic_t));
-    memset(&state->data->target_pic, 0, sizeof(scaling_flt_pic_t));
+    state->data = new scaling_example_data_t;
+    memset(&state->data->source_pic, 0, sizeof(ScalingPic));
+    memset(&state->data->target_pic, 0, sizeof(ScalingPic));
 
     state->data->allow_crop = true;
 
@@ -156,7 +156,7 @@ scaling_example_init
 
     state->data->target_width = 0;     // 0 = same as source
     state->data->target_height = 0;    // 0 = same as source
-    state->data->format = SCALING_FLT_RGB_16;
+    state->data->format = SCALING_RGB_16;
 
     state->data->plugin_path.clear();
     state->data->config_path.clear();
@@ -164,13 +164,13 @@ scaling_example_init
     state->data->msg.clear();
     for (size_t i = 0; i < init_params->count; i++)
     {
-        std::string name(init_params->property[i].name);
-        std::string value(init_params->property[i].value);
+        std::string name(init_params->properties[i].name);
+        std::string value(init_params->properties[i].value);
 
         if ("format" == name)
         {
-            if ("rgb_16" == value) state->data->format = SCALING_FLT_RGB_16;
-            else if ("yuv420_10" == value) state->data->format = SCALING_FLT_YUV420_10;
+            if ("rgb_16" == value) state->data->format = SCALING_RGB_16;
+            else if ("yuv420_10" == value) state->data->format = SCALING_YUV420_10;
             else return STATUS_ERROR;
         }
         else if ("source_width" == name)
@@ -274,12 +274,12 @@ scaling_example_init
 }
 
 static
-status_t
+Status
 scaling_example_close
-    (scaling_flt_handle_t handle   /**< [in/out] filter instance handle */
+    (ScalingHandle handle   /**< [in/out] filter instance handle */
     )
 {
-    scaling_flt_example_t* state = (scaling_flt_example_t*)handle;
+    scaling_example_t* state = (scaling_example_t*)handle;
 
     if (state->data)
     {
@@ -295,14 +295,14 @@ scaling_example_close
 }
 
 static
-status_t
+Status
 scaling_example_process
-    (scaling_flt_handle_t        handle   /**< [in/out] filter instance handle */
-    , const scaling_flt_pic_t*    in      /**< [in] Input picture */
-    , scaling_flt_pic_t*          out     /**< [out] Output picture */
+    (ScalingHandle         handle  /**< [in/out] filter instance handle */
+    , const ScalingPic*    in      /**< [in] Input picture */
+    , ScalingPic*          out     /**< [out] Output picture */
     )
 {
-    scaling_flt_example_t* state = (scaling_flt_example_t*)handle;
+    scaling_example_t* state = (scaling_example_t*)handle;
 
     memcpy(state->data->source_pic.buffer[0], in->buffer[0], in->width*in->height*2);
     memcpy(state->data->source_pic.buffer[1], in->buffer[1], in->width*in->height*2);
@@ -325,25 +325,25 @@ scaling_example_process
 }
 
 static
-status_t
+Status
 scaling_example_set_property
-    (scaling_flt_handle_t handle    /**< [in/out] filter instance handle */
-    , const property_t* property     /**< [in] Property to write */
+    (ScalingHandle handle       /**< [in/out] filter instance handle */
+    , const Property* property     /**< [in] Property to write */
     )
 {
-    scaling_flt_example_t* state = (scaling_flt_example_t*)handle;
+    scaling_example_t* state = (scaling_example_t*)handle;
     if (NULL == state || NULL == property) return STATUS_ERROR;
     return STATUS_ERROR;
 }
 
 static
-status_t
+Status
 scaling_example_get_property
-    (scaling_flt_handle_t handle    /**< [in/out] filter instance handle */
-    , property_t* property           /**< [in/out] Property to read */
+    (ScalingHandle handle       /**< [in/out] filter instance handle */
+    , Property* property           /**< [in/out] Property to read */
     )
 {
-    scaling_flt_example_t* state = (scaling_flt_example_t*)handle;
+    scaling_example_t* state = (scaling_example_t*)handle;
     if (NULL == state) return STATUS_ERROR;
 
     std::string name(property->name);
@@ -353,22 +353,22 @@ scaling_example_get_property
         strcpy(property->value, "3");
         return STATUS_OK;
     }
-    else if ("get_target_offset_top" == name && property->max_value_sz > std::to_string(state->data->target_offset_top).size())
+    else if ("get_target_offset_top" == name && property->maxValueSz > std::to_string(state->data->target_offset_top).size())
     {
         strcpy(property->value, std::to_string(state->data->target_offset_top).c_str());
         return STATUS_OK;
     }
-    else if ("get_target_offset_bottom" == name && property->max_value_sz > std::to_string(state->data->target_offset_bottom).size())
+    else if ("get_target_offset_bottom" == name && property->maxValueSz > std::to_string(state->data->target_offset_bottom).size())
     {
         strcpy(property->value, std::to_string(state->data->target_offset_bottom).c_str());
         return STATUS_OK;
     }
-    else if ("get_target_offset_left" == name && property->max_value_sz > std::to_string(state->data->target_offset_left).size())
+    else if ("get_target_offset_left" == name && property->maxValueSz > std::to_string(state->data->target_offset_left).size())
     {
         strcpy(property->value, std::to_string(state->data->target_offset_left).c_str());
         return STATUS_OK;
     }
-    else if ("get_target_offset_right" == name && property->max_value_sz > std::to_string(state->data->target_offset_right).size())
+    else if ("get_target_offset_right" == name && property->maxValueSz > std::to_string(state->data->target_offset_right).size())
     {
         strcpy(property->value, std::to_string(state->data->target_offset_right).c_str());
         return STATUS_OK;
@@ -385,14 +385,14 @@ scaling_example_get_property
 static
 const char*
 scaling_example_get_message
-    (scaling_flt_handle_t handle        /**< [in/out] filter instance handle */
+    (ScalingHandle handle        /**< [in/out] filter instance handle */
     )
 {
-    scaling_flt_example_t* state = (scaling_flt_example_t*)handle;
+    scaling_example_t* state = (scaling_example_t*)handle;
     return state->data->msg.c_str();
 }
 
-static scaling_flt_api_t plugin_api
+static ScalingApi plugin_api
 {
     "example"
     , scaling_example_get_info
@@ -406,7 +406,13 @@ static scaling_flt_api_t plugin_api
 };
 
 DLB_EXPORT
-scaling_flt_api_t* scaling_flt_get_api()
+ScalingApi* scalingGetApi()
 {
     return &plugin_api;
+}
+
+DLB_EXPORT
+int scalingGetApiVersion()
+{
+    return SCALING_API_VERSION;
 }

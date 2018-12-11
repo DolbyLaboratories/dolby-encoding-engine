@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
 * 
 * Redistribution and use in source and binary forms, with or without
@@ -38,8 +38,6 @@
 #include <cstdio>
 #include <string>
 
-#include "j2k_dec_api.h"
-
 // Kakadu core includes
 #include "kdu_elementary.h"
 #include "kdu_messaging.h"
@@ -48,10 +46,7 @@
 #include "kdu_sample_processing.h"
 // Kakadu support includes
 #include "kdu_stripe_decompressor.h"
-// Embed Kakadu support code
-#include "avx2_stripe_transfer.cpp"
-#include "kdu_stripe_decompressor.cpp"
-#include "ssse3_stripe_transfer.cpp"
+#include "j2k_dec_kakadu.h"
 
 using namespace kdu_supp;
 
@@ -59,7 +54,7 @@ using namespace kdu_supp;
 
 static
 const
-property_info_t j2k_dec_kakadu_info[] =
+PropertyInfo j2k_dec_kakadu_info[] =
 {
     { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
@@ -67,13 +62,12 @@ property_info_t j2k_dec_kakadu_info[] =
     { "height", PROPERTY_TYPE_INTEGER, "Picture height", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
 };
 
-static
 size_t
 kakadu_get_info
-    (const property_info_t** info)
+    (const PropertyInfo** info)
 {
     *info = j2k_dec_kakadu_info;
-    return sizeof(j2k_dec_kakadu_info) / sizeof(property_info_t);
+    return sizeof(j2k_dec_kakadu_info) / sizeof(PropertyInfo);
 }
 
 typedef struct
@@ -145,7 +139,6 @@ class j2k_buffer : public kdu_compressed_source
         char* m_curpos;
 };
 
-static
 size_t
 kakadu_get_size()
 {
@@ -164,11 +157,10 @@ init_data
     data->msg.clear();
 }
 
-static
-status_t
+Status
 kakadu_init
-    (j2k_dec_handle_t               handle          /**< [in/out] Decoder instance handle */
-    ,const j2k_dec_init_params_t*   init_params     /**< [in] Properties to init decoder instance */
+    (J2kDecHandle               handle          /**< [in/out] Decoder instance handle */
+    ,const J2kDecInitParams*    init_params     /**< [in] Properties to init decoder instance */
     )
 {
     j2k_dec_kakadu_t* state = (j2k_dec_kakadu_t*)handle;
@@ -178,8 +170,8 @@ kakadu_init
 
     for (size_t i = 0; i < init_params->count; i++)
     {
-        std::string name(init_params->property[i].name);
-        std::string value(init_params->property[i].value);
+        std::string name(init_params->properties[i].name);
+        std::string value(init_params->properties[i].value);
 
         if ("width" == name)
         {
@@ -224,10 +216,9 @@ kakadu_init
     return STATUS_OK;
 }
 
-static
-status_t
+Status
 kakadu_close
-    (j2k_dec_handle_t handle
+    (J2kDecHandle handle
     )
 {
     j2k_dec_kakadu_t* state = (j2k_dec_kakadu_t*)handle;
@@ -246,7 +237,7 @@ static
 void
 prepare_output
     (j2k_dec_kakadu_t* state
-    ,j2k_dec_output_t* out)
+    ,J2kDecOutput* out)
 {
     int plane_samples_num = (int)(state->data->width*state->data->height);
     short* p_r = (short*)state->data->reorder_buffer;
@@ -272,12 +263,11 @@ prepare_output
     out->height = state->data->height;
 }
 
-static
-status_t
+Status
 kakadu_process
-    (j2k_dec_handle_t           handle  /**< [in/out] Decoder instance handle */
-    ,const j2k_dec_input_t*     in      /**< [in] Encoded input */
-    ,j2k_dec_output_t*          out     /**< [out] Decoded output */
+    (J2kDecHandle           handle  /**< [in/out] Decoder instance handle */
+    ,const J2kDecInput*     in      /**< [in] Encoded input */
+    ,J2kDecOutput*          out     /**< [out] Decoded output */
     )
 {
     j2k_dec_kakadu_t* state = (j2k_dec_kakadu_t*)handle;
@@ -322,52 +312,21 @@ kakadu_process
     return STATUS_OK;
 }
 
-static
-status_t
-kakadu_set_property
-    (j2k_dec_handle_t          /**< [in/out] Decoder instance handle */
-    , const property_t*        /**< [in] Property to write */
-    )
-{
-    return STATUS_ERROR;
-}
-
-static
-status_t
+Status
 kakadu_get_property
-    (j2k_dec_handle_t              /**< [in/out] Decoder instance handle */
-    , property_t*                  /**< [in/out] Property to read */
+    (J2kDecHandle                /**< [in/out] Decoder instance handle */
+    , Property*                  /**< [in/out] Property to read */
     )
 {
     return STATUS_ERROR;
 }
 
-static
 const char*
 kakadu_get_message
-    (j2k_dec_handle_t handle        /**< [in/out] Decoder instance handle */
+    (J2kDecHandle handle        /**< [in/out] Decoder instance handle */
     )
 {
     j2k_dec_kakadu_t* state = (j2k_dec_kakadu_t*)handle;
     return state->data->msg.empty() ? NULL :state->data->msg.c_str();
 }
 
-static
-j2k_dec_api_t kakadu_plugin_api =
-{
-    "kakadu"
-    ,kakadu_get_info
-    ,kakadu_get_size
-    ,kakadu_init
-    ,kakadu_close
-    ,kakadu_process
-    ,kakadu_set_property
-    ,kakadu_get_property
-    ,kakadu_get_message
-};
-
-DLB_EXPORT
-j2k_dec_api_t* j2k_dec_get_api()
-{
-    return &kakadu_plugin_api;
-}

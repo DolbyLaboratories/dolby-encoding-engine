@@ -690,6 +690,26 @@ piping_status_t PipingManager::pipeDataReady(int pipe_id, size_t& bytes_ready)
     return status;
 }
 
+
+piping_status_t PipingManager::pipeBufferFree(int pipe_id, uint64_t& bytes_available)
+{
+    piping_status_t status = PIPE_MGR_OK;
+    std::map<int, PipeData*>::iterator it = mData->mPipes.find(pipe_id);
+    if (it == mData->mPipes.end())
+    {
+        status = PIPE_MGR_PIPE_NOT_FOUND;
+    }
+    else
+    {
+        PipeData* pipe = it->second;
+        std::lock_guard<std::mutex> lock(pipe->mMutex);
+        bytes_available = pipe->mInBuf.Free();
+        status = pipe->mStatus;
+    }
+
+    return status;
+}
+
 piping_status_t PipingManager::getPipeStatus(int pipe_id)
 {
     std::map<int, PipeData*>::iterator it = mData->mPipes.find(pipe_id);

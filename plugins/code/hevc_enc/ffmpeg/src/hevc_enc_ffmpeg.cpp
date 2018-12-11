@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,7 @@
 
 static
 const
-property_info_t hevc_enc_ffmpeg_info[] =
+PropertyInfo hevc_enc_ffmpeg_info[] =
 {
     { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
     , { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
@@ -94,11 +94,11 @@ property_info_t hevc_enc_ffmpeg_info[] =
 static
 size_t
 ffmpeg_get_info
-(const property_info_t** info
+(const PropertyInfo** info
 )
 {
     *info = hevc_enc_ffmpeg_info;
-    return sizeof(hevc_enc_ffmpeg_info) / sizeof(property_info_t);
+    return sizeof(hevc_enc_ffmpeg_info) / sizeof(PropertyInfo);
 }
 
 static
@@ -109,10 +109,10 @@ ffmpeg_get_size()
 }
 
 static
-status_t
+Status
 ffmpeg_init
-(hevc_enc_handle_t handle
-, const hevc_enc_init_params_t* init_params
+(HevcEncHandle handle
+, const HevcEncInitParams* init_params
 )
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
@@ -235,7 +235,8 @@ ffmpeg_init
         // LAUNCH THREAD //
         state->data->ffmpeg_running = true;
         state->data->ffmpeg_thread = std::thread(run_cmd_thread_func, ffmpeg_call, state->data);
-        state->data->msg = "FFMPEG launched with the following command line: " + ffmpeg_call;
+        state->data->msg = "FFMPEG encoder version: " + state->data->version_string;
+        state->data->msg += "\nFFMPEG launched with the following command line: " + ffmpeg_call;
         if (state->data->redirect_stdout)
             state->data->msg += "\nFFMPEG log file: " + state->data->temp_file[3];
         return STATUS_OK;
@@ -247,9 +248,9 @@ ffmpeg_init
 }
 
 static
-status_t
+Status
 ffmpeg_close
-(hevc_enc_handle_t handle
+(HevcEncHandle handle
 )
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
@@ -278,12 +279,12 @@ ffmpeg_close
 }
 
 static
-status_t
+Status
 ffmpeg_process
-(hevc_enc_handle_t          handle
-, const hevc_enc_picture_t*  picture
+(HevcEncHandle          handle
+, const HevcEncPicture*  picture
 , const size_t               picture_num
-, hevc_enc_output_t*         output
+, HevcEncOutput*         output
 )
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
@@ -298,25 +299,25 @@ ffmpeg_process
 
     for (unsigned int i = 0; i < picture_num; i++)
     {
-        hevc_enc_picture_t current_pic = picture[i];
+        HevcEncPicture current_pic = picture[i];
 
-        int byte_num = current_pic.bit_depth == 8 ? 1 : 2;
+        int byte_num = current_pic.bitDepth == 8 ? 1 : 2;
         size_t plane_size[3];
         plane_size[0] = current_pic.width * current_pic.height * byte_num;
         plane_size[1] = plane_size[0];
         plane_size[2] = plane_size[0];
 
-        if (current_pic.color_space == HEVC_ENC_COLOR_SPACE_I420)
+        if (current_pic.colorSpace == HEVC_ENC_COLOR_SPACE_I420)
         {
             plane_size[1] /= 4;
             plane_size[2] /= 4;
         }
-        else if (current_pic.color_space == HEVC_ENC_COLOR_SPACE_I422)
+        else if (current_pic.colorSpace == HEVC_ENC_COLOR_SPACE_I422)
         {
             plane_size[1] /= 2;
             plane_size[2] /= 2;
         }
-        else if (current_pic.color_space != HEVC_ENC_COLOR_SPACE_I444)
+        else if (current_pic.colorSpace != HEVC_ENC_COLOR_SPACE_I444)
         {
             state->data->msg = "YUV444 is not supported.";
             return STATUS_ERROR;
@@ -372,12 +373,12 @@ ffmpeg_process
     if (get_aud_from_bytestream(state->data->output_bytestream, state->data->nalus, false, state->data->max_output_data) == true)
     {
         output->nal = state->data->nalus.data();
-        output->nal_num = state->data->nalus.size();
+        output->nalNum = state->data->nalus.size();
     }
     else
     {
         output->nal = NULL;
-        output->nal_num = 0;
+        output->nalNum = 0;
     }
 
     if (state->data->ffmpeg_ret_code)
@@ -388,10 +389,10 @@ ffmpeg_process
 }
 
 static
-status_t
+Status
 ffmpeg_flush
-(hevc_enc_handle_t      handle
-, hevc_enc_output_t*    output
+(HevcEncHandle      handle
+, HevcEncOutput*    output
 , int*                  is_empty
 )
 {
@@ -426,18 +427,18 @@ ffmpeg_flush
     if (get_aud_from_bytestream(state->data->output_bytestream, state->data->nalus, true, state->data->max_output_data) == true)
     {
         output->nal = state->data->nalus.data();
-        output->nal_num = state->data->nalus.size();
+        output->nalNum = state->data->nalus.size();
     }
     else if (state->data->ffmpeg_running)
     {
         output->nal = NULL;
-        output->nal_num = 0;
+        output->nalNum = 0;
         *is_empty = 0;
     }
     else
     {
         output->nal = NULL;
-        output->nal_num = 0;
+        output->nalNum = 0;
         *is_empty = 1;
     }
 
@@ -455,10 +456,10 @@ ffmpeg_flush
 }
 
 static
-status_t
+Status
 ffmpeg_set_property
-(hevc_enc_handle_t handle
-, const property_t* property
+(HevcEncHandle handle
+, const Property* property
 )
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
@@ -473,10 +474,10 @@ ffmpeg_set_property
 }
 
 static
-status_t
+Status
 ffmpeg_get_property
-(hevc_enc_handle_t handle
-, property_t* property
+(HevcEncHandle handle
+, Property* property
 )
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
@@ -509,7 +510,7 @@ ffmpeg_get_property
 static
 const char*
 ffmpeg_get_message
-(hevc_enc_handle_t handle
+(HevcEncHandle handle
 )
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
@@ -517,7 +518,7 @@ ffmpeg_get_message
 }
 
 static
-hevc_enc_api_t ffmpeg_plugin_api =
+HevcEncApi ffmpeg_plugin_api =
 {
     "ffmpeg"
     , ffmpeg_get_info
@@ -532,7 +533,13 @@ hevc_enc_api_t ffmpeg_plugin_api =
 };
 
 DLB_EXPORT
-hevc_enc_api_t* hevc_enc_get_api()
+HevcEncApi* hevcEncGetApi()
 {
     return &ffmpeg_plugin_api;
+}
+
+DLB_EXPORT
+int hevcEncGetApiVersion()
+{
+    return HEVC_ENC_API_VERSION;
 }

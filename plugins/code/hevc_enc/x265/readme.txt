@@ -25,8 +25,6 @@ x265 compilation and prerequisities:
       https://www.nasm.us/pub/nasm/releasebuilds/2.13.03/win64/nasm-2.13.03-installer-x64.exe
     - Execute the installer and follow the instructions
     - Add the NASM installation directory to PATH
-    Detailed instructions about building x265 can be found here:
-    https://bitbucket.org/multicoreware/x265/wiki/Home
 
 - Building x265:
     It is mandatory to build the x265 library with at least 10-bit API.
@@ -43,6 +41,8 @@ x265 compilation and prerequisities:
     Found nasm: C:/Users/mgaik/NASM/nasm.exe (found version "2.13.03")
     Found Nasm 2.13.03 to build assembly primitives
     x265 version 2.8
+
+    Visit https://bitbucket.org/multicoreware/x265/wiki/Home for more details.
 
 Plugin prerequisities:
 - The "libx265.lib" and "libx265.dll" libraries on Windows

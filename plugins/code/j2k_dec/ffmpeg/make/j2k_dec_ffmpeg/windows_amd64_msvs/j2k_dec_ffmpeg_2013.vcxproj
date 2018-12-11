@@ -42,7 +42,7 @@
 <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='release|x64'">false</LinkIncremental></PropertyGroup>
 <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
 <ClCompile>
-<AdditionalIncludeDirectories>..\..\..\..\..\common\GenericPlugin;..\..\..\..\..\common;..\..\..\src;..\..\..\..</AdditionalIncludeDirectories>
+<AdditionalIncludeDirectories>..\..\..\..\..\common\GenericPlugin;..\..\..\..\..\common\SystemCalls;..\..\..\..\..\common;..\..\..\src;..\..\..\..</AdditionalIncludeDirectories>
 <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
 <BufferSecurityCheck>true</BufferSecurityCheck>
 <CompileAs>Default</CompileAs>
@@ -72,7 +72,7 @@
 <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers></Link></ItemDefinitionGroup>
 <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
 <ClCompile>
-<AdditionalIncludeDirectories>..\..\..\..\..\common\GenericPlugin;..\..\..\..\..\common;..\..\..\src;..\..\..\..</AdditionalIncludeDirectories>
+<AdditionalIncludeDirectories>..\..\..\..\..\common\GenericPlugin;..\..\..\..\..\common\SystemCalls;..\..\..\..\..\common;..\..\..\src;..\..\..\..</AdditionalIncludeDirectories>
 <BasicRuntimeChecks>Default</BasicRuntimeChecks>
 <BufferSecurityCheck>false</BufferSecurityCheck>
 <CompileAs>Default</CompileAs>
@@ -102,9 +102,11 @@
 <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers></Link></ItemDefinitionGroup>
 <ItemGroup>
 <ClCompile Include="..\..\..\..\..\common\GenericPlugin\GenericPlugin.cpp" />
+<ClCompile Include="..\..\..\..\..\common\SystemCalls\SystemCalls.cpp" />
 <ClCompile Include="..\..\..\src\j2k_dec_ffmpeg.cpp" /></ItemGroup>
 <ItemGroup>
 <ClInclude Include="..\..\..\..\..\common\GenericPlugin\GenericPlugin.h" />
+<ClInclude Include="..\..\..\..\..\common\SystemCalls\SystemCalls.h" />
 <ClInclude Include="..\..\..\..\..\common\common.h" />
 <ClInclude Include="..\..\..\..\j2k_dec_api.h" /></ItemGroup>
 <ItemGroup />

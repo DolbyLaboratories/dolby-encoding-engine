@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
 * 
 * Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,7 @@
 
 #include "j2k_dec_api.h"
 #include "GenericPlugin.h"
+#include "SystemCalls.h"
 
 #define MAX_PLANES (3)
 static const int temp_file_num = 3;
@@ -49,7 +50,7 @@ static int cur_instance_idx = 0;
 
 static
 const
-property_info_t j2k_dec_ffmpeg_info[] =
+PropertyInfo j2k_dec_ffmpeg_info[] =
 {
     { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
@@ -64,10 +65,10 @@ property_info_t j2k_dec_ffmpeg_info[] =
 static
 size_t
 ffmpeg_get_info
-    (const property_info_t** info)
+    (const PropertyInfo** info)
 {
     *info = j2k_dec_ffmpeg_info;
-    return sizeof(j2k_dec_ffmpeg_info) / sizeof(property_info_t);
+    return sizeof(j2k_dec_ffmpeg_info) / sizeof(PropertyInfo);
 }
 
 typedef struct
@@ -114,24 +115,31 @@ init_data
     cur_instance_idx++;
 }
 
-bool bin_exists(const std::string& bin)
+static bool
+bin_exists(const std::string& bin, const std::string& arg, std::string& output)
 {
-    std::string cmd = "\"" + bin + "\" -version";
+    std::string cmd = "\"" + bin + "\" " + arg;
 
-#ifdef WIN32 
-    // wrap command in extra quotations to ensure windows calls it properly 
-    cmd = "\"" + cmd + "\"";
-#endif
+    int ret_code = 0;
+    //int status = systemWithTimeout(cmd, ret_code, BINARY_CHECK_TIMEOUT, output);
 
-    int rt = system(cmd.c_str());
-    return (rt == 0);
+    int status = systemWithStdout(cmd, output, ret_code);
+
+    if (status != SYSCALL_STATUS_OK)
+    {
+        return false;
+    }
+    else
+    {
+        return (ret_code == 0);
+    }
 }
 
 static
-status_t
+Status
 ffmpeg_init
-    (j2k_dec_handle_t               handle          /**< [in/out] Decoder instance handle */
-    ,const j2k_dec_init_params_t*   init_params     /**< [in] Properties to init decoder instance */
+    (J2kDecHandle               handle          /**< [in/out] Decoder instance handle */
+    ,const J2kDecInitParams*    init_params     /**< [in] Properties to init decoder instance */
     )
 {
     j2k_dec_ffmpeg_t* state = (j2k_dec_ffmpeg_t*)handle;
@@ -141,10 +149,10 @@ ffmpeg_init
 
     for (size_t i = 0; i < init_params->count; i++)
     {
-        std::string name(init_params->property[i].name);
-        std::string value(init_params->property[i].value);
+        std::string name(init_params->properties[i].name);
+        std::string value(init_params->properties[i].value);
 
-        if (state->data->generic_plugin.setProperty(&init_params->property[i]) == STATUS_OK) continue;
+        if (state->data->generic_plugin.setProperty(&init_params->properties[i]) == STATUS_OK) continue;
 
         if  ("ffmpeg_bin" == name)
         {
@@ -197,20 +205,23 @@ ffmpeg_init
         return STATUS_ERROR;
     }
 
-    if (!bin_exists(state->data->ffmpeg_bin))
+    std::string binCheckOutput = "";
+    if (!bin_exists(state->data->ffmpeg_bin, "-version", binCheckOutput))
     {
         // cannot resolve binary path so try to expand it into an absolute path
         if (state->data->generic_plugin.expandPath(state->data->ffmpeg_bin) != STATUS_OK)
         {
-            state->data->msg += "Cannot access ffmpeg binary.";
+            state->data->msg = "Cannot access ffmpeg binary.";
             return STATUS_ERROR;
         }
-        if (!bin_exists(state->data->ffmpeg_bin))
+        else if (!bin_exists(state->data->ffmpeg_bin, "-version", binCheckOutput))
         {
-            state->data->msg += "Cannot access ffmpeg binary.";
+            state->data->msg = "Cannot access ffmpeg binary.";
             return STATUS_ERROR;
         }
     }
+
+    state->data->msg = "FFMPEG decoder version: " + binCheckOutput;
 
     size_t buffer_size = state->data->width*state->data->height*MAX_PLANES;
     state->data->output_buffer = new short[buffer_size];
@@ -220,9 +231,9 @@ ffmpeg_init
 }
 
 static
-status_t
+Status
 ffmpeg_close
-    (j2k_dec_handle_t handle
+    (J2kDecHandle handle
     )
 {
     j2k_dec_ffmpeg_t* state = (j2k_dec_ffmpeg_t*)handle;
@@ -243,7 +254,7 @@ static
 void
 prepare_output
     (j2k_dec_ffmpeg_t* state
-    ,j2k_dec_output_t* out)
+    ,J2kDecOutput* out)
 {
     int plane_samples_num = (int)(state->data->width*state->data->height);
     short* p_r = (short*)state->data->reorder_buffer;
@@ -270,11 +281,11 @@ prepare_output
 }
 
 static
-status_t
+Status
 ffmpeg_process
-    (j2k_dec_handle_t           handle  /**< [in/out] Decoder instance handle */
-    ,const j2k_dec_input_t*     in      /**< [in] Encoded input */
-    ,j2k_dec_output_t*          out     /**< [out] Decoded output */
+    (J2kDecHandle           handle  /**< [in/out] Decoder instance handle */
+    ,const J2kDecInput*     in      /**< [in] Encoded input */
+    ,J2kDecOutput*          out     /**< [out] Decoded output */
     )
 {
     j2k_dec_ffmpeg_t* state = (j2k_dec_ffmpeg_t*)handle;
@@ -341,20 +352,20 @@ ffmpeg_process
 }
 
 static
-status_t
+Status
 ffmpeg_set_property
-    (j2k_dec_handle_t                   /**< [in/out] Decoder instance handle */
-    , const property_t*                 /**< [in] Property to write */
+    (J2kDecHandle                     /**< [in/out] Decoder instance handle */
+    , const Property*                 /**< [in] Property to write */
     )
 {
     return STATUS_ERROR;
 }
 
 static
-status_t
+Status
 ffmpeg_get_property
-    (j2k_dec_handle_t   handle              /**< [in/out] Decoder instance handle */
-    , property_t*       property            /**< [in/out] Property to read */
+    (J2kDecHandle   handle                /**< [in/out] Decoder instance handle */
+    , Property*       property            /**< [in/out] Property to read */
     )
 {
     j2k_dec_ffmpeg_t* state = (j2k_dec_ffmpeg_t*)handle;
@@ -375,7 +386,7 @@ ffmpeg_get_property
 static
 const char*
 ffmpeg_get_message
-    (j2k_dec_handle_t handle        /**< [in/out] Decoder instance handle */
+    (J2kDecHandle handle        /**< [in/out] Decoder instance handle */
     )
 {
     j2k_dec_ffmpeg_t* state = (j2k_dec_ffmpeg_t*)handle;
@@ -383,7 +394,7 @@ ffmpeg_get_message
 }
 
 static
-j2k_dec_api_t ffmpeg_plugin_api =
+J2kDecApi ffmpeg_plugin_api =
 {
     "ffmpeg"
     ,ffmpeg_get_info
@@ -397,7 +408,13 @@ j2k_dec_api_t ffmpeg_plugin_api =
 };
 
 DLB_EXPORT
-j2k_dec_api_t* j2k_dec_get_api()
+J2kDecApi* j2kDecGetApi()
 {
     return &ffmpeg_plugin_api;
+}
+
+DLB_EXPORT
+int j2kDecGetApiVersion(void)
+{
+    return J2K_DEC_API_VERSION;
 }

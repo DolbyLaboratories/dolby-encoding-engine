@@ -1,7 +1,8 @@
+<?xml version="1.0"?>
 <job_config>
     <input>
         <video>
-            <hevc>
+            <hevc version="1">
                 <frame_rate>FRAME_RATE</frame_rate>
                 <dv_profile>none</dv_profile>
                 <file_name>FILE_NAME</file_name>
@@ -15,7 +16,7 @@
     </input>
     <filter>
         <video>
-            <sdr_to_dv_profile_8_2>
+            <sdr_to_dv_profile_8_2 version="1">
                 <max_light_level>4000</max_light_level>
                 <disable_md_postproc>false</disable_md_postproc>
                 <hevc_dec>
@@ -31,7 +32,7 @@
         </video>
     </filter>
     <output>
-        <hevc>
+        <hevc version="1">
             <file_name>FILE_NAME</file_name>
             <storage>
                 <local>

@@ -1,82 +1,91 @@
 <?xml version="1.0"?>
 <job_config>
-    <input>
-        <video>
-            <mxf>
-                <file_name>FILE_NAME</file_name>
-                <storage>
-                    <local>
-                        <path>PATH</path>
-                    </local>
-                </storage>
-            </mxf>
-        </video>
-    </input>
-    <filter>
-        <video>
-            <dv_mezz_to_dv_profile_8_1>
-                <encode_start>0</encode_start>
-                <encode_end>0</encode_end>
-                <metadata_offset>0</metadata_offset>
-                <active_area_offset_top>0</active_area_offset_top>
-                <active_area_offset_bottom>0</active_area_offset_bottom>
-                <active_area_offset_left>0</active_area_offset_left>
-                <active_area_offset_right>0</active_area_offset_right>
-                <gx>-1</gx>
-                <gy>-1</gy>
-                <bx>-1</bx>
-                <by>-1</by>
-                <rx>-1</rx>
-                <ry>-1</ry>
-                <wpx>-1</wpx>
-                <wpy>-1</wpy>
-                <max_cll>-1</max_cll>
-                <max_fall>-1</max_fall>
-                <j2k_parallel_frames>1</j2k_parallel_frames>
-                <prepend_frames>0</prepend_frames>
-                <target_width>0</target_width>
-                <target_height>0</target_height>
-                <max_scene_frames>256</max_scene_frames>
-                <data_rate>16000</data_rate>
-                <max_vbv_data_rate>16000</max_vbv_data_rate>
-                <vbv_buffer_size>32000</vbv_buffer_size>
-                <encode_pass_num>2</encode_pass_num>
-                <disable_md_postproc>false</disable_md_postproc>
-                <j2k_dec>
-                    <base/>
-                </j2k_dec>
-                <scaling>
-                    <base/>
-                </scaling>
-                <noise>
-                    <base>
-                        <strength>0</strength>
-                    </base>
-                </noise>
-                <hevc_enc>
-                    <ffmpeg>
-                        <ffmpeg_bin>/absolute/path/to/ffmpeg</ffmpeg_bin>
-                        <cmd_gen>/absolute/path/to/cmd_gen_hevc_enc_ffmpeg.py</cmd_gen>
-                        <user_params_file>/absolute/path/to/profile_8_1.json</user_params_file>
-                    </ffmpeg>
-                </hevc_enc>
-            </dv_mezz_to_dv_profile_8_1>
-        </video>
-    </filter>
-    <output>
-        <hevc>
-            <file_name>FILE_NAME</file_name>
-            <storage>
-                <local>
-                    <path>PATH</path>
-                </local>
-            </storage>
-        </hevc>
-    </output>
-    <misc>
-        <temp_dir>
-            <clean_temp>true</clean_temp>
-            <path>PATH</path>
-        </temp_dir>
-    </misc>
+  <input>
+    <video>
+      <mxf version="1">
+        <file_name>FILE_NAME</file_name>    <!-- string -->
+        <storage>
+          <local>
+            <path>PATH</path>    <!-- string -->
+          </local>
+        </storage>
+      </mxf>
+    </video>
+  </input>
+  <filter>
+    <video>
+      <dv_mezz_to_dv_profile_8_1 version="2">
+        <start>0</start>    <!-- string -->
+        <end>0</end>    <!-- string -->
+        <metadata_offset>0</metadata_offset>    <!-- integer -->
+        <active_area_offset_top>0</active_area_offset_top>    <!-- integer -->
+        <active_area_offset_bottom>0</active_area_offset_bottom>    <!-- integer -->
+        <active_area_offset_left>0</active_area_offset_left>    <!-- integer -->
+        <active_area_offset_right>0</active_area_offset_right>    <!-- integer -->
+        <gx>-1</gx>    <!-- integer: from -1 to 50000 -->
+        <gy>-1</gy>    <!-- integer: from -1 to 50000 -->
+        <bx>-1</bx>    <!-- integer: from -1 to 50000 -->
+        <by>-1</by>    <!-- integer: from -1 to 50000 -->
+        <rx>-1</rx>    <!-- integer: from -1 to 50000 -->
+        <ry>-1</ry>    <!-- integer: from -1 to 50000 -->
+        <wpx>-1</wpx>    <!-- integer: from -1 to 50000 -->
+        <wpy>-1</wpy>    <!-- integer: from -1 to 50000 -->
+        <max_cll>-1</max_cll>    <!-- integer: from -1 to 65535 -->
+        <max_fall>-1</max_fall>    <!-- integer: from -1 to 65535 -->
+        <decoder_parallel_frames>0</decoder_parallel_frames>    <!-- integer: from 0 to 16 -->
+        <prepend_frames>0</prepend_frames>    <!-- integer -->
+        <target_width>0</target_width>    <!-- integer list -->
+        <target_height>0</target_height>    <!-- integer list -->
+        <max_scene_frames>240</max_scene_frames>    <!-- integer: from 1 to 256 -->
+        <data_rate>16000</data_rate>    <!-- integer list -->
+        <max_vbv_data_rate>16000</max_vbv_data_rate>    <!-- integer list -->
+        <vbv_buffer_size>32000</vbv_buffer_size>    <!-- integer list -->
+        <encode_pass_num>2</encode_pass_num>    <!-- integer -->
+        <disable_md_postproc>false</disable_md_postproc>    <!-- boolean: true or false -->
+        <decoder>
+          <j2k_dec>
+            <base/>
+          </j2k_dec>
+        </decoder>
+        <scaling>
+          <base>
+            <source_crop_top>0</source_crop_top>    <!-- integer -->
+            <source_crop_bottom>0</source_crop_bottom>    <!-- integer -->
+            <source_crop_left>0</source_crop_left>    <!-- integer -->
+            <source_crop_right>0</source_crop_right>    <!-- integer -->
+          </base>
+        </scaling>
+        <noise>
+          <base>
+            <strength>0</strength>    <!-- integer: from 0 to 0 -->
+          </base>
+        </noise>
+        <hevc_enc>
+          <ffmpeg>
+            <ffmpeg_bin>/absolute/path/to/ffmpeg</ffmpeg_bin>    <!-- string -->
+            <cmd_gen>/absolute/path/to/cmd_gen_hevc_enc_ffmpeg.py</cmd_gen>    <!-- string -->
+            <user_params_file>/absolute/path/to/profile_8_1.json</user_params_file>    <!-- string -->
+            <interpreter>python</interpreter>    <!-- string -->
+            <redirect_stdout>false</redirect_stdout>    <!-- boolean: true or false -->
+          </ffmpeg>
+        </hevc_enc>
+      </dv_mezz_to_dv_profile_8_1>
+    </video>
+  </filter>
+  <output>
+    <hevc version="1">
+      <file_name>FILE_NAME</file_name>    <!-- string list -->
+      <storage>
+        <local>
+          <path>PATH</path>    <!-- string -->
+        </local>
+      </storage>
+    </hevc>
+  </output>
+  <misc>
+    <temp_dir>
+      <clean_temp>true</clean_temp>
+      <path>PATH</path>
+    </temp_dir>
+  </misc>
 </job_config>

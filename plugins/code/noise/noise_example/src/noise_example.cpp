@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
 * 
 * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "noise_flt_api.h"
+#include "noise_api.h"
 #include <string>
 #include <vector>
 
@@ -38,23 +38,23 @@ typedef struct
 {
     size_t                      source_width;
     size_t                      source_height;
-    noise_flt_pic_t             pic;
+    NoisePic                    pic;
     std::string                 msg;
     std::string                 plugin_path;
     std::string                 config_path;
     int                         strength;
     std::vector<std::string>    temp_file;
-} noise_flt_example_data_t;
+} noise_example_data_t;
 
 /* This structure can contain only pointers and simple types */
 typedef struct
 {
-    noise_flt_example_data_t* data;
-} noise_flt_example_t;
+    noise_example_data_t* data;
+} noise_example_t;
 
 static
 const
-property_info_t scaling_base_info[] =
+PropertyInfo scaling_base_info[] =
 {
     { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
@@ -68,40 +68,40 @@ property_info_t scaling_base_info[] =
 static
 size_t
 noise_example_get_info
-(const property_info_t** info    /**< [out] Pointer to array with property information */
+(const PropertyInfo** info    /**< [out] Pointer to array with property information */
 )
 {
     *info = scaling_base_info;
-    return sizeof(scaling_base_info) / sizeof(property_info_t);
+    return sizeof(scaling_base_info) / sizeof(PropertyInfo);
 }
 
 static
 size_t
 noise_example_get_size()
 {
-    return sizeof(noise_flt_example_t);
+    return sizeof(noise_example_t);
 }
 
 static
-status_t
+Status
 noise_example_init
-    (noise_flt_handle_t               handle          /**< [in/out] filter instance handle */
-    , const noise_flt_init_params_t*   init_params     /**< [in] Properties to init filter instance */
+    (NoiseHandle               handle          /**< [in/out] filter instance handle */
+    , const NoiseInitParams*   init_params     /**< [in] Properties to init filter instance */
     )
 {
-    noise_flt_example_t* state = (noise_flt_example_t*)handle;
+    noise_example_t* state = (noise_example_t*)handle;
 
-    state->data = new noise_flt_example_data_t;
+    state->data = new noise_example_data_t;
     state->data->strength = 0;
-    memset(&state->data->pic, 0, sizeof(noise_flt_pic_t));
+    memset(&state->data->pic, 0, sizeof(NoisePic));
 
     state->data->msg.clear();
     state->data->plugin_path.clear();
     state->data->config_path.clear();
     for (size_t i = 0; i < init_params->count; i++)
     {
-        std::string name(init_params->property[i].name);
-        std::string value(init_params->property[i].value);
+        std::string name(init_params->properties[i].name);
+        std::string value(init_params->properties[i].value);
 
         if ("source_width" == name)
         {
@@ -150,12 +150,12 @@ noise_example_init
 }
 
 static
-status_t
+Status
 noise_example_close
-    (noise_flt_handle_t handle   /**< [in/out] filter instance handle */
+    (NoiseHandle handle   /**< [in/out] filter instance handle */
     )
 {
-    noise_flt_example_t* state = (noise_flt_example_t*)handle;
+    noise_example_t* state = (noise_example_t*)handle;
 
     if (state->data)
     {
@@ -168,14 +168,14 @@ noise_example_close
 }
 
 static
-status_t
+Status
 noise_example_process
-    (noise_flt_handle_t        handle   /**< [in/out] filter instance handle */
-    , const noise_flt_pic_t*    in      /**< [in] Input picture */
-    , noise_flt_pic_t*          out     /**< [out] Output picture */
+    (NoiseHandle         handle  /**< [in/out] filter instance handle */
+    , const NoisePic*    in      /**< [in] Input picture */
+    , NoisePic*          out     /**< [out] Output picture */
     )
 {
-    noise_flt_example_t* state = (noise_flt_example_t*)handle;
+    noise_example_t* state = (noise_example_t*)handle;
 
     memcpy(state->data->pic.buffer[0], in->buffer[0], in->width*in->height*2);
     memcpy(state->data->pic.buffer[1], in->buffer[1], in->width*in->height*2);
@@ -196,25 +196,25 @@ noise_example_process
 }
 
 static
-status_t
+Status
 noise_example_set_property
-    (noise_flt_handle_t handle    /**< [in/out] filter instance handle */
-    , const property_t* property     /**< [in] Property to write */
+    (NoiseHandle   handle          /**< [in/out] filter instance handle */
+    , const Property* property     /**< [in] Property to write */
     )
 {
-    noise_flt_example_t* state = (noise_flt_example_t*)handle;
+    noise_example_t* state = (noise_example_t*)handle;
     if (NULL == state || NULL == property) return STATUS_ERROR;
     return STATUS_ERROR;
 }
 
 static
-status_t
+Status
 noise_example_get_property
-    (noise_flt_handle_t handle    /**< [in/out] filter instance handle */
-    , property_t* property           /**< [in/out] Property to read */
+    (NoiseHandle handle       /**< [in/out] filter instance handle */
+    , Property*     property  /**< [in/out] Property to read */
     )
 {
-    noise_flt_example_t* state = (noise_flt_example_t*)handle;
+    noise_example_t* state = (noise_example_t*)handle;
     if (NULL == state) return STATUS_ERROR;
     
     if (NULL != property->name)
@@ -232,14 +232,14 @@ noise_example_get_property
 static
 const char*
 noise_example_get_message
-    (noise_flt_handle_t handle        /**< [in/out] filter instance handle */
+    (NoiseHandle handle        /**< [in/out] filter instance handle */
     )
 {
-    noise_flt_example_t* state = (noise_flt_example_t*)handle;
+    noise_example_t* state = (noise_example_t*)handle;
     return state->data->msg.c_str();
 }
 
-static noise_flt_api_t plugin_api
+static NoiseApi plugin_api
 {
     "example"
     , noise_example_get_info
@@ -253,7 +253,13 @@ static noise_flt_api_t plugin_api
 };
 
 DLB_EXPORT
-noise_flt_api_t* noise_flt_get_api()
+NoiseApi* noiseGetApi()
 {
     return &plugin_api;
+}
+
+DLB_EXPORT
+int noiseGetApiVersion()
+{
+    return NOISE_API_VERSION;
 }

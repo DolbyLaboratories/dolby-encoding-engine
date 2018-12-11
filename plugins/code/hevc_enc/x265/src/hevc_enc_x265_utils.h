@@ -33,6 +33,10 @@
 #ifndef __DEE_PLUGINS_HEVC_ENC_X265_UTILS_H__
 #define __DEE_PLUGINS_HEVC_ENC_X265_UTILS_H__
 
+#ifdef WIN32
+#define X265_API_IMPORTS
+#endif
+
 #include "hevc_enc_api.h"
 #include "x265.h"
 #include <cstdlib>
@@ -46,7 +50,7 @@
 
 typedef struct
 {
-    hevc_enc_nal_type_t type;
+    HevcEncNalType type;
     std::vector<char> payload;
 } nalu_t;
 
@@ -116,7 +120,7 @@ typedef struct
     std::string         psy_rd;
     std::vector<nalu_t>                             output_buffer;
     std::vector<nalu_t>::iterator                   last_used_nal;
-    std::vector<hevc_enc_nal_t>                     output;
+    std::vector<HevcEncNal>                     output;
     std::list<std::pair<std::string,std::string>>   internal_params;
 
     std::string         plugin_path;
@@ -141,8 +145,8 @@ init_defaults
 
 bool
 parse_init_params
-    (hevc_enc_x265_t*               state
-    ,const hevc_enc_init_params_t*  init_params);
+    (hevc_enc_x265_t*          state
+    ,const HevcEncInitParams*  init_params);
 
 bool
 set_param
@@ -156,7 +160,7 @@ set_preset
     ,const std::string& preset
     ,const std::string& tune);
 
-hevc_enc_nal_type_t
+HevcEncNalType
 cast_nal_type
     (const uint32_t type);
 
@@ -180,7 +184,7 @@ get_config_msg
 
 int
 frametype_to_slicetype
-    (hevc_enc_frame_type_t in_type);
+    (HevcEncFrameType in_type);
 
 bool
 filter_native_params

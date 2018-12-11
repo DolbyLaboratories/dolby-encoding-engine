@@ -2,7 +2,7 @@
 <job_config>
     <input>
         <video>
-            <hevc>
+            <hevc version="1">
                 <frame_rate>FRAME_RATE</frame_rate>
                 <dv_profile>none</dv_profile>
                 <file_name>FILE_NAME</file_name>
@@ -16,7 +16,7 @@
     </input>
     <filter>
 		<video>
-			<sdr_to_dv_profile_4_2>
+			<sdr_to_dv_profile_4_2 version="1">
                 <el_data_rate>5000</el_data_rate>
                 <el_max_vbv_data_rate>5000</el_max_vbv_data_rate>
                 <el_vbv_buffer_size>10000</el_vbv_buffer_size>
@@ -39,7 +39,7 @@
         </video>
     </filter>
     <output>
-        <hevc>
+        <hevc version="1">
             <file_name>FILE_NAME</file_name>
             <storage>
                 <local>

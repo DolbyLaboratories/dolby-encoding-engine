@@ -1,64 +1,71 @@
 <?xml version="1.0"?>
 <job_config>
-    <input>
-        <video>
-            <hevc>
-                <frame_rate>FRAME_RATE</frame_rate>
-                <dv_profile>none</dv_profile>
-                <file_name>FILE_NAME</file_name>
-                <storage>
-                    <local>
-                        <path>PATH</path>
-                    </local>
-                </storage>
-            </hevc>
-        </video>
-    </input>
-    <filter>
-        <video>
-            <transcode_to_hevc>
-                <encode_start>0</encode_start>
-                <encode_end>0</encode_end>
-                <target_width>0</target_width>
-                <target_height>0</target_height>
-                <data_rate>15000</data_rate>
-                <max_vbv_data_rate>15000</max_vbv_data_rate>
-                <vbv_buffer_size>30000</vbv_buffer_size>
-                <encode_pass_num>1</encode_pass_num>
-                <decoder>
-                    <hevc_dec>
-                        <impact>
-                            <use_sps_frame_rate>false</use_sps_frame_rate>
-                        </impact>
-                    </hevc_dec>
-                </decoder>
-                <scaling>
-                    <base/>
-                </scaling>
-                <hevc_enc>
-                    <ffmpeg>
-                        <ffmpeg_bin>/absolute/path/to/ffmpeg</ffmpeg_bin>
-                        <cmd_gen>/absolute/path/to/cmd_gen_x265.py</cmd_gen>
-                        <user_params_file>/absolute/path/to/transcode_to_hevc.json</user_params_file>
-                    </ffmpeg>
-                </hevc_enc>
-            </transcode_to_hevc>
-        </video>
-    </filter>
-    <output>
-        <hevc>
-            <file_name>FILE_NAME</file_name>
-            <storage>
-                <local>
-                    <path>PATH</path>
-                </local>
-            </storage>
-        </hevc>
-    </output>
-    <misc>
-        <temp_dir>
-            <clean_temp>true</clean_temp>
-            <path>PATH</path>
-        </temp_dir>
-    </misc>
+  <input>
+    <video>
+      <hevc version="1">
+        <frame_rate>24</frame_rate>    <!-- One of: 23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60 -->
+        <dv_profile>none</dv_profile>    <!-- Must be none when transcoding SDR video. -->
+        <file_name>FILE_NAME</file_name>    <!-- string -->
+        <storage>
+          <local>
+            <path>PATH</path>    <!-- string -->
+          </local>
+        </storage>
+      </hevc>
+    </video>
+  </input>
+  <filter>
+    <video>
+      <transcode_to_hevc version="2">
+        <start>0</start>    <!-- string -->
+        <end>0</end>    <!-- string -->
+        <target_width>0</target_width>    <!-- integer list -->
+        <target_height>0</target_height>    <!-- integer list -->
+        <data_rate>16000</data_rate>    <!-- integer list -->
+        <max_vbv_data_rate>16000</max_vbv_data_rate>    <!-- integer list -->
+        <vbv_buffer_size>32000</vbv_buffer_size>    <!-- integer list -->
+        <encode_pass_num>1</encode_pass_num>    <!-- integer -->
+        <decoder>
+          <hevc_dec>
+            <impact>
+              <use_sps_frame_rate>false</use_sps_frame_rate>    <!-- boolean: true or false -->
+            </impact>
+          </hevc_dec>
+        </decoder>
+        <scaling>
+          <base>
+            <source_crop_top>0</source_crop_top>    <!-- integer -->
+            <source_crop_bottom>0</source_crop_bottom>    <!-- integer -->
+            <source_crop_left>0</source_crop_left>    <!-- integer -->
+            <source_crop_right>0</source_crop_right>    <!-- integer -->
+          </base>
+        </scaling>
+        <hevc_enc>
+          <ffmpeg>
+            <ffmpeg_bin>/absolute/path/to/ffmpeg</ffmpeg_bin>    <!-- string -->
+            <cmd_gen>/absolute/path/to/cmd_gen_hevc_enc_ffmpeg.py</cmd_gen>    <!-- string -->
+            <user_params_file>/absolute/path/to/transcode_to_hevc.json</user_params_file>    <!-- string -->
+            <interpreter>python</interpreter>    <!-- string -->
+            <redirect_stdout>false</redirect_stdout>    <!-- boolean: true or false -->
+          </ffmpeg>
+        </hevc_enc>
+      </transcode_to_hevc>
+    </video>
+  </filter>
+  <output>
+    <hevc version="1">
+      <file_name>FILE_NAME</file_name>    <!-- string list -->
+      <storage>
+        <local>
+          <path>PATH</path>    <!-- string -->
+        </local>
+      </storage>
+    </hevc>
+  </output>
+  <misc>
+    <temp_dir>
+      <clean_temp>true</clean_temp>
+      <path>PATH</path>
+    </temp_dir>
+  </misc>
 </job_config>

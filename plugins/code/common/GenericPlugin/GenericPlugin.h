@@ -30,29 +30,26 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "common.h"
 #include <string>
 #include <vector>
-#include "common.h"
 
 #ifndef GenericPlugin_H
 #define GenericPlugin_H
 
-class GenericPlugin
-{
+class GenericPlugin {
 public:
     GenericPlugin();
 
-    virtual status_t                    setProperty(const property_t* property);
-    const char*                         getMessage();
-    static std::vector<property_info_t> getGenericProperties();
-    status_t                            expandPath(std::string& path);
+    virtual Status setProperty(const Property* property);
+    const char* getMessage();
+    static std::vector<PropertyInfo> getGenericProperties();
+    Status expandPath(std::string& path);
 
 protected:
     std::string msg;
     std::string pluginPath;
     std::string configPath;
-
 };
-
 
 #endif

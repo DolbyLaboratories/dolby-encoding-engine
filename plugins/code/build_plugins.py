@@ -66,6 +66,7 @@ PLUGINS_DICT = {
 'hevc_enc_ffmpeg' : 'hevc_enc/ffmpeg/make/hevc_enc_ffmpeg',
 'j2k_dec_ffmpeg' : 'j2k_dec/ffmpeg/make/j2k_dec_ffmpeg',
 'j2k_dec_kakadu' : 'j2k_dec/kakadu/make/j2k_dec_kakadu',
+'j2k_dec_comprimato' : 'j2k_dec/comprimato/make/j2k_dec_comprimato',
 'noise_example' : 'noise/noise_example/make/noise_example',
 'scaling_example' : 'scaling/scaling_example/make/scaling_example',
 #disabled_plugin_example : 'disabled',
@@ -73,8 +74,8 @@ PLUGINS_DICT = {
 
 example ='''
 examples:
-Linux:   python build_plugins.py --x265 ~/_X265ROOT/ --kakadu ~/_KDUROOT/ --dir dolby-encoding-engine/plugins/code/
-Windows: python build_plugins.py --x265 C:\Users\usr\_X265ROOT\ --kakadu C:\Users\mgaik\_KDUROOT\ --dir C:\Users\usr\dolby-encoding-engine\plugins\code
+Linux:   python build_plugins.py --x265 ~/_X265ROOT/ --kakadu ~/_KDUROOT/ --comprimato ~/_COMPRIMATOROOT/ --dir dolby-encoding-engine/plugins/code/
+Windows: python build_plugins.py --x265 C:\Users\usr\_X265ROOT\ --kakadu C:\Users\mgaik\_KDUROOT\ --comprimato C:\Users\mgaik\_COMPRIMATOROOT\ --dir C:\Users\usr\dolby-encoding-engine\plugins\code
 '''
 
 cmdline_header = '''
@@ -88,6 +89,7 @@ def main_build_plugins():
 
     need_x265_root = 'hevc_enc_x265' in PLUGINS_DICT.keys() and 'X265ROOT' not in ENV.keys()
     need_kdu_root = 'j2k_dec_kakadu' in PLUGINS_DICT.keys() and 'KDUROOT' not in ENV.keys()
+    need_comprimato_root = 'j2k_dec_comprimato' in PLUGINS_DICT.keys() and 'COMPRIMATOROOT' not in ENV.keys()
 
     parser = argparse.ArgumentParser(description=cmdline_header,
                                      epilog=example,
@@ -101,6 +103,7 @@ def main_build_plugins():
     parser.add_argument('--dry', help='Don\'t build, display only build commands', action='store_true')
     parser.add_argument('--x265', help='Specify directory with x265 prerequisites (Optional if X265ROOT is set)', required=need_x265_root)
     parser.add_argument('--kakadu', help='Specify directory with Kakadu prerequisites (Optional if KDUROOT is set)', required=need_kdu_root)
+    parser.add_argument('--comprimato', help='Specify directory with Comprimato prerequisites (Optional if COMPRIMATOROOT is set)', required=need_comprimato_root)
 
     args = parser.parse_args()
     rebuild = not args.no_rebuild
@@ -112,6 +115,9 @@ def main_build_plugins():
     if need_kdu_root or args.kakadu is not None:
         ENV['KDUROOT'] = args.kakadu
         print('KDUROOT={}'.format(ENV['KDUROOT']))
+    if need_comprimato_root or args.comprimato is not None:
+        ENV['COMPRIMATOROOT'] = args.comprimato
+        print('COMRPIMATOROOT={}'.format(ENV['COMPRIMATOROOT']))
 
     results = []
     for plugin in PLUGINS_DICT:

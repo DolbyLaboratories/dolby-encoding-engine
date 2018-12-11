@@ -2,7 +2,7 @@
 <job_config>
     <input>
         <video>
-            <hevc>
+            <hevc version="1">
                 <frame_rate>FRAME_RATE</frame_rate>
                 <dv_profile>none</dv_profile>
                 <file_name>FILE_NAME</file_name>
@@ -16,9 +16,9 @@
     </input>
     <filter>
         <video>
-            <transcode_to_hevc>
-                <encode_start>0</encode_start>
-                <encode_end>0</encode_end>
+            <transcode_to_hevc version="1">
+                <start>0</start>
+                <end>0</end>
                 <target_width>0</target_width>
                 <target_height>0</target_height>
                 <data_rate>15000</data_rate>
@@ -66,7 +66,7 @@
         </video>
     </filter>
     <output>
-        <hevc>
+        <hevc version="1">
             <file_name>FILE_NAME</file_name>
             <storage>
                 <local>

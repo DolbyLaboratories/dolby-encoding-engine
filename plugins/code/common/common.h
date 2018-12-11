@@ -1,12 +1,12 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
-* 
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
-* 
+*
 * * Redistributions of source code must retain the above copyright notice, this
 *   list of conditions and the following disclaimer.
 *
@@ -17,7 +17,7 @@
 * * Neither the name of the copyright holder nor the names of its
 *   contributors may be used to endorse or promote products derived from
 *   this software without specific prior written permission.
-* 
+*
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -34,63 +34,57 @@
 #define __DEE_PLUGINS_COMMON_H__
 
 #include <string.h>
- 
+
 /** @brief  Status code */
-typedef enum
-{
+typedef enum {
     STATUS_OK = 0,
     STATUS_WARNING,
-    STATUS_ERROR
-} status_t;
-  
+    STATUS_ERROR,
+} Status;
+
 /** @brief  Property read/write structure */
-typedef struct
-{
-    const char*   name;     /**< Name of property */
-    char*   value;          /**< Value of property */
-    size_t  max_value_sz;   /**< Size of buffer pointed by 'value' */     
-} property_t;
-  
+typedef struct {
+    const char* name;  /**< Name of property */
+    char* value;       /**< Value of property */
+    size_t maxValueSz; /**< Size of buffer pointed by 'value' */
+} Property;
+
 /** @brief Type o property
  *  Defines how property is presented in XML schema.
  */
-typedef enum
-{
+typedef enum {
     PROPERTY_TYPE_STRING = 0,
     PROPERTY_TYPE_INTEGER,
     PROPERTY_TYPE_DECIMAL,
-    PROPERTY_TYPE_BOOLEAN
-} property_type_t;
+    PROPERTY_TYPE_BOOLEAN,
+} PropertyType;
 
 /** @brief Type of access to property */
-typedef enum
-{
+typedef enum {
     ACCESS_TYPE_WRITE = 0,
-    ACCESS_TYPE_WRITE_INIT,     /**< Writable only during init */
+    ACCESS_TYPE_WRITE_INIT, /**< Writable only during init */
     ACCESS_TYPE_READ,
     ACCESS_TYPE_RW,
-    ACCESS_TYPE_USER,           /**< Means ACCESS_TYPE_WRITE_INIT + show in XML */
-} access_type_t;
-  
+    ACCESS_TYPE_USER, /**< Means ACCESS_TYPE_WRITE_INIT + show in XML */
+} AccessType;
+
 /** @brief  Property information structure */
-typedef struct
-{
-    const char*     name;           /**< Name of property */
-    property_type_t type;           /**< Type of property */
-    const char*     description;    /**< Description of property */
-    const char*     defval;         /**< Default value of property */
-    const char*     values;         /**< List of supported values or range if numeric type */
-    int             min_occurs;     /**< Minimal required number of occurrences */
-    int             max_occurs;     /**< Maximal supported number of occurrences */
-    access_type_t   access;         /**< Type of access to property */
-} property_info_t;
+typedef struct {
+    const char* name;        /**< Name of property */
+    PropertyType type;       /**< Type of property */
+    const char* description; /**< Description of property */
+    const char* defval;      /**< Default value of property */
+    const char* values;      /**< List of supported values or range if numeric type */
+    int minOccurs;           /**< Minimal required number of occurrences */
+    int maxOccurs;           /**< Maximal supported number of occurrences */
+    AccessType access;       /**< Type of access to property */
+} PropertyInfo;
 
 /** @brief Set of properties to init */
-typedef struct
-{
-    const property_t* property;     /**< Pointer to array of properties */       
-    size_t            count;        /**< Number of properties in array */
-} init_params_t;
+typedef struct {
+    const Property* properties; /**< Pointer to array of properties */
+    size_t count;               /**< Number of properties in array */
+} InitParams;
 
 #ifdef __cplusplus
 #ifdef WIN32

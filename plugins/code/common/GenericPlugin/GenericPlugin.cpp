@@ -46,8 +46,8 @@ GenericPlugin::GenericPlugin()
     configPath.clear();
 }
 
-status_t    
-GenericPlugin::setProperty(const property_t* property)
+Status    
+GenericPlugin::setProperty(const Property* property)
 {
     std::string name(property->name);
     std::string value(property->value);
@@ -72,10 +72,10 @@ GenericPlugin::getMessage()
     return msg.empty() ? NULL : msg.c_str();
 }
 
-std::vector<property_info_t>
+std::vector<PropertyInfo>
 GenericPlugin::getGenericProperties()
 {
-    std::vector<property_info_t> propVector;
+    std::vector<PropertyInfo> propVector;
     propVector.push_back({ "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT });
     propVector.push_back({ "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT });
 
@@ -90,7 +90,7 @@ fileExists(const std::string& name)
     return f.good();
 }
 
-status_t
+Status
 GenericPlugin::expandPath(std::string& path)
 {
     if (fileExists(path))

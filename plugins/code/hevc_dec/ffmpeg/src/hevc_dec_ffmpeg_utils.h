@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -45,17 +45,16 @@ typedef struct
     int                         width;
     int                         height;
     int                         byte_num;
-    hevc_dec_color_space_t      chroma_format;
-    hevc_dec_frame_rate_t       frame_rate;
-    hevc_dec_frame_rate_t       frame_rate_ext;
+    HevcDecColorSpace           chroma_format;
+    HevcDecFrameRate            frame_rate;
+    HevcDecFrameRate            frame_rate_ext;
     std::string                 output_format;
     int                         transfer_characteristics;
     int                         matrix_coeffs;
     std::string                 msg;
 
-    hevc_dec_picture_t              decoded_picture;
-    std::list<std::vector<char>>    encoded_blobs;
-    size_t                          plane_size[3];
+    HevcDecPicture              decoded_picture;
+    size_t                      plane_size[3];
 
     std::thread                 ffmpeg_thread;
     int                         ffmpeg_ret_code;
@@ -85,19 +84,13 @@ void init_picture_buffer(hevc_dec_ffmpeg_data_t* data);
 
 void clean_picture_buffer(hevc_dec_ffmpeg_data_t* data);
 
-uint64_t encoded_blob_size(hevc_dec_ffmpeg_data_t* data);
+HevcDecFrameRate string_to_fr(const std::string& str);
 
-hevc_dec_frame_rate_t string_to_fr(const std::string& str);
-
-bool bin_exists(const std::string& bin, const std::string& arg, const std::string& log);
+bool bin_exists(const std::string& bin, const std::string& arg, std::string& output);
 
 void run_cmd_thread_func(std::string cmd, hevc_dec_ffmpeg_data_t* decoding_data);
 
-hevc_dec_status_t read_pic_from_ffmpeg(hevc_dec_ffmpeg_data_t* data);
-
-hevc_dec_status_t write_to_ffmpeg(hevc_dec_ffmpeg_data_t* data, void* stream_buffer, const size_t buffer_size);
-
-hevc_dec_status_t flush_to_ffmpeg(hevc_dec_ffmpeg_data_t* data);
+HevcDecStatus read_pic_from_ffmpeg(hevc_dec_ffmpeg_data_t* data);
 
 bool strip_header(std::string& cmd);
 

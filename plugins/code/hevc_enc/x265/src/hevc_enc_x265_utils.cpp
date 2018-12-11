@@ -34,6 +34,7 @@
 #include <map>
 #include <algorithm>
 #include <sstream>
+#include <iterator>
 
 static
 std::map<std::string, int> color_primaries_map = {
@@ -125,7 +126,7 @@ get_matrix_coefficients_number(std::string matrix)
 }
 
 int
-frametype_to_slicetype(hevc_enc_frame_type_t in_type)
+frametype_to_slicetype(HevcEncFrameType in_type)
 {
     int ret_val;
 
@@ -224,14 +225,14 @@ init_defaults(hevc_enc_x265_t* state)
 bool
 parse_init_params
     (hevc_enc_x265_t*               state
-    ,const hevc_enc_init_params_t*  init_params
+    ,const HevcEncInitParams*  init_params
     )
 {
     state->data->msg.clear();
     for (size_t i = 0; i < init_params->count; i++)
     {
-        std::string name(init_params->property[i].name);
-        std::string value(init_params->property[i].value);
+        std::string name(init_params->properties[i].name);
+        std::string value(init_params->properties[i].value);
 
         if ("bit_depth" == name)
         {
@@ -893,10 +894,10 @@ set_preset
     return (status == 0);
 }
 
-hevc_enc_nal_type_t
+HevcEncNalType
 cast_nal_type(const uint32_t type)
 {
-    hevc_enc_nal_type_t out;
+    HevcEncNalType out;
     if (type == NAL_UNIT_CODED_SLICE_TRAIL_N) out = HEVC_ENC_NAL_UNIT_CODED_SLICE_TRAIL_N;
     else if (type == NAL_UNIT_CODED_SLICE_TRAIL_R) out = HEVC_ENC_NAL_UNIT_CODED_SLICE_TRAIL_R;
     else if (type == NAL_UNIT_CODED_SLICE_TSA_N) out = HEVC_ENC_NAL_UNIT_CODED_SLICE_TSA_N;
@@ -940,7 +941,8 @@ get_config_msg
     ,std::list<std::pair<std::string,std::string>>& native_params
     ,std::string&     msg)
 {
-    msg = "x265 plugin configuration:";
+    msg = "x265 encoder version: " + std::string(x265_version_str);
+    msg += "\nx265 plugin configuration:";
     msg += "\n  bit_depth="+std::to_string(state->data->bit_depth);
     msg += "\n  width="+std::to_string(state->data->width);
     msg += "\n  height="+std::to_string(state->data->height);

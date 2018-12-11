@@ -9,9 +9,23 @@
 <UniqueIdentifier>{e7b95b62-229f-35d3-8538-347c5c86d501}</UniqueIdentifier></Filter>
 <Filter Include="code\j2k_dec\kakadu">
 <UniqueIdentifier>{3ffc4255-829e-3dff-a867-0ad460e88b80}</UniqueIdentifier></Filter>
+<Filter Include="code\j2k_dec\kakadu\make">
+<UniqueIdentifier>{2ec45e54-a677-35d4-b5ce-675c08e005d8}</UniqueIdentifier></Filter>
+<Filter Include="code\j2k_dec\kakadu\make\$(KDUROOT)">
+<UniqueIdentifier>{f55573c7-c8b3-3217-9673-62e2f5494ff6}</UniqueIdentifier></Filter>
+<Filter Include="code\j2k_dec\kakadu\make\$(KDUROOT)\support">
+<UniqueIdentifier>{176d688e-b9e6-3142-b071-614b649130f6}</UniqueIdentifier></Filter>
 <Filter Include="code\j2k_dec\kakadu\src">
 <UniqueIdentifier>{1ecceaee-8e17-3e46-bba7-ea47a7956ec4}</UniqueIdentifier></Filter></ItemGroup>
 <ItemGroup>
+<ClCompile Include="..\..\$(KDUROOT)\support\avx2_stripe_transfer.cpp">
+<Filter>code\j2k_dec\kakadu\make\$(KDUROOT)\support</Filter></ClCompile>
+<ClCompile Include="..\..\$(KDUROOT)\support\kdu_stripe_decompressor.cpp">
+<Filter>code\j2k_dec\kakadu\make\$(KDUROOT)\support</Filter></ClCompile>
+<ClCompile Include="..\..\$(KDUROOT)\support\ssse3_stripe_transfer.cpp">
+<Filter>code\j2k_dec\kakadu\make\$(KDUROOT)\support</Filter></ClCompile>
+<ClCompile Include="..\..\$(KDUROOT)\support\supp_local.cpp">
+<Filter>code\j2k_dec\kakadu\make\$(KDUROOT)\support</Filter></ClCompile>
 <ClCompile Include="..\..\..\src\j2k_dec_kakadu.cpp">
 <Filter>code\j2k_dec\kakadu\src</Filter></ClCompile></ItemGroup>
 <ItemGroup>

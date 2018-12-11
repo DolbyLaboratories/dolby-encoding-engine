@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017, Dolby Laboratories
+* Copyright (c) 2017-2018, Dolby Laboratories
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -62,7 +62,7 @@ typedef struct
     int                         vbv_buffer_size;
     std::vector<std::string>    command_line;
     std::vector<char>           output_bytestream;
-    std::vector<hevc_enc_nal_t> nalus;
+    std::vector<HevcEncNal>     nalus;
     char                        output_temp_buf[READ_BUFFER_SIZE];
 
     bool                        light_level_information_sei_present;
@@ -110,6 +110,8 @@ typedef struct
     bool                        piping_error;
     bool                        redirect_stdout;
 
+    std::string                 version_string;
+
     GenericPlugin               generic_plugin;
 
 } hevc_enc_ffmpeg_data_t;
@@ -122,9 +124,9 @@ typedef struct
 
 void init_defaults(hevc_enc_ffmpeg_t* state);
 
-bool get_aud_from_bytestream(std::vector<char> &bitstream, std::vector<hevc_enc_nal_t> &nalus, bool flush, size_t max_data);
+bool get_aud_from_bytestream(std::vector<char> &bitstream, std::vector<HevcEncNal> &nalus, bool flush, size_t max_data);
 
-bool parse_init_params(hevc_enc_ffmpeg_t* state, const hevc_enc_init_params_t* init_params);
+bool parse_init_params(hevc_enc_ffmpeg_t* state, const HevcEncInitParams* init_params);
 
 void run_cmd_thread_func(std::string cmd, hevc_enc_ffmpeg_data_t* encoding_data);
 
