@@ -11,7 +11,7 @@ Prerequisites:
 - The "libcmpto_j2k_dec.so" library on Linux
 - The "cmpto_j2k_dec.h" API's header file.
 
-    COMPTIMATOROOT
+    COMPRIMATOROOT
     ├── library files (based on platform)
     └── cmpto_j2k_dec.h
 
