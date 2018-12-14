@@ -27,6 +27,8 @@
 <ClCompile Include="..\..\$(KDUROOT)\support\supp_local.cpp">
 <Filter>code\j2k_dec\kakadu\make\$(KDUROOT)\support</Filter></ClCompile>
 <ClCompile Include="..\..\..\src\j2k_dec_kakadu.cpp">
+<Filter>code\j2k_dec\kakadu\src</Filter></ClCompile>
+<ClCompile Include="..\..\..\src\j2k_dec_kakadu_plugin.cpp">
 <Filter>code\j2k_dec\kakadu\src</Filter></ClCompile></ItemGroup>
 <ItemGroup>
 <ClInclude Include="..\..\..\..\..\common\common.h">

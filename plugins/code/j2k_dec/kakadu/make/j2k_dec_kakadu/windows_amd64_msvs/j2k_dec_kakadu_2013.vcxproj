@@ -105,7 +105,8 @@
 <ClCompile Include="$(KDUROOT)\support\kdu_stripe_decompressor.cpp" />
 <ClCompile Include="$(KDUROOT)\support\ssse3_stripe_transfer.cpp" />
 <ClCompile Include="$(KDUROOT)\support\supp_local.cpp" />
-<ClCompile Include="..\..\..\src\j2k_dec_kakadu.cpp" /></ItemGroup>
+<ClCompile Include="..\..\..\src\j2k_dec_kakadu.cpp" />
+<ClCompile Include="..\..\..\src\j2k_dec_kakadu_plugin.cpp" /></ItemGroup>
 <ItemGroup>
 <ClInclude Include="..\..\..\..\..\common\common.h" />
 <ClInclude Include="..\..\..\..\j2k_dec_api.h" /></ItemGroup>
