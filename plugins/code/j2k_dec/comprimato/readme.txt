@@ -12,8 +12,14 @@ Prerequisites:
 - The "cmpto_j2k_dec.h" API's header file.
 
     COMPRIMATOROOT
-    ├── library files (based on platform)
-    └── cmpto_j2k_dec.h
+    ├── lib
+    │   ├── linux64
+    │   │   └── libcmpto_j2k_dec.so
+    │   └── windows64
+    │       ├── cmpto_j2k_dec.dll
+    │       └── cmpto_j2k_dec.lib
+    └── include
+        └── cmpto_j2k_dec.h
 
 Build instructions, Windows:
 1. Set the COMPRIMATOROOT environment variable pointing to the folder with prerequisites.
