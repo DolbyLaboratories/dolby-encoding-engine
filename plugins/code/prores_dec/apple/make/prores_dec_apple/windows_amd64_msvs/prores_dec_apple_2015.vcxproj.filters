@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<ItemGroup>
+<Filter Include="code">
+<UniqueIdentifier>{cf162038-ec02-32ca-94b6-8c927f3cfc25}</UniqueIdentifier></Filter>
+<Filter Include="code\common">
+<UniqueIdentifier>{58e986a2-7e7e-314b-93a5-53c87fc426e3}</UniqueIdentifier></Filter>
+<Filter Include="code\common\GenericPlugin">
+<UniqueIdentifier>{2dfd78d0-5e49-329e-85fc-bcb4901333e7}</UniqueIdentifier></Filter>
+<Filter Include="code\prores_dec">
+<UniqueIdentifier>{270a8680-6fd2-3ed2-b810-c8d295e6ac4d}</UniqueIdentifier></Filter>
+<Filter Include="code\prores_dec\apple">
+<UniqueIdentifier>{a361618c-7c46-3e04-9a03-f28609c63f07}</UniqueIdentifier></Filter>
+<Filter Include="code\prores_dec\apple\src">
+<UniqueIdentifier>{f15d78bd-d388-395f-93e5-de4dda4ed4ef}</UniqueIdentifier></Filter></ItemGroup>
+<ItemGroup>
+<ClCompile Include="..\..\..\..\..\common\GenericPlugin\GenericPlugin.cpp">
+<Filter>code\common\GenericPlugin</Filter></ClCompile>
+<ClCompile Include="..\..\..\src\ProresDecApple.cpp">
+<Filter>code\prores_dec\apple\src</Filter></ClCompile>
+<ClCompile Include="..\..\..\..\proresDecApiWrapper.cpp">
+<Filter>code\prores_dec</Filter></ClCompile>
+<ClCompile Include="..\..\..\..\prores_dec_api.cpp">
+<Filter>code\prores_dec</Filter></ClCompile></ItemGroup>
+<ItemGroup>
+<ClInclude Include="..\..\..\..\..\common\GenericPlugin\GenericPlugin.h">
+<Filter>code\common\GenericPlugin</Filter></ClInclude>
+<ClInclude Include="..\..\..\..\..\common\common.h">
+<Filter>code\common</Filter></ClInclude>
+<ClInclude Include="..\..\..\..\ProresDecPlugin.h">
+<Filter>code\prores_dec</Filter></ClInclude>
+<ClInclude Include="..\..\..\..\proresDecApiWrapper.h">
+<Filter>code\prores_dec</Filter></ClInclude>
+<ClInclude Include="..\..\..\..\prores_dec_api.h">
+<Filter>code\prores_dec</Filter></ClInclude></ItemGroup>
+<ItemGroup />
+<ItemGroup />
+<ItemGroup />
+<ItemGroup /></Project>

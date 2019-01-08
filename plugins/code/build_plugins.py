@@ -52,7 +52,8 @@ import datetime
 windows_target_64   = 'windows_amd64_msvs'
 linux_target_64     = 'linux_amd64_gnu'
 
-msbuild = r"C:\Program Files (x86)\MSBuild\12.0\Bin\MSBuild.exe"
+msbuild14 = r"C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
+msbuild12 = r"C:\Program Files (x86)\MSBuild\12.0\Bin\MSBuild.exe"
 make = 'make'
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -69,13 +70,18 @@ PLUGINS_DICT = {
 'j2k_dec_comprimato' : 'j2k_dec/comprimato/make/j2k_dec_comprimato',
 'noise_example' : 'noise/noise_example/make/noise_example',
 'scaling_example' : 'scaling/scaling_example/make/scaling_example',
+'prores_dec_apple' : 'prores_dec/apple/make/prores_dec_apple',
 #disabled_plugin_example : 'disabled',
+}
+
+VS2015_PLUGINS = {
+    'prores_dec_apple'
 }
 
 example ='''
 examples:
-Linux:   python build_plugins.py --x265 ~/_X265ROOT/ --kakadu ~/_KDUROOT/ --comprimato ~/_COMPRIMATOROOT/ --dir dolby-encoding-engine/plugins/code/
-Windows: python build_plugins.py --x265 C:\Users\usr\_X265ROOT\ --kakadu C:\Users\mgaik\_KDUROOT\ --comprimato C:\Users\mgaik\_COMPRIMATOROOT\ --dir C:\Users\usr\dolby-encoding-engine\plugins\code
+Linux:   python build_plugins.py --x265 ~/_X265ROOT/ --kakadu ~/_KDUROOT/ --comprimato ~/_COMPRIMATOROOT/ --apple-prores ~/_APPLE_PRORES_LIB_ROOT/ --dir dolby-encoding-engine/plugins/code/
+Windows: python build_plugins.py --x265 C:\Users\usr\_X265ROOT\ --kakadu C:\Users\mgaik\_KDUROOT\ --comprimato C:\Users\mgaik\_COMPRIMATOROOT\ --apple-prores ~\_APPLE_PRORES_LIB_ROOT\ --dir C:\Users\usr\dolby-encoding-engine\plugins\code
 '''
 
 cmdline_header = '''
@@ -90,6 +96,7 @@ def main_build_plugins():
     need_x265_root = 'hevc_enc_x265' in PLUGINS_DICT.keys() and 'X265ROOT' not in ENV.keys()
     need_kdu_root = 'j2k_dec_kakadu' in PLUGINS_DICT.keys() and 'KDUROOT' not in ENV.keys()
     need_comprimato_root = 'j2k_dec_comprimato' in PLUGINS_DICT.keys() and 'COMPRIMATOROOT' not in ENV.keys()
+    need_apple_prores_lib_root = 'prores_dec_apple' in PLUGINS_DICT.keys() and 'APPLE_PRORES_LIB_ROOT' not in ENV.keys()
 
     parser = argparse.ArgumentParser(description=cmdline_header,
                                      epilog=example,
@@ -104,6 +111,7 @@ def main_build_plugins():
     parser.add_argument('--x265', help='Specify directory with x265 prerequisites (Optional if X265ROOT is set)', required=need_x265_root)
     parser.add_argument('--kakadu', help='Specify directory with Kakadu prerequisites (Optional if KDUROOT is set)', required=need_kdu_root)
     parser.add_argument('--comprimato', help='Specify directory with Comprimato prerequisites (Optional if COMPRIMATOROOT is set)', required=need_comprimato_root)
+    parser.add_argument('--apple-prores', help='Specify directory with Apple ProRes prerequisites (Optional if APPLE_PRORES_LIB_ROOT is set)', required=need_apple_prores_lib_root)
 
     args = parser.parse_args()
     rebuild = not args.no_rebuild
@@ -118,13 +126,21 @@ def main_build_plugins():
     if need_comprimato_root or args.comprimato is not None:
         ENV['COMPRIMATOROOT'] = args.comprimato
         print('COMRPIMATOROOT={}'.format(ENV['COMPRIMATOROOT']))
+    if need_apple_prores_lib_root or args.apple_prores is not None:
+        ENV['APPLE_PRORES_LIB_ROOT'] = args.apple_prores
+        print('APPLE_PRORES_LIB_ROOT={}'.format(ENV['APPLE_PRORES_LIB_ROOT']))
 
     results = []
     for plugin in PLUGINS_DICT:
         def get_build_cmd(os_name):
             build_cmd = []
             if os_name == 'Windows':
-                solution_file = '{}_2013.sln'.format(plugin)
+                if plugin in VS2015_PLUGINS:
+                    solution_file = '{}_2015.sln'.format(plugin)
+                    msbuild = msbuild14
+                else:
+                    solution_file = '{}_2013.sln'.format(plugin)
+                    msbuild = msbuild12
                 full_solution_path = os.path.join(args.dir,
                                                   PLUGINS_DICT[plugin],
                                                   windows_target_64,
