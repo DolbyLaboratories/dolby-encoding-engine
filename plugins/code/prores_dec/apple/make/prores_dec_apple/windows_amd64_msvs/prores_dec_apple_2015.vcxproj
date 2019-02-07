@@ -105,13 +105,13 @@
 <ItemGroup>
 <ClCompile Include="..\..\..\..\..\common\GenericPlugin\GenericPlugin.cpp" />
 <ClCompile Include="..\..\..\src\ProresDecApple.cpp" />
-<ClCompile Include="..\..\..\..\proresDecApiWrapper.cpp" />
+<ClCompile Include="..\..\..\..\proresDecPluginWrapper.cpp" />
 <ClCompile Include="..\..\..\..\prores_dec_api.cpp" /></ItemGroup>
 <ItemGroup>
 <ClInclude Include="..\..\..\..\..\common\GenericPlugin\GenericPlugin.h" />
 <ClInclude Include="..\..\..\..\..\common\common.h" />
 <ClInclude Include="..\..\..\..\ProresDecPlugin.h" />
-<ClInclude Include="..\..\..\..\proresDecApiWrapper.h" />
+<ClInclude Include="..\..\..\..\proresDecPluginWrapper.h" />
 <ClInclude Include="..\..\..\..\prores_dec_api.h" /></ItemGroup>
 <ItemGroup />
 <ItemGroup />

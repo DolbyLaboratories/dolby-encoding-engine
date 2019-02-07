@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017-2018, Dolby Laboratories
+* Copyright (c) 2017-2019, Dolby Laboratories
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -93,6 +93,7 @@ init_defaults(hevc_enc_ffmpeg_t* state)
     state->data->color_primaries = "unspecified";
     state->data->transfer_characteristics = "unspecified";
     state->data->matrix_coefficients = "unspecified";
+    state->data->chromaSampleLocation = "0";
 
     state->data->mastering_display_sei_present = false;
     state->data->mastering_display_sei_x1 = 0;
@@ -500,6 +501,10 @@ parse_init_params
             state->data->color_description_present = true;
             state->data->matrix_coefficients = std::to_string((*it).second);
         }
+        else if ("chromaloc" == name)
+        {
+            state->data->chromaSampleLocation = value;
+        }
         // generate_mastering_display_color_volume_sei
         else if ("mastering_display_sei_x1" == name)
         {
@@ -773,6 +778,7 @@ write_cfg_file(hevc_enc_ffmpeg_data_t* data, const std::string& file)
         cfg_file << "        \"transfer_characteristics\": \""              << data->transfer_characteristics               << "\",\n";
         escape_backslashes(data->matrix_coefficients);
         cfg_file << "        \"matrix_coefficients\": \""                   << data->matrix_coefficients                    << "\",\n";
+        cfg_file << "        \"chromaloc\": \""                             << data->chromaSampleLocation                   << "\",\n";
         cfg_file << "        \"mastering_display_sei_present\": \""         << data->mastering_display_sei_present          << "\",\n";
         cfg_file << "        \"mastering_display_sei_x1\": \""              << data->mastering_display_sei_x1               << "\",\n";
         cfg_file << "        \"mastering_display_sei_y1\": \""              << data->mastering_display_sei_y1               << "\",\n";

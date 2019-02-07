@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017-2018, Dolby Laboratories
+* Copyright (c) 2017-2019, Dolby Laboratories
 * All rights reserved.
 * 
 * Redistribution and use in source and binary forms, with or without
@@ -197,6 +197,7 @@ init_defaults(hevc_enc_x265_t* state)
     state->data->color_primaries = "unspecified";
     state->data->transfer_characteristics = "unspecified";
     state->data->matrix_coefficients = "unspecified";
+    state->data->chromaSampleLocation = "0";
 
     // master-display
     state->data->mastering_display_enabled = false;
@@ -663,6 +664,10 @@ parse_init_params
                 continue;
             }
             state->data->matrix_coefficients = value;
+        }
+        else if ("chromaloc" == name)
+        {
+            state->data->chromaSampleLocation = value;
         }
         // master-display
         else if ("mastering_display_sei_x1" == name)

@@ -1,7 +1,7 @@
 """
 * BSD 3-Clause License
 *
-* Copyright (c) 2018, Dolby Laboratories
+* Copyright (c) 2018-2019, Dolby Laboratories
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -127,7 +127,7 @@ def handleParameters(dee_cfg_json, user_cfg_json):
                                   'max_vbv_data_rate', 'vbv_buffer_size',
                                   'ffmpeg_bin', 'input_file', 'output_file',
                                   'multipass', 'range', 'stats_file', 'color_description_present',
-                                  'color_primaries', 'transfer_characteristics', 'matrix_coefficients',
+                                  'color_primaries', 'transfer_characteristics', 'matrix_coefficients', 'chromaloc',
                                   'light_level_information_sei_present', 'light_level_max_content',
                                   'mastering_display_sei_present',
                                   'mastering_display_sei_x1',
@@ -225,10 +225,11 @@ def generateX265Config(systemParameters, userParameters):
     color_description_params = ""
     if systemParameters['color_description_present'] == "1":
         color_description_params = "colorprim={colorprim}:transfer={transfer}:"     \
-                                   "colormatrix={colormatrix}:".format(
+                                   "colormatrix={colormatrix}:chromaloc={chromaloc}:".format(
                                     colorprim = systemParameters['color_primaries'],
                                     transfer = systemParameters['transfer_characteristics'],
-                                    colormatrix = systemParameters['matrix_coefficients']
+                                    colormatrix = systemParameters['matrix_coefficients'],
+                                    chromaloc = systemParameters['chromaloc']
                                     )
 
     light_level_params = ""
@@ -273,7 +274,7 @@ def generateX265Config(systemParameters, userParameters):
     return x265_cfg
 
 def getX265DvRequirements():
-    return "aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:chromaloc=2:sar=1"
+    return "aud=1:annexb=1:repeat-headers=1:hrd=1:hash=1:sar=1"
 
 if __name__ == "__main__":
     dee_cfg_json = sys.argv[1]

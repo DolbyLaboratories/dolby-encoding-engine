@@ -16,9 +16,9 @@ LDLIBS = $(APPLE_PRORES_LIB_ROOT)/lib/linux64/libProRes64.a -ldl -Wl,-rpath,\$${
 
 
 INPUTS_LINK_debug = $(TMP)code/common/GenericPlugin/GenericPlugin.prores_dec_apple_linux_amd64_gnu_debug.o $(TMP)code/prores_dec/apple/src/ProresDecApple.prores_dec_apple_linux_amd64_gnu_debug.o\
-                    $(TMP)code/prores_dec/proresDecApiWrapper.prores_dec_apple_linux_amd64_gnu_debug.o $(TMP)code/prores_dec/prores_dec_api.prores_dec_apple_linux_amd64_gnu_debug.o
+                    $(TMP)code/prores_dec/proresDecPluginWrapper.prores_dec_apple_linux_amd64_gnu_debug.o $(TMP)code/prores_dec/prores_dec_api.prores_dec_apple_linux_amd64_gnu_debug.o
 INPUTS_LINK_release = $(TMP)code/common/GenericPlugin/GenericPlugin.prores_dec_apple_linux_amd64_gnu_release.o $(TMP)code/prores_dec/apple/src/ProresDecApple.prores_dec_apple_linux_amd64_gnu_release.o\
-                      $(TMP)code/prores_dec/proresDecApiWrapper.prores_dec_apple_linux_amd64_gnu_release.o $(TMP)code/prores_dec/prores_dec_api.prores_dec_apple_linux_amd64_gnu_release.o
+                      $(TMP)code/prores_dec/proresDecPluginWrapper.prores_dec_apple_linux_amd64_gnu_release.o $(TMP)code/prores_dec/prores_dec_api.prores_dec_apple_linux_amd64_gnu_release.o
 
 
 default: prores_dec_apple_debug.so prores_dec_apple_release.so
@@ -38,9 +38,9 @@ $(TMP)%.prores_dec_apple_linux_amd64_gnu_release.o: $(BASE)%.cpp | $(TMP)%/..
 	$(CXX) $(CXXFLAGS_release) $(DEFINES_release) $(INCLUDES) -o $@ $<
 
 CLEAN_COMPILE_debug = $(TMP)code/common/GenericPlugin/GenericPlugin.prores_dec_apple_linux_amd64_gnu_debug.d $(TMP)code/prores_dec/apple/src/ProresDecApple.prores_dec_apple_linux_amd64_gnu_debug.d\
-                      $(TMP)code/prores_dec/proresDecApiWrapper.prores_dec_apple_linux_amd64_gnu_debug.d $(TMP)code/prores_dec/prores_dec_api.prores_dec_apple_linux_amd64_gnu_debug.d
+                      $(TMP)code/prores_dec/proresDecPluginWrapper.prores_dec_apple_linux_amd64_gnu_debug.d $(TMP)code/prores_dec/prores_dec_api.prores_dec_apple_linux_amd64_gnu_debug.d
 CLEAN_COMPILE_release = $(TMP)code/common/GenericPlugin/GenericPlugin.prores_dec_apple_linux_amd64_gnu_release.d $(TMP)code/prores_dec/apple/src/ProresDecApple.prores_dec_apple_linux_amd64_gnu_release.d\
-                        $(TMP)code/prores_dec/proresDecApiWrapper.prores_dec_apple_linux_amd64_gnu_release.d $(TMP)code/prores_dec/prores_dec_api.prores_dec_apple_linux_amd64_gnu_release.d
+                        $(TMP)code/prores_dec/proresDecPluginWrapper.prores_dec_apple_linux_amd64_gnu_release.d $(TMP)code/prores_dec/prores_dec_api.prores_dec_apple_linux_amd64_gnu_release.d
 
 cleandeps:
 	$(RM) $(CLEAN_COMPILE_debug)
@@ -71,11 +71,11 @@ help:
 
 include $(wildcard $(TMP)code/common/GenericPlugin/GenericPlugin.prores_dec_apple_linux_amd64_gnu_debug.d)
 include $(wildcard $(TMP)code/prores_dec/apple/src/ProresDecApple.prores_dec_apple_linux_amd64_gnu_debug.d)
-include $(wildcard $(TMP)code/prores_dec/proresDecApiWrapper.prores_dec_apple_linux_amd64_gnu_debug.d)
+include $(wildcard $(TMP)code/prores_dec/proresDecPluginWrapper.prores_dec_apple_linux_amd64_gnu_debug.d)
 include $(wildcard $(TMP)code/prores_dec/prores_dec_api.prores_dec_apple_linux_amd64_gnu_debug.d)
 include $(wildcard $(TMP)code/common/GenericPlugin/GenericPlugin.prores_dec_apple_linux_amd64_gnu_release.d)
 include $(wildcard $(TMP)code/prores_dec/apple/src/ProresDecApple.prores_dec_apple_linux_amd64_gnu_release.d)
-include $(wildcard $(TMP)code/prores_dec/proresDecApiWrapper.prores_dec_apple_linux_amd64_gnu_release.d)
+include $(wildcard $(TMP)code/prores_dec/proresDecPluginWrapper.prores_dec_apple_linux_amd64_gnu_release.d)
 include $(wildcard $(TMP)code/prores_dec/prores_dec_api.prores_dec_apple_linux_amd64_gnu_release.d)
 
 

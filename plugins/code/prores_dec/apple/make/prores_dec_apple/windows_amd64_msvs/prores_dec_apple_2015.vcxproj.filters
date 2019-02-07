@@ -18,7 +18,7 @@
 <Filter>code\common\GenericPlugin</Filter></ClCompile>
 <ClCompile Include="..\..\..\src\ProresDecApple.cpp">
 <Filter>code\prores_dec\apple\src</Filter></ClCompile>
-<ClCompile Include="..\..\..\..\proresDecApiWrapper.cpp">
+<ClCompile Include="..\..\..\..\proresDecPluginWrapper.cpp">
 <Filter>code\prores_dec</Filter></ClCompile>
 <ClCompile Include="..\..\..\..\prores_dec_api.cpp">
 <Filter>code\prores_dec</Filter></ClCompile></ItemGroup>
@@ -29,7 +29,7 @@
 <Filter>code\common</Filter></ClInclude>
 <ClInclude Include="..\..\..\..\ProresDecPlugin.h">
 <Filter>code\prores_dec</Filter></ClInclude>
-<ClInclude Include="..\..\..\..\proresDecApiWrapper.h">
+<ClInclude Include="..\..\..\..\proresDecPluginWrapper.h">
 <Filter>code\prores_dec</Filter></ClInclude>
 <ClInclude Include="..\..\..\..\prores_dec_api.h">
 <Filter>code\prores_dec</Filter></ClInclude></ItemGroup>

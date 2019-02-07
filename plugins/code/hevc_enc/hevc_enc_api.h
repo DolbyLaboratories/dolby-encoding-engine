@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017-2018, Dolby Laboratories
+* Copyright (c) 2017-2019, Dolby Laboratories
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -52,7 +52,7 @@ extern "C" {
 *      data_rate : integer : n/a : hevc_enc_init : value in kbps
 *      max_vbv_data_rate : integer : n/a : hevc_enc_init : value in kbps
 *      vbv_buffer_size : integer : n/a : hevc_enc_init : value in kb
-*      range : enum : [limited,full] : hevc_enc_init
+*      range : enum : [limited,full] : hevc_enc_init : each workflow provides required value
 *      multi_pass : enum : [off,1st,nth,last] : hevc_enc_init
 *      stats_file : string : n/a : hevc_enc_init : temp file to write stats in multipass encoding
 *      max_output_data : integer : n/a : hevc_enc_set_property : framework indicates max size of buffer before each 'process' call
@@ -60,9 +60,10 @@ extern "C" {
 *      absolute_pass_num : integer : n/a : hevc_enc_init : when encoding multiple times (in multipass encoding or in multiple output streams) this value states the index number of the current encoding
 *      temp_file_num : integer : n/a : hevc_enc_get_property : accessed before hevc_enc_init, optional, should be used if plugin needs some temp files
 *      temp_file : string : n/a : hevc_enc_init : occurs multiple times, according to value retrieved from 'temp_file_num'
-*      color_primaries : enum : [unspecified,bt_709,bt_601_625,bt_601_525,bt_2020] : hevc_enc_init : optional, used when encoding HDR10-compatible streams
-*      transfer_characteristics : enum : [unspecified,bt_709,bt_601_625,bt_601_525,smpte_st_2084,std_b67] : hevc_enc_init : optional, used when encoding HDR10-compatible streams
-*      matrix_coefficients : enum : [unspecified,bt_709,bt_601_625,bt_601_525,bt_2020] : hevc_enc_init : optional, used when encoding HDR10-compatible streams
+*      color_primaries : enum : [unspecified,bt_709,bt_601_625,bt_601_525,bt_2020] : hevc_enc_init : each workflow provides required value
+*      transfer_characteristics : enum : [unspecified,bt_709,bt_601_625,bt_601_525,smpte_st_2084,std_b67] : hevc_enc_init : each workflow provides required value
+*      matrix_coefficients : enum : [unspecified,bt_709,bt_601_625,bt_601_525,bt_2020] : hevc_enc_init : each workflow provides required value
+*      chromaloc : integer : [0,5] : hevc_enc_init : each workflow provides required value
 *      mastering_display_sei_x1 : integer : [0,50000] : hevc_enc_init : first primary x : optional, used when encoding HDR10-compatible streams
 *      mastering_display_sei_y1 : integer : [0,50000] : hevc_enc_init : first primary y : optional, used when encoding HDR10-compatible streams
 *      mastering_display_sei_x2 : integer : [0,50000] : hevc_enc_init : second primary x : optional, used when encoding HDR10-compatible streams

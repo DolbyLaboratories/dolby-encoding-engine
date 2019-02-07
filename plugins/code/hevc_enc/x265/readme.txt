@@ -38,7 +38,7 @@ x265 compilation and prerequisities:
     .\multilib.bat (in x265_2.8\vc12-x86_65)
     
     If you set up NASM properly, at the start of execution, the following message displays:
-    Found nasm: C:/Users/mgaik/NASM/nasm.exe (found version "2.13.03")
+    Found nasm: C:/Users/[USER]/NASM/nasm.exe (found version "2.13.03")
     Found Nasm 2.13.03 to build assembly primitives
     x265 version 2.8
 

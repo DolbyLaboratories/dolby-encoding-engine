@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2018, Dolby Laboratories
+* Copyright (c) 2018-2019, Dolby Laboratories
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -44,12 +44,12 @@ public:
     Status    close();
     Status    setProperty(const Property* property);
     Status    getProperty(Property* property); 
-    void        setPRPixelFormat();
-    void        makePixelBuffer();
-    bool        convertDecodedPicture();
+    void      setPRPixelFormat();
+    void      makePixelBuffer();
+    bool      convertDecodedPicture();
 
     static void             fillProperties();
-    static PropertyInfo* getPropTable();
+    static PropertyInfo*    getPropTable();
     static int              getPropTablesize();
 
 private:
@@ -66,6 +66,7 @@ private:
     PRDecoderRef    decoder;
     PRPixelBuffer   pixelBuffer;
     unsigned char*  outBuffer;
+    uint8_t*        scratchMem;
     ProresDecFormat pluginFormat;
 };
 
@@ -81,10 +82,9 @@ bool ProresDecApple::convertDecodedPicture()
             return false;
         }
 
-        uint8_t *tmp = new uint8_t[bufferSize * 3 / 4];
-        uint8_t *r = tmp;
-        uint8_t *g = tmp + (bufferSize / 4);
-        uint8_t *b = tmp + (bufferSize / 2);
+        uint8_t *r = scratchMem;
+        uint8_t *g = scratchMem + (bufferSize / 4);
+        uint8_t *b = scratchMem + (bufferSize / 2);
 
         uint8_t *d = (uint8_t*)outBuffer;
         for (int i = 0; i < bufferSize; i += 8)
@@ -100,8 +100,7 @@ bool ProresDecApple::convertDecodedPicture()
 
         bufferSize = bufferSize * 3 / 4;
 
-        memcpy(outBuffer, tmp, bufferSize);
-        delete[]tmp;
+        memcpy(outBuffer, scratchMem, bufferSize);
         return true;
     }
     else if (decoderFormat == kPRFormat_v216)
@@ -113,11 +112,10 @@ bool ProresDecApple::convertDecodedPicture()
         }
 
         const int components = bufferSize / 2;
-        uint16_t *tmp = new uint16_t[components];
 
-        uint16_t *y = tmp;
-        uint16_t *u = tmp + (components / 2);
-        uint16_t *v = tmp + ((components / 2) + (components / 4));
+        uint16_t *y = (uint16_t*)scratchMem;
+        uint16_t *u = (uint16_t*)scratchMem + (components / 2);
+        uint16_t *v = (uint16_t*)scratchMem + ((components / 2) + (components / 4));
 
         uint16_t *d = (uint16_t*)outBuffer;
         for (int i = 0; i < components; i += 4)
@@ -128,8 +126,7 @@ bool ProresDecApple::convertDecodedPicture()
             *y++ = d[i + 3];
         }
 
-        memcpy(outBuffer, tmp, bufferSize);
-        delete[]tmp;
+        memcpy(outBuffer, scratchMem, bufferSize);
         return true;
     }
     else
@@ -171,6 +168,7 @@ ProresDecApple::ProresDecApple()
     ,bufferSize(0)
     ,decoderFormat(kPRFormat_b64a)
     ,outBuffer(NULL)
+    ,scratchMem(NULL)
     ,pluginFormat(RGB48LE)
 {
 }
@@ -250,6 +248,7 @@ Status ProresDecApple::init(const ProresDecInitParams* initParams)
     bufferSize = height * bytesPerRow;
     decImgSize = bufferSize;
     outBuffer = new unsigned char[bufferSize];
+    scratchMem = new uint8_t[bufferSize];
 
     makePixelBuffer();
 
@@ -283,7 +282,9 @@ Status ProresDecApple::process(const ProresDecInput* in, ProresDecOutput* out)
 Status ProresDecApple::close()
 {
     if (outBuffer != NULL)
-        delete[] outBuffer;
+        delete[] outBuffer;    
+    if (scratchMem != NULL)
+        delete[] scratchMem;
         
     PRCloseDecoder(decoder);
         

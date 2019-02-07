@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2017-2018, Dolby Laboratories
+* Copyright (c) 2017-2019, Dolby Laboratories
 * All rights reserved.
 * 
 * Redistribution and use in source and binary forms, with or without
@@ -95,6 +95,7 @@ typedef struct
     std::string         color_primaries;
     std::string         transfer_characteristics;
     std::string         matrix_coefficients;
+    std::string         chromaSampleLocation;
 
     // master-display
     bool                mastering_display_enabled;

@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2018, Dolby Laboratories
+* Copyright (c) 2018-2019, Dolby Laboratories
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,13 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "ProresDecPlugin.h"
+/*
+ *   This wrapper implements the prores_dec_api.h C API and underneath calls the
+ *   C++ methods of the ProresDecPlugin abstract class. By inheriting from that class
+ *   new prores decoder plugins can be implemented as C++ classes.
+ */
+
+#include "prores_dec_api.h"
 
 int proresDecWrapperGetInfo(const PropertyInfo** info);
 Status proresDecWrapperCreate(ProresDecHandle* handle);
