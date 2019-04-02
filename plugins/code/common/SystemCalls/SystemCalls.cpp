@@ -69,19 +69,6 @@ struct ProcessData
 #define LOOP_WAIT 100
 #define TEMP_BUF 1024
 
-template<typename Out>
-static
-void splitString(const std::string &s, char delim, Out result)
-{
-    std::stringstream ss;
-    ss.str(s);
-    std::string item;
-    while (std::getline(ss, item, delim))
-    {
-        *(result++) = item;
-    }
-}
-
 static
 inline
 std::vector<std::string> splitQuotedString(const std::string &s, char delim)
@@ -122,15 +109,6 @@ std::vector<std::string> splitQuotedString(const std::string &s, char delim)
     if (item.str() != "")
         elems.push_back(item.str());
 
-    return elems;
-}
-
-static
-inline
-std::vector<std::string> splitString(const std::string &s, char delim)
-{
-    std::vector<std::string> elems;
-    splitString(s, delim, std::back_inserter(elems));
     return elems;
 }
 

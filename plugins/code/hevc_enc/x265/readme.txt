@@ -7,6 +7,10 @@ Build tools:
 - gcc 4.8.5
 
 x265 compilation and prerequisities:
+- CMake
+    Visit: https://cmake.org/download/ or https://cmake.org/install/ for more details
+    On Ubuntu: sudo apt-get install cmake
+    Make sure cmake is added to PATH
 
 - NASM:
     x265 shall be built with NASM (verified with 2.13.03) in order to achieve maximum performance.

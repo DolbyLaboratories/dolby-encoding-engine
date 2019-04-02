@@ -28,7 +28,7 @@ Prerequisites:
     - kdu_stripe_decompressor.cpp
     - kdu_stripe_decompressor.h
     - ssse3_stripe_transfer.cpp
-    - supp_local.cpp (not needed for library v7.9)
+    - supp_local.cpp
     - stripe_decompressor_local.h
     - x86_stripe_transfer_local.h
 

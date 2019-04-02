@@ -16,7 +16,8 @@
     </input>
     <filter>
         <video>
-            <transcode_to_hevc version="2">
+            <transcode_to_hevc version="3">
+                <encode_type>sdr</encode_type> <!-- One of: sdr, hdr10 -->
                 <start>0</start>
                 <end>0</end>
                 <target_width>0</target_width>
