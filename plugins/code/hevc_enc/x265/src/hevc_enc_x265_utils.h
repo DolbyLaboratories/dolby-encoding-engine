@@ -116,6 +116,7 @@ typedef struct
     int                 light_level_max_frame_average;
 
     bool                force_slice_type;
+    bool                uhd_bd;
 
     std::string         level_idc;
     std::string         psy_rd;

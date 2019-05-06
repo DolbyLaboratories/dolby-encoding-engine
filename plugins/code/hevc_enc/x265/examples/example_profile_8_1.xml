@@ -44,7 +44,7 @@
         <disable_md_postproc>false</disable_md_postproc>    <!-- boolean: true or false -->
         <decoder>
           <j2k_dec>
-            <base/>
+            <kakadu_dlb/>    <!-- If plugin 'kakadu_dlb' is not available use the other one, e.g. 'base'. -->
           </j2k_dec>
         </decoder>
         <scaling>

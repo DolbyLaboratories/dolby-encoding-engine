@@ -76,7 +76,8 @@ extern "C" {
 *      mastering_display_sei_min_lum : integer : [0:2000000000] : hevc_enc_init : minimum display luminance : optional, used when encoding HDR10-compatible streams
 *      light_level_max_content : integer : [0,65535] : hevc_enc_init : optional, used when encoding HDR10-compatible streams
 *      light_level_max_frame_average : integer : [0,65535] : hevc_enc_init : optional, used when encoding HDR10-compatible streams
-*      force_slice_type : [true,false] : hevc_enc_init : optional, when present and set to 'true' indicates that frame_type in hevc_enc_picture_t might come with value different than HEVC_ENC_FRAME_TYPE_AUTO  
+*      force_slice_type : [true,false] : hevc_enc_init : optional, when present and set to 'true' indicates that frame_type in hevc_enc_picture_t might come with value different than HEVC_ENC_FRAME_TYPE_AUTO
+*      uhd_bd : [true,false] : hevc_enc_init : optional, used to indicate that stream must conform Ultra HD Blu-ray spec
 *
 * Additionally, hevc_enc_init_params_t structure will contain all plugin-specific properties set via XML interface (ACCESS_TYPE_USER).
 *

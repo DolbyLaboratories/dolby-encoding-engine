@@ -218,6 +218,7 @@ init_defaults(hevc_enc_x265_t* state)
     state->data->light_level_max_frame_average = 0;
 
     state->data->force_slice_type = false;
+    state->data->uhd_bd = false;
 
     state->data->plugin_path.clear();
     state->data->config_path.clear();
@@ -806,6 +807,10 @@ parse_init_params
         else if ("force_slice_type" == name)
         {
             state->data->force_slice_type = ("true" == value);
+        }
+        else if ("uhd_bd" == name)
+        {
+            state->data->uhd_bd = ("true" == value);
         }
         else if ("absolute_pass_num" == name)
         {

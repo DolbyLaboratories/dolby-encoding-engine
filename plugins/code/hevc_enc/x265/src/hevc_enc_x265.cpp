@@ -269,6 +269,13 @@ x265_init
         native_params.push_back({"max-cll", max_cll});
     }
 
+    if (state->data->uhd_bd == true)
+    {
+        native_params.push_back({"level-idc", "5.1"});
+        native_params.push_back({"uhd-bd", ""});
+        native_params.push_back({"b-adapt", "0"});
+    }
+
     for (auto ip : state->data->internal_params)
     {
         native_params.push_back({ip.first, ip.second});
@@ -431,6 +438,14 @@ x265_process
         input_picture.planes[0] = picture[i].plane[0];
         input_picture.planes[1] = picture[i].plane[1];
         input_picture.planes[2] = picture[i].plane[2];
+
+
+        /*  When encoding Dolby Vision profile 7 (BD), placement of B/P frames must be deterministic.
+            This can be achieved by forcing B frame every time.
+            IDRs and P frames are still emitted, but only at known positions.
+            It should change the interpretation of option "bframes", from "max", to "exact" number. */
+        if (true == state->data->uhd_bd)
+            input_picture.sliceType = X265_TYPE_B;
 
         int num_encoded = state->api->encoder_encode(state->encoder, &p_nal, &nal, &input_picture, NULL);
         if (num_encoded < 0)
