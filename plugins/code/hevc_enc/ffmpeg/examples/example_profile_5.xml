@@ -27,7 +27,7 @@
         <append_frames>0</append_frames>    <!-- integer -->
         <target_width>0</target_width>    <!-- integer list -->
         <target_height>0</target_height>    <!-- integer list -->
-        <max_scene_frames>240</max_scene_frames>    <!-- integer: from 1 to 256 -->
+        <max_scene_frames>240</max_scene_frames>    <!-- integer: from 12 to 256 -->
         <preprocessing_mode>optimized</preprocessing_mode>    <!-- One of: optimized, standard -->
         <data_rate>16000</data_rate>    <!-- integer list -->
         <max_vbv_data_rate>16000</max_vbv_data_rate>    <!-- integer list -->
@@ -53,7 +53,7 @@
         </scaling>
         <noise>
           <base>
-            <strength>0</strength>    <!-- integer: from 0 to 0 -->
+            <strength>0</strength>    <!-- fixed value -->
           </base>
         </noise>
         <hevc_enc>

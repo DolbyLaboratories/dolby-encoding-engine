@@ -324,7 +324,7 @@ ffmpeg_process
             return STATUS_ERROR;
         }
 
-        for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
         {
             bool plane_written_flag = false;
             size_t plane_data_written = 0;
@@ -333,7 +333,7 @@ ffmpeg_process
                 if (state->data->ffmpeg_ret_code != 0) break;
 
                 size_t bytes_written = 0;
-                status = state->data->piping_mgr.writeToPipe(state->data->in_pipe_id, (void*)((char*)current_pic.plane[i] + plane_data_written), plane_size[i] - plane_data_written, bytes_written);
+                status = state->data->piping_mgr.writeToPipe(state->data->in_pipe_id, (void*)((char*)current_pic.plane[j] + plane_data_written), plane_size[j] - plane_data_written, bytes_written);
                 plane_data_written += bytes_written;
                 if (status != PIPE_MGR_OK)
                 {
@@ -342,7 +342,7 @@ ffmpeg_process
                     return STATUS_ERROR;
                 }
 
-                if (plane_data_written == plane_size[i])
+                if (plane_data_written == plane_size[j])
                     plane_written_flag = true;
                 
                 if (bytes_written == 0)

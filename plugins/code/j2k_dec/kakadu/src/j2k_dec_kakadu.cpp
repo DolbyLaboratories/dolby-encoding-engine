@@ -38,6 +38,13 @@
 #include <cstdio>
 #include <string>
 
+#ifdef _WIN32
+#pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 // Kakadu core includes
 #include "kdu_elementary.h"
 #include "kdu_messaging.h"
@@ -46,6 +53,13 @@
 #include "kdu_sample_processing.h"
 // Kakadu support includes
 #include "kdu_stripe_decompressor.h"
+
+#ifdef _WIN32
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
+#endif
+
 #include "j2k_dec_kakadu.h"
 
 using namespace kdu_supp;

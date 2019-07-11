@@ -347,6 +347,7 @@ x265_close
     if (state->lib_initialized)
     {
         state->api->encoder_close(state->encoder);
+        state->api->cleanup();
         state->lib_initialized = false;
     }
 
@@ -377,19 +378,19 @@ x265_process
     hevc_enc_x265_t* state = (hevc_enc_x265_t*)handle;
     
     x265_nal *p_nal;
-    uint32_t nal;
+    uint32_t nal_count = 0;
 
     if (state->data->pending_header && !state->param->bRepeatHeaders)
     {
         state->data->pending_header = false;
-        if (state->api->encoder_headers(state->encoder, &p_nal, &nal) < 0)
+        if (state->api->encoder_headers(state->encoder, &p_nal, &nal_count) < 0)
         {
             state->data->msg = "Failure generating stream headers.";
             return STATUS_ERROR;
         }
-        if (nal)
+        if (nal_count)
         {
-            for (int j = 0; j < (int)nal; j++)
+            for (uint32_t j = 0; j < nal_count; j++)
             {
                 nalu_t nalu;
                 nalu.type = cast_nal_type(p_nal[j].type);
@@ -447,13 +448,13 @@ x265_process
         if (true == state->data->uhd_bd)
             input_picture.sliceType = X265_TYPE_B;
 
-        int num_encoded = state->api->encoder_encode(state->encoder, &p_nal, &nal, &input_picture, NULL);
+        int num_encoded = state->api->encoder_encode(state->encoder, &p_nal, &nal_count, &input_picture, NULL);
         if (num_encoded < 0)
         {
             state->data->msg = "encoder_encode() failed.";
             return STATUS_ERROR;
         }
-        for (uint32_t j = 0; j < nal; j++)
+        for (uint32_t j = 0; j < nal_count; j++)
         {
             nalu_t nalu;
             nalu.type = cast_nal_type(p_nal[j].type);
@@ -502,8 +503,8 @@ x265_flush
     }
 
     x265_nal *p_nal;
-    uint32_t nal;
-    int num_encoded = state->api->encoder_encode(state->encoder, &p_nal, &nal, NULL, NULL);
+    uint32_t nal_count = 0;
+    int num_encoded = state->api->encoder_encode(state->encoder, &p_nal, &nal_count, NULL, NULL);
     
     if (num_encoded < 0)
     {
@@ -518,7 +519,7 @@ x265_flush
         return STATUS_OK;
     }
 
-    for (uint32_t j = 0; j < nal; j++)
+    for (uint32_t j = 0; j < nal_count; j++)
     {
         nalu_t nalu;
         nalu.type = cast_nal_type(p_nal[j].type);

@@ -40,6 +40,7 @@
 class GenericPlugin {
 public:
     GenericPlugin();
+    virtual ~GenericPlugin() {}
 
     virtual Status setProperty(const Property* property);
     const char* getMessage();

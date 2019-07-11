@@ -820,18 +820,18 @@ parse_init_params
         else if ("param" == name)
         {
             auto items = split_string(value, ':');
-            for (auto i : items)
+            for (auto item : items)
             {  
                 std::string param_name, param_value;
-                std::size_t found = i.find("=");
+                std::size_t found = item.find("=");
                 if (found == std::string::npos)
                 {
-                    param_name = i;
+                    param_name = item;
                 }
                 else
                 {
-                    param_name = i.substr(0, found);
-                    param_value = i.substr(found+1);
+                    param_name = item.substr(0, found);
+                    param_value = item.substr(found+1);
                     std::replace(param_value.begin(), param_value.end(), ';', ':');
                 }
                 state->data->internal_params.push_back({param_name, param_value});

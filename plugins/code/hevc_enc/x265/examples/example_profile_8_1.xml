@@ -57,7 +57,7 @@
         </scaling>
         <noise>
           <base>
-            <strength>0</strength>    <!-- integer: from 0 to 0 -->
+            <strength>0</strength>    <!-- fixed value -->
           </base>
         </noise>
         <hevc_enc>
