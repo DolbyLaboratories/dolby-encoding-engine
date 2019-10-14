@@ -399,6 +399,7 @@ ffmpeg_flush
 {
     hevc_enc_ffmpeg_t* state = (hevc_enc_ffmpeg_t*)handle;
     piping_status_t status;
+    state->data->msg.clear();
 
     // close input pipe to let FFMPEG know we finished sending input
     state->data->piping_mgr.closePipe(state->data->in_pipe_id);

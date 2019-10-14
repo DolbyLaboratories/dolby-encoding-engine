@@ -1,77 +1,82 @@
 <?xml version="1.0"?>
 <job_config>
-    <input>
-        <video>
-            <hevc>
-                <frame_rate>FRAME_RATE</frame_rate>
-                <dv_profile>none</dv_profile>
-                <file_name>FILE_NAME</file_name>
-                <storage>
-                    <local>
-                        <path>PATH</path>
-                    </local>
-                </storage>
-            </hevc>
-        </video>
-    </input>
-    <filter>
-		<video>
-			<sdr_to_dv_profile_4_2>
-                <el_data_rate>5000</el_data_rate>
-                <el_max_vbv_data_rate>5000</el_max_vbv_data_rate>
-                <el_vbv_buffer_size>10000</el_vbv_buffer_size>
-                <encode_pass_num>1</encode_pass_num>
-                <max_light_level>4000</max_light_level>
-                <disable_md_postproc>false</disable_md_postproc>
-                <hevc_dec>
-                    <impact>
-                        <use_sps_frame_rate>false</use_sps_frame_rate>
-                    </impact>
-                </hevc_dec>
-                <hevc_enc>
-                    <x265>
-                        <preset>fast</preset>
-                        <tune>grain</tune>
-                        <open_gop>false</open_gop>
-                        <max_intra_period>48</max_intra_period>
-                        <min_intra_period>48</min_intra_period>
-                        <intra_refresh>false</intra_refresh>
-                        <max_bframes>8</max_bframes>
-                        <scenecut>0</scenecut>
-                        <scenecut_bias>0</scenecut_bias>
-                        <lookahead_frames>50</lookahead_frames>
-                        <info>false</info>
-                        <frame_threads>0</frame_threads>
-                        <nr_inter>400</nr_inter>
-                        <nr_intra>100</nr_intra>
-                        <cbqpoffs>0</cbqpoffs>
-                        <crqpoffs>0</crqpoffs>
-                        <min_cu_size>8</min_cu_size>
-                        <max_cu_size>64</max_cu_size>
-                        <qg_size>32</qg_size>
-                        <rc_grain>false</rc_grain>
-                        <level_idc>0</level_idc>
-                        <psy_rd>0</psy_rd>
-                        <profile>auto</profile>
-                    </x265>
-                </hevc_enc>
-			</sdr_to_dv_profile_4_2>
-		</video>
-    </filter>
-    <output>
-        <hevc>
-            <file_name>FILE_NAME</file_name>
-            <storage>
-                <local>
-                    <path>PATH</path>
-                </local>
-            </storage>
-        </hevc>
-    </output>
-    <misc>
-        <temp_dir>
-            <clean_temp>true</clean_temp>
-            <path>PATH</path>
-        </temp_dir>
-    </misc>
+  <input>
+    <video>
+      <hevc version="1">
+        <frame_rate>24</frame_rate>    <!-- One of: 23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60 -->
+        <dv_profile>none</dv_profile>    <!-- fixed value -->
+        <file_name>FILE_NAME</file_name>    <!-- string -->
+        <storage>
+          <local>
+            <path>PATH</path>    <!-- string -->
+          </local>
+        </storage>
+      </hevc>
+    </video>
+  </input>
+  <filter>
+    <video>
+      <sdr_to_dv_profile_4_2 version="1">
+        <el_data_rate>50</el_data_rate>    <!-- string -->
+        <el_max_vbv_data_rate>50</el_max_vbv_data_rate>    <!-- string -->
+        <el_vbv_buffer_size>100</el_vbv_buffer_size>    <!-- string -->
+        <encode_pass_num>1</encode_pass_num>    <!-- string -->
+        <max_light_level>4000</max_light_level>    <!-- One of: 200, 1000, 4000 -->
+        <run_mode>linear_dynamic</run_mode>    <!-- One of: singlenode, linear_dynamic -->
+        <disable_md_postproc>false</disable_md_postproc>    <!-- boolean: true or false -->
+        <disable_md_conform>false</disable_md_conform>    <!-- boolean: true or false -->
+        <hevc_dec>
+          <impact>
+            <use_sps_frame_rate>false</use_sps_frame_rate>    <!-- boolean: true or false -->
+          </impact>
+        </hevc_dec>
+        <hevc_enc>
+          <x265>
+            <preset>fast</preset>    <!-- One of: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo -->
+            <tune>none</tune>    <!-- One of: none, psnr, ssim, grain, fastdecode, zerolatency -->
+            <open_gop>false</open_gop>    <!-- boolean: true or false -->
+            <max_intra_period>48</max_intra_period>    <!-- integer: from 1 to 65535 -->
+            <min_intra_period>48</min_intra_period>    <!-- integer: from 0 to 65535 -->
+            <intra_refresh>false</intra_refresh>    <!-- boolean: true or false -->
+            <max_bframes>4</max_bframes>    <!-- integer: from 0 to 16 -->
+            <scenecut>0</scenecut>    <!-- integer -->
+            <scenecut_bias>0</scenecut_bias>    <!-- integer: from 0 to 100 -->
+            <lookahead_frames>48</lookahead_frames>    <!-- integer: from 0 to 250 -->
+            <concatenation_flag>false</concatenation_flag>    <!-- boolean: true or false -->
+            <info>false</info>    <!-- boolean: true or false -->
+            <frame_threads>1</frame_threads>    <!-- integer: from 0 to 16 -->
+            <nr_inter>0</nr_inter>    <!-- integer: from 0 to 2000 -->
+            <nr_intra>0</nr_intra>    <!-- integer: from 0 to 2000 -->
+            <cbqpoffs>0</cbqpoffs>    <!-- integer: from -12 to 12 -->
+            <crqpoffs>0</crqpoffs>    <!-- integer: from -12 to 12 -->
+            <min_cu_size>8</min_cu_size>    <!-- One of: 8, 16, 32 -->
+            <max_cu_size>64</max_cu_size>    <!-- One of: 16, 32, 64 -->
+            <qg_size>32</qg_size>    <!-- One of: 16, 32, 64 -->
+            <rc_grain>false</rc_grain>    <!-- boolean: true or false -->
+            <level_idc>0</level_idc>    <!-- One of: 0, 1.0, 10, 2.0, 20, 2.1, 21, 3.0, 30, 3.1, 31, 4.0, 40, 4.1, 41, 5.0, 50, 5.1, 51, 5.2, 52, 6.0, 60, 6.1, 61, 6.2, 62, 8.5, 85 -->
+            <psy_rd>0</psy_rd>    <!-- float: from 0 to 5 -->
+            <wpp>false</wpp>    <!-- boolean: true or false -->
+            <profile>auto</profile>    <!-- One of: auto, main, main10, main-intra, main10-intra, main444-8, main444-intra, main422-10, main422-10-intra, main444-10, main444-10-intra, main12, main12-intra, main422-12, main422-12-intra, main444-12, main444-12-intra -->
+            <!-- <param>PARAM</param> -->     <!-- Allows the user to set x265 native parameters. Syntax: id=val:id=val -->
+          </x265>
+        </hevc_enc>
+      </sdr_to_dv_profile_4_2>
+    </video>
+  </filter>
+  <output>
+    <hevc version="1">
+      <file_name>FILE_NAME</file_name>    <!-- string list -->
+      <storage>
+        <local>
+          <path>PATH</path>    <!-- string -->
+        </local>
+      </storage>
+    </hevc>
+  </output>
+  <misc>
+    <temp_dir>
+      <clean_temp>true</clean_temp>
+      <path>PATH</path>
+    </temp_dir>
+  </misc>
 </job_config>

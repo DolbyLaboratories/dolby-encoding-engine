@@ -14,7 +14,7 @@
   </input>
   <filter>
     <video>
-      <dv_mezz_to_dv_profile_8_1 version="2">
+      <dv_mezz_to_hdr10 version="2">
         <start>0</start>    <!-- string -->
         <end>0</end>    <!-- string -->
         <metadata_offset>0</metadata_offset>    <!-- integer -->
@@ -23,6 +23,7 @@
         <active_area_offset_left>-1</active_area_offset_left>    <!-- integer -->
         <active_area_offset_right>-1</active_area_offset_right>    <!-- integer -->
         <signal_range_coded>auto</signal_range_coded>    <!-- One of: auto, computer, video, signal -->
+        <content_mapping>none</content_mapping>    <!-- One of: false, true, none, 600, 1000 -->
         <gx>-1</gx>    <!-- integer: from -1 to 50000 -->
         <gy>-1</gy>    <!-- integer: from -1 to 50000 -->
         <bx>-1</bx>    <!-- integer: from -1 to 50000 -->
@@ -31,18 +32,18 @@
         <ry>-1</ry>    <!-- integer: from -1 to 50000 -->
         <wpx>-1</wpx>    <!-- integer: from -1 to 50000 -->
         <wpy>-1</wpy>    <!-- integer: from -1 to 50000 -->
+        <max_peak_lum>-1</max_peak_lum>    <!-- integer: from -1 to 2000000000 -->
+        <min_peak_lum>-1</min_peak_lum>    <!-- integer: from -1 to 2000000000 -->
         <max_cll>-1</max_cll>    <!-- integer: from -1 to 65535 -->
         <max_fall>-1</max_fall>    <!-- integer: from -1 to 65535 -->
         <decoder_parallel_frames>0</decoder_parallel_frames>    <!-- integer: from 0 to 16 -->
         <prepend_frames>0</prepend_frames>    <!-- integer -->
         <target_width>0</target_width>    <!-- integer list -->
         <target_height>0</target_height>    <!-- integer list -->
-        <max_scene_frames>240</max_scene_frames>    <!-- integer: from 1 to 256 -->
         <data_rate>16000</data_rate>    <!-- integer list -->
         <max_vbv_data_rate>16000</max_vbv_data_rate>    <!-- integer list -->
         <vbv_buffer_size>32000</vbv_buffer_size>    <!-- integer list -->
         <encode_pass_num>2</encode_pass_num>    <!-- integer -->
-        <disable_md_postproc>false</disable_md_postproc>    <!-- boolean: true or false -->
         <decoder>
           <j2k_dec>
             <kakadu_dlb/>    <!-- If plugin 'kakadu_dlb' is not available use the other one, e.g. 'base'. -->
@@ -91,7 +92,7 @@
             <param>hdr-opt</param>    <!-- Allows the user to set x265 native parameters. Syntax: id=val:id=val -->
           </x265>
         </hevc_enc>
-      </dv_mezz_to_dv_profile_8_1>
+      </dv_mezz_to_hdr10>
     </video>
   </filter>
   <output>

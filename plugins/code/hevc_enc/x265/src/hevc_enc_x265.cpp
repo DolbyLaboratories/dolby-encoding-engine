@@ -90,6 +90,7 @@ PropertyInfo hevc_enc_x265_info[] =
     ,{"scenecut", PROPERTY_TYPE_INTEGER, "Defines how aggressively I-frames need to be inserted. The higher the threshold value, the more aggressive the I-frame placement. Value 0 disables adaptive I frame placement", "40", NULL, 0, 1, ACCESS_TYPE_USER}
     ,{"scenecut_bias", PROPERTY_TYPE_INTEGER, "Represents the percentage difference between the inter cost and intra cost of a frame used in scenecut detection. Values between 5 and 15 are recommended.", "5", "0:100", 0, 1, ACCESS_TYPE_USER}
     ,{"lookahead_frames", PROPERTY_TYPE_INTEGER, "Number of frames to look ahead. Must be between the maximum consecutive bframe count and 250.", "20", "0:250", 0, 1, ACCESS_TYPE_USER}
+    ,{"concatenation_flag", PROPERTY_TYPE_BOOLEAN, "Set concatenation flag in 1st buffer timing SEI.", "false", "", 0, 1, ACCESS_TYPE_USER }
     ,{"info", PROPERTY_TYPE_BOOLEAN, "Enables informational SEI in the stream headers which describes the encoder version, build info, and encode parameters.", "false", NULL, 0, 1, ACCESS_TYPE_USER }
     ,{"frame_threads", PROPERTY_TYPE_INTEGER, "Number of concurrently encoded frames (0 = autodetect). Value 1 can improve encode quality, but significantly reduces performance.", "0", "0:16", 0, 1, ACCESS_TYPE_USER }
     ,{"nr_inter", PROPERTY_TYPE_INTEGER, "Inter frame noise reduction strength (0 = disabled).", "0", "0:2000", 0, 1, ACCESS_TYPE_USER }
@@ -103,6 +104,7 @@ PropertyInfo hevc_enc_x265_info[] =
     ,{"rc_grain", PROPERTY_TYPE_BOOLEAN, "Enables a specialized ratecontrol algorithm for film grain content.", "false", NULL, 0, 1, ACCESS_TYPE_USER }
     ,{"level_idc", PROPERTY_TYPE_STRING, "Minimum decoder requirement level.", "0", "0:1.0:10:2.0:20:2.1:21:3.0:30:3.1:31:4.0:40:4.1:41:5.0:50:5.1:51:5.2:52:6.0:60:6.1:61:6.2:62:8.5:85", 0, 1, ACCESS_TYPE_USER }
     ,{"psy_rd", PROPERTY_TYPE_DECIMAL, "Influence rate distortion optimized mode decision to preserve the energy of the source image in the encoded image at the expense of compression efficiency.", "2.0", "0:5", 0, 1, ACCESS_TYPE_USER }
+    ,{"wpp", PROPERTY_TYPE_BOOLEAN, "Enable Wavefront Parallel Processing.", "false", NULL, 0, 1, ACCESS_TYPE_USER }
 
     ,{"profile", PROPERTY_TYPE_STRING, "Enforce the requirements of the specified HEVC profile", "auto", "auto:main:main10:main-intra:main10-intra:main444-8:main444-intra:main422-10:main422-10-intra:main444-10:main444-10-intra:main12:main12-intra:main422-12:main422-12-intra:main444-12:main444-12-intra", 0, 1, ACCESS_TYPE_USER }
     ,{"param", PROPERTY_TYPE_STRING, "Sets any x265 parameter using syntax \"name=value\" or just \"name\" for boolean flags. Use ':' separator to enter multiple values under one tag. If value contains colon, use semicolon instead.", NULL, NULL, 0, 100, ACCESS_TYPE_USER}
@@ -192,6 +194,7 @@ x265_init
     }
 
     api->param_default(state->param);
+    state->param->forceFlush = 0;
 
     bool ok = set_preset(state, state->data->preset, state->data->tune);
     
@@ -244,11 +247,15 @@ x265_init
     native_params.push_back({"qg-size", std::to_string(state->data->qg_size)});
     native_params.push_back({state->data->rc_grain ? "rc-grain" : "no-rc-grain", ""});
     native_params.push_back({"level-idc", state->data->level_idc});
+    native_params.push_back({state->data->wpp ? "wpp" : "no-wpp", ""});
     native_params.push_back({"psy-rd", state->data->psy_rd});
     native_params.push_back({"colorprim", std::to_string(get_color_prim_number(state->data->color_primaries))});
     native_params.push_back({"transfer", std::to_string(get_transfer_characteristics_number(state->data->transfer_characteristics))});
     native_params.push_back({"colormatrix", std::to_string(get_matrix_coefficients_number(state->data->matrix_coefficients))});
     native_params.push_back({"chromaloc", state->data->chromaSampleLocation});
+    
+    if (state->data->concatenation_flag) native_params.push_back({"hrd-concat", ""});
+    
 
      if (state->data->mastering_display_enabled == true)
     {
@@ -343,6 +350,7 @@ x265_close
     )
 {
     hevc_enc_x265_t* state = (hevc_enc_x265_t*)handle;
+    state->data->msg.clear();
 
     if (state->lib_initialized)
     {
@@ -379,6 +387,7 @@ x265_process
     
     x265_nal *p_nal;
     uint32_t nal_count = 0;
+    state->data->msg.clear();
 
     if (state->data->pending_header && !state->param->bRepeatHeaders)
     {
@@ -505,7 +514,6 @@ x265_flush
     x265_nal *p_nal;
     uint32_t nal_count = 0;
     int num_encoded = state->api->encoder_encode(state->encoder, &p_nal, &nal_count, NULL, NULL);
-    
     if (num_encoded < 0)
     {
         state->data->msg = "encoder_encode() failed.";

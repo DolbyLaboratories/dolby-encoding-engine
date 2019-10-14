@@ -18,10 +18,11 @@
         <start>0</start>    <!-- string -->
         <end>0</end>    <!-- string -->
         <metadata_offset>0</metadata_offset>    <!-- integer -->
-        <active_area_offset_top>0</active_area_offset_top>    <!-- integer -->
-        <active_area_offset_bottom>0</active_area_offset_bottom>    <!-- integer -->
-        <active_area_offset_left>0</active_area_offset_left>    <!-- integer -->
-        <active_area_offset_right>0</active_area_offset_right>    <!-- integer -->
+        <active_area_offset_top>-1</active_area_offset_top>    <!-- integer -->
+        <active_area_offset_bottom>-1</active_area_offset_bottom>    <!-- integer -->
+        <active_area_offset_left>-1</active_area_offset_left>    <!-- integer -->
+        <active_area_offset_right>-1</active_area_offset_right>    <!-- integer -->
+        <signal_range_coded>auto</signal_range_coded>    <!-- One of: auto, computer, video, signal -->
         <gx>-1</gx>    <!-- integer: from -1 to 50000 -->
         <gy>-1</gy>    <!-- integer: from -1 to 50000 -->
         <bx>-1</bx>    <!-- integer: from -1 to 50000 -->

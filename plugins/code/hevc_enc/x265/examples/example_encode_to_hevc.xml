@@ -19,7 +19,7 @@
   <filter>
     <video>
       <encode_to_hevc version="4">
-        <encode_type>sdr</encode_type>    <!-- One of: sdr, hdr10 -->
+        <encode_type>sdr</encode_type>    <!-- One of: sdr, hdr10, dv_profile_4_2_bl, dv_profile_4_2_el, dv_profile_5, dv_profile_7_bl, dv_profile_7_el, dv_profile_8_1 -->
         <start>0</start>    <!-- string -->
         <end>0</end>    <!-- string -->
         <target_width>0</target_width>    <!-- integer list -->
@@ -38,8 +38,8 @@
         </scaling>
         <hevc_enc>
           <x265>
-            <preset>slow</preset>    <!-- One of: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo -->
-            <tune>grain</tune>    <!-- One of: none, psnr, ssim, grain, fastdecode, zerolatency -->
+            <preset>slower</preset>    <!-- One of: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo -->
+            <tune>none</tune>    <!-- One of: none, psnr, ssim, grain, fastdecode, zerolatency -->
             <open_gop>false</open_gop>    <!-- boolean: true or false -->
             <max_intra_period>48</max_intra_period>    <!-- integer: from 1 to 65535 -->
             <min_intra_period>48</min_intra_period>    <!-- integer: from 0 to 65535 -->
@@ -50,18 +50,20 @@
             <lookahead_frames>48</lookahead_frames>    <!-- integer: from 0 to 250 -->
             <concatenation_flag>false</concatenation_flag>    <!-- boolean: true or false -->
             <info>false</info>    <!-- boolean: true or false -->
-            <frame_threads>0</frame_threads>    <!-- integer: from 0 to 16 -->
-            <nr_inter>400</nr_inter>    <!-- integer: from 0 to 2000 -->
-            <nr_intra>100</nr_intra>    <!-- integer: from 0 to 2000 -->
+            <frame_threads>1</frame_threads>    <!-- integer: from 0 to 16 -->
+            <nr_inter>0</nr_inter>    <!-- integer: from 0 to 2000 -->
+            <nr_intra>0</nr_intra>    <!-- integer: from 0 to 2000 -->
             <cbqpoffs>0</cbqpoffs>    <!-- integer: from -12 to 12 -->
             <crqpoffs>0</crqpoffs>    <!-- integer: from -12 to 12 -->
             <min_cu_size>8</min_cu_size>    <!-- One of: 8, 16, 32 -->
             <max_cu_size>64</max_cu_size>    <!-- One of: 16, 32, 64 -->
             <qg_size>32</qg_size>    <!-- One of: 16, 32, 64 -->
-            <rc_grain>true</rc_grain>    <!-- boolean: true or false -->
+            <rc_grain>false</rc_grain>    <!-- boolean: true or false -->
             <level_idc>0</level_idc>    <!-- One of: 0, 1.0, 10, 2.0, 20, 2.1, 21, 3.0, 30, 3.1, 31, 4.0, 40, 4.1, 41, 5.0, 50, 5.1, 51, 5.2, 52, 6.0, 60, 6.1, 61, 6.2, 62, 8.5, 85 -->
             <psy_rd>0</psy_rd>    <!-- float: from 0 to 5 -->
+            <wpp>false</wpp>    <!-- boolean: true or false -->
             <profile>auto</profile>    <!-- One of: auto, main, main10, main-intra, main10-intra, main444-8, main444-intra, main422-10, main422-10-intra, main444-10, main444-10-intra, main12, main12-intra, main422-12, main422-12-intra, main444-12, main444-12-intra -->
+            <!-- <param>PARAM</param> -->     <!-- Allows the user to set x265 native parameters. Syntax: id=val:id=val -->
           </x265>
         </hevc_enc>
       </encode_to_hevc>

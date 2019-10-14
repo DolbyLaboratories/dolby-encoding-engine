@@ -117,9 +117,11 @@ typedef struct
 
     bool                force_slice_type;
     bool                uhd_bd;
+    bool                concatenation_flag;
 
     std::string         level_idc;
     std::string         psy_rd;
+    bool                wpp;
     std::vector<nalu_t>                             output_buffer;
     std::vector<nalu_t>::iterator                   last_used_nal;
     std::vector<HevcEncNal>                     output;

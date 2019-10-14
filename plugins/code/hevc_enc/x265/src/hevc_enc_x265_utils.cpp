@@ -193,6 +193,7 @@ init_defaults(hevc_enc_x265_t* state)
     state->data->rc_grain = false;
     state->data->level_idc = "0";
     state->data->psy_rd = "2.0";
+    state->data->wpp = false;
 
     state->data->color_primaries = "unspecified";
     state->data->transfer_characteristics = "unspecified";
@@ -219,6 +220,7 @@ init_defaults(hevc_enc_x265_t* state)
 
     state->data->force_slice_type = false;
     state->data->uhd_bd = false;
+    state->data->concatenation_flag = false;
 
     state->data->plugin_path.clear();
     state->data->config_path.clear();
@@ -636,6 +638,14 @@ parse_init_params
             }
             state->data->psy_rd = value;
         }
+        else if ("wpp" == name) {
+            if (value != "true" && value != "false")
+            {
+                state->data->msg += "\nInvalid 'wpp' value.";
+                continue;
+            }
+            state->data->wpp = (value == "true");
+        }
         else if ("color_primaries" == name)
         {
             auto it = color_primaries_map.find(value);
@@ -812,6 +822,10 @@ parse_init_params
         {
             state->data->uhd_bd = ("true" == value);
         }
+        else if ("concatenation_flag" == name)
+        {
+            state->data->concatenation_flag = ("true" == value);
+        }
         else if ("absolute_pass_num" == name)
         {
             // this internal param is ignored for x265
@@ -986,6 +1000,7 @@ get_config_msg
     msg += "\n  rc_grain=" + bool2string(state->data->rc_grain);
     msg += "\n  level_idc=" + state->data->level_idc;
     msg += "\n  psy_rd=" + state->data->psy_rd;
+    msg += "\n  wpp=" + bool2string(state->data->wpp);
     msg += "\n  profile=" + state->data->profile;
     
     msg += "\n  color_primaries=" + state->data->color_primaries;
