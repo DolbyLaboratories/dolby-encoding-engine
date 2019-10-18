@@ -1,6 +1,6 @@
 # dolby-encoding-engine
 
-This repository contains various additions to Dolby Encoding Engine (DEE), such as plugins allowing integration of 3rd part components.
+This repository contains various additions to Dolby Encoding Engine (DEE), such as plugins allowing integration of 3rd party components.
 
 :mega: If you need stable source code, use [release archives](https://github.com/DolbyLaboratories/dolby-encoding-engine/releases) to get components associated with specific DEE version.
 
