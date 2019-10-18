@@ -76,8 +76,8 @@
             <concatenation_flag>false</concatenation_flag>    <!-- boolean: true or false -->
             <info>false</info>    <!-- boolean: true or false -->
             <frame_threads>1</frame_threads>    <!-- integer: from 0 to 16 -->
-            <nr_inter>0</nr_inter>    <!-- integer: from 0 to 2000 -->
-            <nr_intra>0</nr_intra>    <!-- integer: from 0 to 2000 -->
+            <nr_inter>400</nr_inter>    <!-- integer: from 0 to 2000 -->
+            <nr_intra>100</nr_intra>    <!-- integer: from 0 to 2000 -->
             <cbqpoffs>0</cbqpoffs>    <!-- integer: from -12 to 12 -->
             <crqpoffs>0</crqpoffs>    <!-- integer: from -12 to 12 -->
             <min_cu_size>8</min_cu_size>    <!-- One of: 8, 16, 32 -->
