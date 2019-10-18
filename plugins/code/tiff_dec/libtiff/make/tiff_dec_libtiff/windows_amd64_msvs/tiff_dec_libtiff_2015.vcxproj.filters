@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<ItemGroup>
+<Filter Include="code">
+<UniqueIdentifier>{cf162038-ec02-32ca-94b6-8c927f3cfc25}</UniqueIdentifier></Filter>
+<Filter Include="code\common">
+<UniqueIdentifier>{58e986a2-7e7e-314b-93a5-53c87fc426e3}</UniqueIdentifier></Filter>
+<Filter Include="code\common\GenericPlugin">
+<UniqueIdentifier>{2dfd78d0-5e49-329e-85fc-bcb4901333e7}</UniqueIdentifier></Filter>
+<Filter Include="code\common\SystemCalls">
+<UniqueIdentifier>{ef7ead36-d902-3706-8175-e02750a15327}</UniqueIdentifier></Filter>
+<Filter Include="code\tiff_dec">
+<UniqueIdentifier>{5e747626-984c-3385-81ae-45d070668c88}</UniqueIdentifier></Filter>
+<Filter Include="code\tiff_dec\libtiff">
+<UniqueIdentifier>{5f5aa50b-1503-3791-a03a-e612e63e20fc}</UniqueIdentifier></Filter>
+<Filter Include="code\tiff_dec\libtiff\src">
+<UniqueIdentifier>{4808b5a7-dee4-3240-a52f-46667dd29f3f}</UniqueIdentifier></Filter></ItemGroup>
+<ItemGroup>
+<ClCompile Include="..\..\..\..\..\common\GenericPlugin\GenericPlugin.cpp">
+<Filter>code\common\GenericPlugin</Filter></ClCompile>
+<ClCompile Include="..\..\..\..\..\common\SystemCalls\SystemCalls.cpp">
+<Filter>code\common\SystemCalls</Filter></ClCompile>
+<ClCompile Include="..\..\..\src\tiff_dec_libtiff.cpp">
+<Filter>code\tiff_dec\libtiff\src</Filter></ClCompile></ItemGroup>
+<ItemGroup>
+<ClInclude Include="..\..\..\..\..\common\GenericPlugin\GenericPlugin.h">
+<Filter>code\common\GenericPlugin</Filter></ClInclude>
+<ClInclude Include="..\..\..\..\..\common\SystemCalls\SystemCalls.h">
+<Filter>code\common\SystemCalls</Filter></ClInclude>
+<ClInclude Include="..\..\..\..\..\common\common.h">
+<Filter>code\common</Filter></ClInclude>
+<ClInclude Include="..\..\..\..\tiff_dec_api.h">
+<Filter>code\tiff_dec</Filter></ClInclude></ItemGroup>
+<ItemGroup />
+<ItemGroup />
+<ItemGroup />
+<ItemGroup /></Project>

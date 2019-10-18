@@ -3,7 +3,7 @@ Dolby Encoding Engine plugin for Comprimato JPEG2000 decoder
 The provided source code was built and tested using the Comprimato SDK version 2.5.8-release.
 
 Build tools:
-- Visual Studio 2013
+- Visual Studio 2013 or 2015
 - gcc 4.8.5
 
 Prerequisites:
@@ -23,7 +23,7 @@ Prerequisites:
 
 Build instructions, Windows:
 1. Set the COMPRIMATOROOT environment variable pointing to the folder with prerequisites.
-2. Build using make\j2k_dec_comprimato\windows_amd64_msvs\j2k_dec_comprimato_2013.sln
+2. Build using make\j2k_dec_comprimato\windows_amd64_msvs\j2k_dec_comprimato_2015.sln
 2. Copy the .dll library with the plugin and "cmpto_j2k_dec.dll" to the Dolby Encoding Engine installation folder.
 
 Build instructions, Linux:

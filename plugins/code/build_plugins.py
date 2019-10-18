@@ -34,7 +34,6 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 """
-__author__ = 'Marek Gaik'
 
 import sys
 import os
@@ -49,8 +48,10 @@ import zipfile
 import stat
 import datetime
 
-windows_target_64   = 'windows_amd64_msvs'
-linux_target_64     = 'linux_amd64_gnu'
+__author__ = 'Marek Gaik'
+
+windows_target_64 = 'windows_amd64_msvs'
+linux_target_64 = 'linux_amd64_gnu'
 
 msbuild14 = r"C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
 msbuild12 = r"C:\Program Files (x86)\MSBuild\12.0\Bin\MSBuild.exe"
@@ -62,32 +63,30 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 Please comment out (#) plugins you wish to exclude from compilation
 """
 PLUGINS_DICT = {
-'hevc_dec_ffmpeg' : 'hevc_dec/ffmpeg/make/hevc_dec_ffmpeg',
-'hevc_enc_x265' : 'hevc_enc/x265/make/hevc_enc_x265/',
-'hevc_enc_ffmpeg' : 'hevc_enc/ffmpeg/make/hevc_enc_ffmpeg',
-'j2k_dec_ffmpeg' : 'j2k_dec/ffmpeg/make/j2k_dec_ffmpeg',
-'j2k_dec_kakadu' : 'j2k_dec/kakadu/make/j2k_dec_kakadu',
-'j2k_dec_comprimato' : 'j2k_dec/comprimato/make/j2k_dec_comprimato',
-'noise_example' : 'noise/noise_example/make/noise_example',
-'scaling_example' : 'scaling/scaling_example/make/scaling_example',
-'prores_dec_apple' : 'prores_dec/apple/make/prores_dec_apple',
-#disabled_plugin_example : 'disabled',
+    'hevc_dec_ffmpeg': 'hevc_dec/ffmpeg/make/hevc_dec_ffmpeg',
+    'hevc_enc_x265': 'hevc_enc/x265/make/hevc_enc_x265/',
+    'hevc_enc_ffmpeg': 'hevc_enc/ffmpeg/make/hevc_enc_ffmpeg',
+    'j2k_dec_ffmpeg': 'j2k_dec/ffmpeg/make/j2k_dec_ffmpeg',
+    'j2k_dec_kakadu': 'j2k_dec/kakadu/make/j2k_dec_kakadu',
+    'j2k_dec_comprimato': 'j2k_dec/comprimato/make/j2k_dec_comprimato',
+    'noise_example': 'noise/noise_example/make/noise_example',
+    'scaling_example': 'scaling/scaling_example/make/scaling_example',
+    'prores_dec_apple': 'prores_dec/apple/make/prores_dec_apple',
+    'tiff_dec_libtiff' : 'tiff_dec/libtiff/make/tiff_dec_libtiff',
+    # disabled_plugin_example: 'disabled',
 }
 
-VS2015_PLUGINS = {
-    'prores_dec_apple'
-}
-
-example ='''
+example = '''
 examples:
 Linux:   python build_plugins.py --x265 ~/_X265ROOT/ --kakadu ~/_KDUROOT/ --comprimato ~/_COMPRIMATOROOT/ --apple-prores ~/_APPLE_PRORES_LIB_ROOT/ --dir dolby-encoding-engine/plugins/code/
-Windows: python build_plugins.py --x265 C:\Users\usr\_X265ROOT\ --kakadu C:\Users\mgaik\_KDUROOT\ --comprimato C:\Users\mgaik\_COMPRIMATOROOT\ --apple-prores ~\_APPLE_PRORES_LIB_ROOT\ --dir C:\Users\usr\dolby-encoding-engine\plugins\code
+Windows: python build_plugins.py --x265 C:\\Users\\usr\\_X265ROOT\\ --kakadu C:\\Users\\mgaik\\_KDUROOT\\ --comprimato C:\\Users\\mgaik\\_COMPRIMATOROOT\\ --apple-prores ~\\_APPLE_PRORES_LIB_ROOT\\ --dir C:\\Users\\usr\\dolby-encoding-engine\\plugins\\code
 '''
 
 cmdline_header = '''
 Dolby Encoding Engine Plugins Build Script.
 Please edit PLUGINS_DICT if you wish to disable some plugins.
 '''
+
 
 def main_build_plugins():
     ENV = os.environ
@@ -97,11 +96,12 @@ def main_build_plugins():
     need_kdu_root = 'j2k_dec_kakadu' in PLUGINS_DICT.keys() and 'KDUROOT' not in ENV.keys()
     need_comprimato_root = 'j2k_dec_comprimato' in PLUGINS_DICT.keys() and 'COMPRIMATOROOT' not in ENV.keys()
     need_apple_prores_lib_root = 'prores_dec_apple' in PLUGINS_DICT.keys() and 'APPLE_PRORES_LIB_ROOT' not in ENV.keys()
+    need_libtiff_root = 'tiff_dec_libtiff' in PLUGINS_DICT.keys() and 'LIBTIFFROOT' not in ENV.keys()
 
     parser = argparse.ArgumentParser(description=cmdline_header,
                                      epilog=example,
                                      formatter_class=argparse.RawDescriptionHelpFormatter
-                                    )
+                                     )
     parser.add_argument('--dir', help='Plugins base (code) directory. default={}'.format(SCRIPT_DIR),
                         required=False, default=SCRIPT_DIR)
     parser.add_argument('--config', help='Specify build configuration default=release', required=False,
@@ -112,6 +112,7 @@ def main_build_plugins():
     parser.add_argument('--kakadu', help='Specify directory with Kakadu prerequisites (Optional if KDUROOT is set)', required=need_kdu_root)
     parser.add_argument('--comprimato', help='Specify directory with Comprimato prerequisites (Optional if COMPRIMATOROOT is set)', required=need_comprimato_root)
     parser.add_argument('--apple-prores', help='Specify directory with Apple ProRes prerequisites (Optional if APPLE_PRORES_LIB_ROOT is set)', required=need_apple_prores_lib_root)
+    parser.add_argument('--libtiff', help='Specify directory with libtiff prerequisites (Optional if LIBTIFFROOT is set)', required=need_libtiff_root)
 
     args = parser.parse_args()
     rebuild = not args.no_rebuild
@@ -129,26 +130,25 @@ def main_build_plugins():
     if need_apple_prores_lib_root or args.apple_prores is not None:
         ENV['APPLE_PRORES_LIB_ROOT'] = args.apple_prores
         print('APPLE_PRORES_LIB_ROOT={}'.format(ENV['APPLE_PRORES_LIB_ROOT']))
+    if need_libtiff_root or args.libtiff is not None:
+        ENV['LIBTIFFROOT'] = args.libtiff
+        print('LIBTIFFROOT={}'.format(ENV['LIBTIFFROOT']))
 
     results = []
     for plugin in PLUGINS_DICT:
         def get_build_cmd(os_name):
             build_cmd = []
             if os_name == 'Windows':
-                if plugin in VS2015_PLUGINS:
-                    solution_file = '{}_2015.sln'.format(plugin)
-                    msbuild = msbuild14
-                else:
-                    solution_file = '{}_2013.sln'.format(plugin)
-                    msbuild = msbuild12
+                solution_file = '{}_2015.sln'.format(plugin)
+                msbuild = msbuild14
                 full_solution_path = os.path.join(args.dir,
                                                   PLUGINS_DICT[plugin],
                                                   windows_target_64,
                                                   solution_file)
                 build_cmd = [msbuild,
                              os.path.abspath(full_solution_path),
-                             '/p:Configuration='+args.config,
-                            ]
+                             '/p:Configuration=' + args.config,
+                             ]
                 if rebuild:
                     build_cmd.append('/t:Clean;Build')
             elif os_name == 'Linux':
@@ -159,7 +159,7 @@ def main_build_plugins():
                 make_target = plugin + '_' + args.config + '.so'
                 build_cmd = [make,
                              make_dir_switch
-                            ]
+                             ]
                 if rebuild:
                     build_cmd.append('clean')
                 build_cmd.append(make_target)
@@ -178,6 +178,5 @@ def main_build_plugins():
     print('Results for {}: '.format(os_name))
     print("\n\r".join(results))
 
-if __name__=="__main__":
+if __name__ == "__main__":
     sys.exit(main_build_plugins())
-

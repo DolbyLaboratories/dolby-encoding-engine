@@ -1,11 +1,11 @@
 Dolby Encoding Engine plugin for HEVC decoding via FFmpeg
 
 Build tools: 
-- Visual Studio 2013
+- Visual Studio 2013 or 2015
 - gcc 4.8.5
 
 Build instructions, Windows:
-1. Build using make\windows_amd64_msv\hevc_dec_ffmpeg_2013.sln
+1. Build using make\windows_amd64_msv\hevc_dec_ffmpeg_2015.sln
 2. Copy the .dll library with the plugin to the Dolby Encoding Engine installation folder.
 
 Build instructions, Linux:

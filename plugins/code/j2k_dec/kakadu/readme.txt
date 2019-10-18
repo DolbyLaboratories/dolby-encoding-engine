@@ -3,7 +3,7 @@ Dolby Encoding Engine plugin for Kakadu JPEG2000 decoder
 The provided source code was built and tested using the Kakadu SDK version 7.A.
 
 Build tools: 
-- Visual Studio 2013
+- Visual Studio 2013 or 2015
 - gcc 4.8.5
 
 Prerequisites:
@@ -65,7 +65,7 @@ Prerequisites:
 
 Build instructions, Windows:
 1. Set the KDUROOT environment variable pointing to the folder with prerequisites.
-2. Build using make\j2k_dec_kakadu\windows_amd64_msvs\j2k_dec_kakadu_2013.sln
+2. Build using make\j2k_dec_kakadu\windows_amd64_msvs\j2k_dec_kakadu_2015.sln
 2. Copy the .dll library with the plugin and "libkdu_v7AR.dll" to the Dolby Encoding Engine installation folder.
 
 Build instructions, Linux:

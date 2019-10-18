@@ -3,7 +3,8 @@ Dolby Encoding Engine plugin for the x265 HEVC encoder
 The provided source code was built and tested using the x265 library version 3.1.2.
 
 Build tools: 
-- Visual Studio 2013
+- Visual Studio 2013 (to build x265 library)
+- Visual Studio 2013 or 2015 (to build the plugin)
 - gcc 4.8.5
 
 x265 compilation and prerequisities:
