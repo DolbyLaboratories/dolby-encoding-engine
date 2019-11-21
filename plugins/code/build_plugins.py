@@ -73,6 +73,8 @@ PLUGINS_DICT = {
     'scaling_example': 'scaling/scaling_example/make/scaling_example',
     'prores_dec_apple': 'prores_dec/apple/make/prores_dec_apple',
     'tiff_dec_libtiff' : 'tiff_dec/libtiff/make/tiff_dec_libtiff',
+    'hevc_dec_beamr' : 'hevc_dec/beamr/make/hevc_dec_beamr',
+    'hevc_enc_beamr' : 'hevc_enc/beamr/make/hevc_enc_beamr',
     # disabled_plugin_example: 'disabled',
 }
 
@@ -97,6 +99,7 @@ def main_build_plugins():
     need_comprimato_root = 'j2k_dec_comprimato' in PLUGINS_DICT.keys() and 'COMPRIMATOROOT' not in ENV.keys()
     need_apple_prores_lib_root = 'prores_dec_apple' in PLUGINS_DICT.keys() and 'APPLE_PRORES_LIB_ROOT' not in ENV.keys()
     need_libtiff_root = 'tiff_dec_libtiff' in PLUGINS_DICT.keys() and 'LIBTIFFROOT' not in ENV.keys()
+    need_beamr_sdk = ('hevc_dec_beamr' in PLUGINS_DICT.keys() or 'hevc_enc_beamr' in PLUGINS_DICT.keys()) and 'BEAMR_SDK' not in ENV.keys()
 
     parser = argparse.ArgumentParser(description=cmdline_header,
                                      epilog=example,
@@ -113,6 +116,7 @@ def main_build_plugins():
     parser.add_argument('--comprimato', help='Specify directory with Comprimato prerequisites (Optional if COMPRIMATOROOT is set)', required=need_comprimato_root)
     parser.add_argument('--apple-prores', help='Specify directory with Apple ProRes prerequisites (Optional if APPLE_PRORES_LIB_ROOT is set)', required=need_apple_prores_lib_root)
     parser.add_argument('--libtiff', help='Specify directory with libtiff prerequisites (Optional if LIBTIFFROOT is set)', required=need_libtiff_root)
+    parser.add_argument('--beamr-sdk', help='Specify directory with Beamr SDK prerequisites (Optional if BEAMR_SDK is set)', required=need_beamr_sdk)
 
     args = parser.parse_args()
     rebuild = not args.no_rebuild
@@ -133,6 +137,9 @@ def main_build_plugins():
     if need_libtiff_root or args.libtiff is not None:
         ENV['LIBTIFFROOT'] = args.libtiff
         print('LIBTIFFROOT={}'.format(ENV['LIBTIFFROOT']))
+    if need_beamr_sdk or args.beamr_sdk is not None:
+        ENV['BEAMR_SDK'] = args.beamr_sdk
+        print('BEAMR_SDK={}'.format(ENV['BEAMR_SDK']))
 
     results = []
     for plugin in PLUGINS_DICT:

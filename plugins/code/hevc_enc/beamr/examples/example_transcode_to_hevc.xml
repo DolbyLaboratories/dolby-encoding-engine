@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<job_config>
+  <input>
+    <video>
+      <hevc version="1">
+        <frame_rate>24</frame_rate>    <!-- One of: 23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60 -->
+        <dv_profile>none</dv_profile>    <!-- Must be none when transcoding SDR video. -->
+        <file_name>FILE_NAME</file_name>    <!-- string -->
+        <storage>
+          <local>
+            <path>PATH</path>    <!-- string -->
+          </local>
+        </storage>
+      </hevc>
+    </video>
+  </input>
+  <filter>
+    <video>
+      <transcode_to_hevc version="3">
+        <encode_type>sdr</encode_type>    <!-- One of: sdr, hdr10 -->
+        <start>0</start>    <!-- string -->
+        <end>0</end>    <!-- string -->
+        <target_width>0</target_width>    <!-- integer list -->
+        <target_height>0</target_height>    <!-- integer list -->
+        <data_rate>16000</data_rate>    <!-- integer list -->
+        <max_vbv_data_rate>16000</max_vbv_data_rate>    <!-- integer list -->
+        <vbv_buffer_size>32000</vbv_buffer_size>    <!-- integer list -->
+        <encode_pass_num>1</encode_pass_num>    <!-- integer -->
+        <decoder>
+          <hevc_dec>
+            <beamr>
+              <use_sps_frame_rate>false</use_sps_frame_rate>    <!-- boolean: true or false -->
+              <flags>0</flags>    <!-- integer -->
+              <output_delay>16</output_delay>    <!-- integer: from 0 to 255 -->
+              <mt_disable>false</mt_disable>    <!-- boolean: true or false -->
+              <mt_num_threads>4</mt_num_threads>    <!-- integer: from 0 to 255 -->
+              <mt_num_wf_lines>4</mt_num_wf_lines>    <!-- integer: from 1 to 255 -->
+              <mt_num_frames>3</mt_num_frames>    <!-- integer: from 1 to 255 -->
+              <mt_num_input_units>4</mt_num_input_units>    <!-- integer: from 1 to 255 -->
+              <mt_flags>3</mt_flags>    <!-- integer -->
+              <mt_aff_mask>0</mt_aff_mask>    <!-- integer -->
+              <disable_cpu_extensions>0</disable_cpu_extensions>    <!-- integer -->
+              <debug_level>0</debug_level>    <!-- integer: from 0 to 2 -->
+            </beamr>
+          </hevc_dec>
+        </decoder>
+        <scaling>
+          <base>
+            <source_crop_top>0</source_crop_top>    <!-- integer -->
+            <source_crop_bottom>0</source_crop_bottom>    <!-- integer -->
+            <source_crop_left>0</source_crop_left>    <!-- integer -->
+            <source_crop_right>0</source_crop_right>    <!-- integer -->
+          </base>
+        </scaling>
+        <hevc_enc>
+          <beamr>
+            <preset>slow</preset>    <!-- One of: insanely_slow, ultra_slow, very_slow, slower, slow, medium, medium_plus, fast, faster, ultra_fast, insanely_fast -->
+            <modifier>cinema</modifier>    <!-- One or more modifiers combined with '+' sign. Supported modifiers: low_delay, tune_psnr, realtime, cinema, blueray, hdr, gpu, hlg, tune_vmaf, low_bitrate. -->
+            <gop_intra_period>48</gop_intra_period>    <!-- integer: from 0 to 65535 -->
+            <gop_idr_period>1</gop_idr_period>    <!-- integer: from 0 to 65535 -->
+            <gop_min_intra_period>48</gop_min_intra_period>    <!-- integer: from 0 to 255 -->
+            <gop_minigop_size>8</gop_minigop_size>    <!-- integer: from 1 to 16 -->
+            <gop_min_minigop_size>8</gop_min_minigop_size>    <!-- integer: from 1 to 16 -->
+            <gop_max_refs>4</gop_max_refs>    <!-- integer: from 1 to 8 -->
+            <me_scene_change>0</me_scene_change>    <!-- integer: from 0 to 90 -->
+            <pps_cb_qp_offset>0</pps_cb_qp_offset>    <!-- integer: from -12 to 12 -->
+            <pps_cr_qp_offset>0</pps_cr_qp_offset>    <!-- integer: from -12 to 12 -->
+            <!-- <native_config_file>NATIVE_CONFIG_FILE</native_config_file> -->     <!-- Allows the user to set Beamr parameters using native config file. -->
+            <!-- <param>rc.look_ahead=48</param> -->     <!-- Allows the user to set Beamr native parameters. Syntax: id=val:id=val -->
+            <!-- <gop_structure_in_file>GOP_STRUCTURE_IN_FILE</gop_structure_in_file> -->     <!-- A file containing GOP structure to re-create by the encoder. -->
+            <!-- <gop_structure_out_file>GOP_STRUCTURE_OUT_FILE</gop_structure_out_file> -->     <!-- A file to store GOP structure created by the encoder. -->
+            <debug_level>0</debug_level>    <!-- integer: from 0 to 2 -->
+          </beamr>
+        </hevc_enc>
+      </transcode_to_hevc>
+    </video>
+  </filter>
+  <output>
+    <hevc version="1">
+      <file_name>FILE_NAME</file_name>    <!-- string list -->
+      <storage>
+        <local>
+          <path>PATH</path>    <!-- string -->
+        </local>
+      </storage>
+    </hevc>
+  </output>
+  <misc>
+    <temp_dir>
+      <clean_temp>true</clean_temp>
+      <path>PATH</path>
+    </temp_dir>
+  </misc>
+</job_config>
