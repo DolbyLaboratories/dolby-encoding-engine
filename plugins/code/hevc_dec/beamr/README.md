@@ -45,7 +45,7 @@ cd make/linux_amd64_gnu
 make
 ```
 
-Copy hevc_dec_beamr_release.so to DEE installation folder. File can be renamed, but extension must be `.so`.
+Copy `hevc_dec_beamr_release.so` to DEE installation folder. File can be renamed, but extension must be `.so`.
 
 ## Build instructions (Windows)
 
@@ -53,6 +53,6 @@ Extract the kit folder from the archive.
 
 Set environment variable BEAMR_SDK.
 
-Build the plugin using Visual Studio solution in `make/windows_amd64_msvs/hevc_dec_beamr_2015.sln`.
+Build the plugin using Visual Studio solution in `make\windows_amd64_msvs\hevc_dec_beamr_2015.sln`.
 
-Copy hevc_dec_beamr.dll to DEE installation folder. File can be renamed, but extension must be `.dll`.
+Copy `hevc_dec_beamr.dll` to DEE installation folder. File can be renamed, but extension must be `.dll`.
