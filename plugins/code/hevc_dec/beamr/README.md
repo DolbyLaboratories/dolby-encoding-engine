@@ -9,6 +9,8 @@ Provided source code was built and tested using Beamr5x-4.5.0.3.
 
 ## Prerequisites
 
+The build must be performed within the complete `dolby-encoding-engine` code tree. Download the whole repository, even if you plan to build only selected plugins.
+
 To build the plugin, Beamr5x SDK is required and environment variable `BEAMR_SDK` pointing to the kit folder.
 The typical structure of the kit folder is presented below.
 
