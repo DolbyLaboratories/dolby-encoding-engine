@@ -45,7 +45,7 @@ Set environment variable `BEAMR_SDK`.
 Build the plugin:
 
 ```bash
-cd make/linux_amd64_gnu
+cd make/hevc_dec_beamr/linux_amd64_gnu
 make
 ```
 
@@ -57,6 +57,6 @@ Extract the kit folder from the archive.
 
 Set environment variable BEAMR_SDK.
 
-Build the plugin using Visual Studio solution in `make\windows_amd64_msvs\hevc_dec_beamr_2015.sln`.
+Build the plugin using Visual Studio solution in `make\hevc_dec_beamr\windows_amd64_msvs\hevc_dec_beamr_2015.sln`.
 
 Copy `hevc_dec_beamr.dll` to DEE installation folder. The file can be renamed, but the extension must be `.dll`.
