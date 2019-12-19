@@ -393,6 +393,7 @@ static Status flush(HevcEncHandle handle, HevcEncOutput* output, int* isEmpty) {
     try {
         state->encoder->flush();
         state->encoder->getNal(output, state->ctrl->max_output_data);
+        state->ctrl->msg = state->encoder->getMessage();
         *isEmpty = (output->nalNum == 0);
         return STATUS_OK;
     }

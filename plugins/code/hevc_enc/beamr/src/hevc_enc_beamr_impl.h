@@ -186,6 +186,9 @@ protected:
     friend hevc_error_t VSSHSDKAPI cb_rec_send(void* ctx, const vh3_Picture* pic, vh3_RecPictureInfo info);
     friend hevc_error_t VSSHSDKAPI cb_ms_send(void* ctx, const vh3_MediaSample* ms, vh3_NalInfo info);
     friend void cb_settings_change(void* ctx, const char* msg);
+
+    uint32_t modifierValue(const std::string& str);
+    uint16_t presetValue(const std::string& str);
 };
 
 /* This structure can contain only pointers and simple types */

@@ -168,6 +168,61 @@ static std::map<std::string, hevc_rate_control_types_e> multi_pass2int = {
     {"last", HEVC_RATE_CONTROL_DUAL_PASS_1}, // dual pass - 2nd pass
 };
 
+static std::map<std::string, hevc_presets_e> preset2int = {
+    {"insanely_slow", HEVC_PRESET_INSANELY_SLOW},
+    {"ultra_slow", HEVC_PRESET_ULTRA_SLOW},
+    {"very_slow", HEVC_PRESET_VERY_SLOW},
+    {"slower", HEVC_PRESET_SLOWER},
+    {"slow", HEVC_PRESET_SLOW},
+    {"medium", HEVC_PRESET_MEDIUM},
+    {"medium_plus", HEVC_PRESET_MEDIUM_PLUS},
+    {"fast", HEVC_PRESET_FAST},
+    {"faster", HEVC_PRESET_FASTER},
+    {"ultra_fast", HEVC_PRESET_ULTRA_FAST},
+    {"insanely_fast", HEVC_PRESET_INSANELY_FAST},
+    // Can be set, but not explicitly exposed in DEE interface
+    {"broadcast", HEVC_PRESET_BROADCAST},
+    {"vod", HEVC_PRESET_VOD},
+    {"ultralow_bitrate", HEVC_PRESET_ULTRALOW_BITRATE},
+    {"gpu1", HEVC_PRESET_GPU1},
+    {"gpu2", HEVC_PRESET_GPU2},
+};
+
+uint16_t Encoder::presetValue(const std::string& str) {
+    uint16_t value = 0;
+    if (!preset2int.count(str))
+        error("Unknown preset - %s", str.c_str());
+    else
+        value = (uint16_t)preset2int[str];
+    return value;
+}
+
+static std::map<std::string, hevc_modifiers_e> modifier2int = {
+    {"low_delay", HEVC_MOD_LOW_DELAY},
+    {"tune_psnr", HEVC_MOD_TUNE_PSNR},
+    {"realtime", HEVC_MOD_REALTIME},
+    {"cinema", HEVC_MOD_CINEMA},
+    {"blueray", HEVC_MOD_BLUERAY},
+    {"hdr", HEVC_MOD_HDR},
+    {"gpu", HEVC_MOD_GPU},
+    {"hlg", HEVC_MOD_HLG},
+    {"vmaf", HEVC_MOD_TUNE_VMAF},
+    {"low_bitrate", HEVC_MOD_LOW_BITRATE}, 
+};
+
+uint32_t Encoder::modifierValue(const std::string& str) {
+    uint32_t mask = 0;
+    auto tokens = split(str, "+");
+    for (auto& x : tokens) {
+        if (!modifier2int.count(x)) {
+            error("Unknown modifier - %s", x.c_str());
+            continue;
+        }
+        mask |= modifier2int[x];
+    }
+    return mask;
+}
+
 void Encoder::init(PluginCtrl& ctrl) {
     hevc_error_t errCode = HEVC_OK;
 
@@ -184,20 +239,18 @@ void Encoder::init(PluginCtrl& ctrl) {
     FUNCTION_T_RETVAL(errCode, hevce_default_settings, &settings);
     checkErrorCode(errCode);
 
-    std::list<std::string> str;
-    str.push_back("preset=" + ctrl.preset);
+    hevce_init_settings_t initSettings;
+    memset(&initSettings, 0, sizeof(initSettings));
+    initSettings.size = sizeof(initSettings);
+    if (ctrl.preset.size())
+        initSettings.preset = presetValue(ctrl.preset);
     if (ctrl.modifier.size())
-        str.push_back("modifier=" + ctrl.modifier);
-    if (str.size()) {
-        std::vector<char*> argv;
-        for (auto& x : str)
-            argv.push_back((char*)x.c_str());
-        argv.push_back(nullptr);
+        initSettings.modifier = modifierValue(ctrl.modifier);
+    initSettings.width = ctrl.width;
+    initSettings.height = ctrl.height;
 
-        FUNCTION_T_RETVAL(errCode, hevce_read_cmd_line, &settings, argv.data());
-        checkErrorCode(errCode);
-        str.clear();
-    }
+    FUNCTION_T_RETVAL(errCode, hevce_init_settings, &settings, &initSettings, 0);
+    checkErrorCode(errCode);
 
     settings.stream[0].params.bit_depth_chroma = settings.input.bit_depth_chroma = ctrl.bit_depth;
     settings.stream[0].params.bit_depth_luma = settings.input.bit_depth_luma = ctrl.bit_depth;
@@ -295,6 +348,7 @@ void Encoder::init(PluginCtrl& ctrl) {
         }
     }
 
+    std::list<std::string> str;
     for (auto& tag : ctrl.param) {
         auto params = split(tag, ":");
         for (auto& x : params) {
@@ -419,11 +473,15 @@ void Encoder::feed(const HevcEncPicture* in) {
         FUNCTION_T_RETVAL(errCode, vh3_enc_setPicture, hEnc, pic, &picInfo);
         checkErrorCode(errCode);
 
-        FUNCTION_T_RETVAL(errCode, vh3_encode, hEnc, nullptr);
-        checkErrorCode(errCode);
+        if (settings.mt.disable) {
+            FUNCTION_T_RETVAL(errCode, vh3_encode, hEnc, nullptr);
+            checkErrorCode(errCode);
+        }
 
-        std::lock_guard<std::mutex> lck(dataLock);
-        message("Fed frame[" + std::to_string(frameIndex) + "]");
+        if (debugLevel > 0) {
+            std::lock_guard<std::mutex> lck(dataLock);
+            message("Fed frame[" + std::to_string(frameIndex) + "]");
+        }
         frameIndex++;
     }
 }
@@ -435,6 +493,11 @@ void Encoder::flush() {
         hevc_error_t errCode;
         FUNCTION_T_RETVAL(errCode, vh3_enc_flush, hEnc);
         checkErrorCode(errCode);
+
+        if (settings.mt.disable) {
+            FUNCTION_T_RETVAL(errCode, vh3_encode, hEnc, nullptr);
+            checkErrorCode(errCode);
+        }
 
         FUNCTION_T_RETVAL(errCode, vh3_enc_waitForEncode, hEnc);
         checkErrorCode(errCode);
@@ -540,8 +603,10 @@ void Encoder::getNal(HevcEncOutput* out, uint64_t maxSize) {
     while (remainingBytes && nalIdx < qMS.size()) {
         vh3_Nal u = qMS[nalIdx++];
         auto ms = u.ms;
-        if (ms->used_size < remainingBytes) {
+        if ((uint64_t)ms->used_size < remainingBytes) {
             HevcEncNal tmp;
+            if (debugLevel > 0)
+                message("ms->used_size: " + std::to_string(ms->used_size) + ", remainingBytes: " + std::to_string(remainingBytes));
             FUNCTION_T(memcpy, curBufPos, ms->data, ms->used_size);
             tmp.payload = curBufPos;
             tmp.size = ms->used_size;
@@ -549,6 +614,10 @@ void Encoder::getNal(HevcEncOutput* out, uint64_t maxSize) {
             curBufPos += ms->used_size;
             nal.push_back(tmp);
             nalUnitsToRelease++;
+            remainingBytes -= (uint64_t)ms->used_size;
+        }
+        else {
+            break;
         }
     }
 

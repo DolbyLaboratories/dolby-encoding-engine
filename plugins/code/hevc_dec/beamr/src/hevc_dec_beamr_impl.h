@@ -131,7 +131,6 @@ protected:
     void error(const char* fmt, ...);
     void cropFrame(vh3_Picture* dst, const vh3_Picture* const src, const vh3_PictureDisplay& params);
     void writeFrame(const vh3_Picture* pic, HevcDecPicture& out);
-    void flushDecodeThread();
 
     hevc_error_t notify(vh3_Notification a);
     hevc_error_t recSend(const vh3_Picture* pic, vh3_RecPictureInfo info);

@@ -215,19 +215,20 @@ void Decoder::flush() {
         flushing = true;
         FUNCTION_T(feed, nullptr, 0); // Feed all remaining stream data (the last NALU).
 
-        std::thread thread = std::thread(&Decoder::flushDecodeThread, this);
-
         hevc_error_t errCode;
         FUNCTION_T_RETVAL(errCode, vh3_dec_flush, hDec);
         checkErrorCode(errCode);
+
+        if(settings.mt.disable){
+             FUNCTION_T_RETVAL(errCode, vh3_decode, hDec, nullptr);
+             checkErrorCode(errCode);  
+         }
 
         FUNCTION_T_RETVAL(errCode, vh3_dec_waitForDecode, hDec);
         checkErrorCode(errCode);
 
         flushing = false;
         flushed = true;
-        if (thread.joinable())
-            thread.join();
     }
 }
 
@@ -268,8 +269,10 @@ void Decoder::sendToDecode(uint64_t startOffset, uint64_t endOffset) {
     FUNCTION_T_RETVAL(errCode, vh3_dec_feedData, hDec, mediaSample, 0);
     checkErrorCode(errCode);
 
-    FUNCTION_T_RETVAL(errCode, vh3_decode, hDec, nullptr);
-    checkErrorCode(errCode);
+    if(settings.mt.disable){
+        FUNCTION_T_RETVAL(errCode, vh3_decode, hDec, nullptr);
+        checkErrorCode(errCode);
+    }
 }
 
 void Decoder::cropFrame(vh3_Picture* dst, const vh3_Picture* const src, const vh3_PictureDisplay& params) {
@@ -409,13 +412,6 @@ bool Decoder::getPic(HevcDecPicture& outPic) {
     FUNCTION_T_RETVAL(errCode, vh3_dec_releasePicture, hDec, picData.pic);
     checkErrorCode(errCode);
     return true;
-}
-
-void Decoder::flushDecodeThread() {
-    while(flushing) {
-        std::this_thread::sleep_for (std::chrono::milliseconds(10));
-        FUNCTION_T(vh3_decode, hDec, nullptr);
-    }
 }
 
 hevc_error_t Decoder::notify(vh3_Notification a) {
