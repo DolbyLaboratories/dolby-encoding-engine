@@ -583,9 +583,9 @@ void Encoder::releaseNalUnits() {
 void Encoder::getNal(HevcEncOutput* out, uint64_t maxSize) {
     out->nalNum = 0;
     checkPendingErrors();
-    FUNCTIONV_T(releaseNalUnits);
     std::lock_guard<std::mutex> lck(dataLock);
-
+    FUNCTIONV_T(releaseNalUnits);
+    
     if (qMS.empty())
         return;
 
