@@ -37,6 +37,7 @@
 #include <fstream>
 #include <cstdio>
 #include <string>
+#include <exception>
 
 #ifdef _WIN32
 #pragma warning(push, 0)
@@ -73,7 +74,8 @@ PropertyInfo j2k_dec_kakadu_info[] =
     { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "width", PROPERTY_TYPE_INTEGER, "Picture width", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
-    { "height", PROPERTY_TYPE_INTEGER, "Picture height", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
+    { "height", PROPERTY_TYPE_INTEGER, "Picture height", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
+    { "thread_num", PROPERTY_TYPE_INTEGER, "Number of threads to be used by decoder instance. Value 0 disables multi-threading.", "4", "0:255", 0, 1, ACCESS_TYPE_USER }
 };
 
 size_t
@@ -89,8 +91,10 @@ typedef struct
     std::string         msg;
     size_t              width;
     size_t              height;
+    int                 thread_num;
     kdu_int16*          output_buffer;
     short*              reorder_buffer;
+    kdu_thread_env      env;
 } j2k_dec_kakadu_data_t;
 
 /* This structure can contain only pointers and simple types */
@@ -168,6 +172,7 @@ init_data
     data->reorder_buffer = NULL;
     data->width = 0;
     data->height = 0;
+    data->thread_num = 4;
     data->msg.clear();
 }
 
@@ -187,25 +192,34 @@ kakadu_init
         std::string name(init_params->properties[i].name);
         std::string value(init_params->properties[i].value);
 
-        if ("width" == name)
-        {
-            state->data->width = std::stoi(value);
-        }
-        else if ("height" == name)
-        {
-            state->data->height = std::stoi(value);
-        }
-        else if ("plugin_path" == name)
-        {
-            continue;
-        }
-        else if ("config_path" == name)
-        {
-            continue;
-        }
-        else
-        {
-            state->data->msg += "\nUnknown XML property: " + name;
+        try {
+            if ("width" == name)
+            {
+                state->data->width = std::stoi(value);
+            }
+            else if ("height" == name)
+            {
+                state->data->height = std::stoi(value);
+            }
+            else if ("thread_num" == name)
+            {
+                state->data->thread_num = std::stoi(value);
+            }
+            else if ("plugin_path" == name)
+            {
+                continue;
+            }
+            else if ("config_path" == name)
+            {
+                continue;
+            }
+            else
+            {
+                state->data->msg += "Unknown XML property: " + name;
+                return STATUS_ERROR;
+            }
+        } catch(std::exception&){
+            state->data->msg += "Invalid '" + name + "' value: " + value;
             return STATUS_ERROR;
         }
     }
@@ -222,9 +236,22 @@ kakadu_init
         return STATUS_ERROR;
     }
 
+    if (state->data->thread_num < 0 || state->data->thread_num > 255)
+    {
+        state->data->msg = "Invalid 'thread_num' value: " + std::to_string(state->data->thread_num);
+        return STATUS_ERROR;
+    }
+
     int buffer_size = (int)(state->data->width*state->data->height*MAX_PLANES);
     state->data->output_buffer = new kdu_int16[buffer_size];
     state->data->reorder_buffer = new short[buffer_size];
+
+    if (state->data->thread_num) {
+        state->data->env.create(); 
+        for (int nt=1; nt < state->data->thread_num; nt++)
+            if (!state->data->env.add_thread())
+                state->data->thread_num = nt;
+    }
 
     state->data->msg = "Initialized Kakadu j2k decoder version " + std::string(kdu_core::kdu_get_core_version());
     return STATUS_OK;
@@ -239,6 +266,10 @@ kakadu_close
 
     if (state->data)
     {
+        if (state->data->thread_num)
+            if (state->data->env.exists())
+                state->data->env.destroy();
+
         if (state->data->output_buffer) delete [] state->data->output_buffer;
         if (state->data->reorder_buffer) delete [] state->data->reorder_buffer;
         delete state->data;
@@ -253,28 +284,12 @@ prepare_output
     (j2k_dec_kakadu_t* state
     ,J2kDecOutput* out)
 {
-    int plane_samples_num = (int)(state->data->width*state->data->height);
-    short* p_r = (short*)state->data->reorder_buffer;
-    short* p_g = p_r + plane_samples_num;
-    short* p_b = p_g + plane_samples_num;
-    short* p_src = (short*)state->data->output_buffer;
-
-    out->buffer[0] = (void*)p_r;
-    out->buffer[1] = (void*)p_g;
-    out->buffer[2] = (void*)p_b;
-
-    for (size_t h = 0; h < state->data->height; h++)
-    {
-        for (size_t w = 0; w < state->data->width; w++)
-        {
-            *p_r++ = *p_src++;
-            *p_g++ = *p_src++;
-            *p_b++ = *p_src++;
-        }
-    }
-
     out->width = state->data->width;
     out->height = state->data->height;
+    size_t plane_bytes = out->width*out->height*2;
+    out->buffer[0] = state->data->output_buffer;
+    out->buffer[1] = (char*)out->buffer[0] + plane_bytes;
+    out->buffer[2] = (char*)out->buffer[1] + plane_bytes;
 }
 
 Status
@@ -313,12 +328,19 @@ kakadu_process
 
     int bit_depth[] = {16, 16, 16};
     bool is_signed[] = {false, false, false};
+
+    bool force_precise=true;
+    bool want_fastest=false;
     kdu_stripe_decompressor decompressor;
-    decompressor.start(codestream);
-    int stripe_heights[3] = {dims0.size.y, dims0.size.y, dims0.size.y};
-    
-    decompressor.pull_stripe(state->data->output_buffer,stripe_heights, NULL, NULL, NULL, bit_depth, is_signed);
-    
+    if (state->data->thread_num)
+        decompressor.start(codestream, force_precise, want_fastest, &state->data->env);
+    else
+        decompressor.start(codestream, force_precise, want_fastest, NULL);
+
+    int stripe_heights[3] = {dims0.size.y, dims1.size.y, dims2.size.y};
+    int sample_offsets[3] = {0, dims0.size.x*dims0.size.y, dims0.size.x*dims0.size.y + dims1.size.x*dims1.size.y};
+    int sample_gaps[3] = {1, 1, 1};
+    decompressor.pull_stripe(state->data->output_buffer,stripe_heights, sample_offsets, sample_gaps, NULL, bit_depth, is_signed);
     decompressor.finish();
     codestream.destroy();
     prepare_output(state, out);

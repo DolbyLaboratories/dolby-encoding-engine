@@ -62,11 +62,12 @@ public:
     ~PipingManager();
     void close();
     void setTimeout(int timeout);
+    void setTimeout(int pipe_id, bool enable);
     void setMaxbuf(size_t maxbuf);
     void setGlobalTimeout(bool global_timeout);
-    int createNamedPipe(std::string path, pipe_type_t type);
+    int createNamedPipe(std::string path, pipe_type_t type, bool client = false);
     piping_status_t destroyNamedPipe(int pipe_id);
-    piping_status_t closePipe(int pipe_id);
+    piping_status_t closePipe(int pipe_id, bool blocking = false);
     piping_status_t getPipePath(int pipe_id, std::string& path);
     piping_status_t writeToPipe(int pipe_id, void* buffer, size_t data_size, size_t& bytes_written);
     piping_status_t readFromPipe(int pipe_id, void* buffer, size_t buffer_size, size_t& bytes_read);

@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2018-2019, Dolby Laboratories
+* Copyright (c) 2018-2020, Dolby Laboratories
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -158,24 +158,28 @@ struct PipeData
     CircularFifo        mOutBuf;
     vector<char>        mTempBuf;
     std::atomic<double> mKillTimer;
+    std::atomic_bool    mKillTimerActive;
     std::thread         mThread;
     std::mutex          mMutex;
     std::atomic_bool    mThreadRunning;
     std::atomic_bool    mStop;
-    std::atomic_bool	mCloseIfEmpty;
+    std::atomic_bool    mCloseIfEmpty;
     pipe_type_t         mType;
     size_t              mBufferSize;
     piping_status_t     mStatus;
     std::string         mErrorString;
     int                 mId;
     size_t              mTotalDataWritten;
+    bool                mClient;
+    std::atomic_bool    mTimeout;
 #ifdef WIN32
     HANDLE              mHandle;
 #else
     int                 mHandle;
+    bool                mConnected;
 #endif
 
-    PipeData(std::string name, size_t maxbuf, pipe_type_t type, int id);
+    PipeData(std::string name, size_t maxbuf, pipe_type_t type, int id, bool client = false);
     ~PipeData();
     void closeThread();
 };
@@ -230,7 +234,6 @@ int pipe_write_func(PipeData* data)
         bytes_written = 0;
     }
 #endif
-
     if (bytes_written > 0)
     {
         data->mMutex.lock();
@@ -240,7 +243,6 @@ int pipe_write_func(PipeData* data)
     }
 
     data->mStatus = status;
-
     if (data->mStatus == PIPE_MGR_OK)
         return bytes_written;
     else
@@ -269,6 +271,12 @@ int pipe_read_func(PipeData* data)
     }
 #else
     int bytes_read = read(data->mHandle, data->mTempBuf.data(), readSize);
+    if (bytes_read > 0)
+        data->mConnected = true;
+
+    if (bytes_read == 0 && data->mConnected)
+        status = PIPE_MGR_PIPE_CLOSED;
+
     if (bytes_read < 0)
     {
         if (errno != EAGAIN)
@@ -302,11 +310,13 @@ void pipe_thread_func(PipeData* data)
 
     // connect the pipe
 #ifdef WIN32
-    if (ConnectNamedPipe(data->mHandle, NULL) == NULL)
-    {
-        DWORD last_error = GetLastError();
-        data->mErrorString = std::to_string(last_error);
-        data->mStatus = PIPE_MGR_CONNECT_ERROR;
+    if (!data->mClient) {
+        if (ConnectNamedPipe(data->mHandle, NULL) == NULL)
+        {
+            DWORD last_error = GetLastError();
+            data->mErrorString = std::to_string(last_error);
+            data->mStatus = PIPE_MGR_CONNECT_ERROR;
+        }
     }
 #else
     signal(SIGPIPE, SIG_IGN); // ignore sigpipe, we handle errors in another way
@@ -334,6 +344,7 @@ void pipe_thread_func(PipeData* data)
 
     int written_bytes = 0;
     int read_bytes = 0;
+    bool success= true;
 
     // run main thread loop
     while (data->mStop == false)
@@ -343,6 +354,7 @@ void pipe_thread_func(PipeData* data)
             written_bytes = pipe_write_func(data);
             if (written_bytes < 0)
             {
+                success = false;
                 break;
             }
             else if (written_bytes > 0)
@@ -353,6 +365,7 @@ void pipe_thread_func(PipeData* data)
             read_bytes = pipe_read_func(data);
             if (read_bytes < 0)
             {
+                success = false;
                 break;
             }
             else if (read_bytes > 0)
@@ -364,17 +377,25 @@ void pipe_thread_func(PipeData* data)
             break;
         }
         
-        if (written_bytes == 0 && read_bytes == 0)
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if (written_bytes == 0 && read_bytes == 0) {
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
     }
 
 #ifdef WIN32
+    if (data->mStop && !data->mClient) {
+        if (success)
+            FlushFileBuffers(data->mHandle);
+        DisconnectNamedPipe(data->mHandle); 
+    }
+
     CloseHandle(data->mHandle);
 #else
+    (void)success;
     close(data->mHandle);
 #endif
 
-    data->mStatus = PIPE_MGR_PIPE_CLOSED;
+    data->mStatus = data->mTimeout ? PIPE_MGR_TIMEOUT : PIPE_MGR_PIPE_CLOSED;
     data->mThreadRunning = false;
 }
 
@@ -384,15 +405,16 @@ void PipeData::closeThread()
 #ifdef WIN32
     CancelIoEx(mHandle, NULL);
 #endif
-    if (mThread.joinable())
+    if (mThread.joinable()) {
         mThread.join();
-
+    }
     mThreadRunning = false;
 }
 
-PipeData::PipeData(std::string name, size_t maxbuf, pipe_type_t type, int id)
+PipeData::PipeData(std::string name, size_t maxbuf, pipe_type_t type, int id, bool client)
 {
     mKillTimer = 0;
+    mKillTimerActive = true;
     mThreadRunning = false;
     mType = type;
     mBufferSize = maxbuf;
@@ -401,45 +423,84 @@ PipeData::PipeData(std::string name, size_t maxbuf, pipe_type_t type, int id)
     mStop = false;
     mCloseIfEmpty = false;
     mTotalDataWritten = 0;
+    mClient = client;
+    mTimeout = false;
 
     mTempBuf.resize(mBufferSize);
     if (type == INPUT_PIPE || type == DUPLEX_PIPE) mInBuf.SetSize(mBufferSize);
     if (type == OUTPUT_PIPE || type == DUPLEX_PIPE) mOutBuf.SetSize(mBufferSize);
 
+    const std::string uriHeader = "named_pipe://";
+    bool uri = false;
+    if (name.find(uriHeader) != std::string::npos) {
+        name = name.substr(uriHeader.size());
+        uri = true;
+    }
+
 #ifdef WIN32
+
     // on windows we only use the name of the temp file to create the named pipe
-    mName = std::string("\\\\.\\pipe\\") + name.substr(name.rfind("\\") + 1);
+    if (uri)
+        mName = name;
+    else
+        mName = std::string("\\\\.\\pipe\\") + name.substr(name.rfind("\\") + 1);
 
     DWORD access = 0;
 
-    if (type == INPUT_PIPE)          access = PIPE_ACCESS_OUTBOUND;
-    else if (type == OUTPUT_PIPE)    access = PIPE_ACCESS_INBOUND;
-    else                             access = PIPE_ACCESS_DUPLEX;
+    if (!mClient) {
+        if (type == INPUT_PIPE)          access = PIPE_ACCESS_OUTBOUND;
+        else if (type == OUTPUT_PIPE)    access = PIPE_ACCESS_INBOUND;
+        else                             access = PIPE_ACCESS_DUPLEX;
 
-    mHandle = CreateNamedPipe(mName.c_str(),
-        access,
-        PIPE_WAIT | PIPE_TYPE_BYTE | PIPE_READMODE_BYTE,
-        1,
-        NAMED_PIPE_BUFFER,
-        NAMED_PIPE_BUFFER,
-        NMPWAIT_USE_DEFAULT_WAIT,
-        NULL);
+        mHandle = CreateNamedPipe(mName.c_str(),
+            access,
+            PIPE_WAIT | PIPE_TYPE_BYTE | PIPE_READMODE_BYTE,
+            PIPE_UNLIMITED_INSTANCES,
+            NAMED_PIPE_BUFFER,
+            NAMED_PIPE_BUFFER,
+            NMPWAIT_USE_DEFAULT_WAIT,
+            NULL);
 
-    if (mHandle == INVALID_HANDLE_VALUE)
-    {
-        DWORD last_error = GetLastError();
-        mErrorString = std::to_string(last_error);
-        mStatus = PIPE_MGR_CREATE_ERROR;
+        if (mHandle == INVALID_HANDLE_VALUE)
+        {
+            DWORD last_error = GetLastError();
+            mErrorString = std::to_string(last_error);
+            mStatus = PIPE_MGR_CREATE_ERROR;
+        }
+    }
+    else {
+        if (type == INPUT_PIPE)          access = GENERIC_WRITE;
+        else                             access = GENERIC_READ;
+
+            mHandle = CreateFile( 
+                 mName.c_str(),
+                 access,
+                 0,
+                 NULL,
+                 OPEN_EXISTING,
+                 0,
+                 NULL);
+
+            auto error = GetLastError();
+            if (mHandle == INVALID_HANDLE_VALUE) 
+            {
+                DWORD last_error = error;
+                mErrorString = std::to_string(last_error);
+                mStatus = PIPE_MGR_CREATE_ERROR;
+            }
     }
 #else
     // on linux we remove the original temp file and create a pipe in it's place
     mHandle = 0;
     mName = name;
-    remove(name.c_str());
+    mConnected = false;
 
-    if (mkfifo(mName.c_str(), S_IWUSR | S_IWOTH | S_IRUSR | S_IROTH) != 0)
-    {
-        mStatus = PIPE_MGR_CREATE_ERROR;
+    if (!uri) {
+        remove(name.c_str());
+        if (mkfifo(mName.c_str(), S_IWUSR | S_IWOTH | S_IRUSR | S_IROTH) != 0)
+        {
+            mStatus = PIPE_MGR_CREATE_ERROR;
+        }
     }
 #endif
 
@@ -456,9 +517,6 @@ PipeData::PipeData(std::string name, size_t maxbuf, pipe_type_t type, int id)
 PipeData::~PipeData()
 {
     closeThread();
-#ifdef WIN32
-
-#endif
 }
 
 // PIPING MANAGER CODE
@@ -505,9 +563,16 @@ void piping_manager_thread_func(PipingManagerData* data)
             {
                 continue;
             }
+
             pipe->mKillTimer = pipe->mKillTimer + timeDiff.count();
+
+            if (!pipe->mKillTimerActive) {
+                pipe->mKillTimer = 0;
+            }
+            
             if (pipe->mKillTimer >= data->mPipeTimeout && data->mGlobalTimeout == false && pipe->mStatus != PIPE_MGR_PIPE_CLOSED)
             {
+                pipe->mTimeout = true;
                 pipe->closeThread();
                 pipe->mStatus = PIPE_MGR_TIMEOUT;
             }
@@ -525,6 +590,7 @@ void piping_manager_thread_func(PipingManagerData* data)
                 PipeData* pipe = it->second;
                 if (pipe->mStatus != PIPE_MGR_PIPE_CLOSED)
                 {
+                    pipe->mTimeout = true;
                     pipe->closeThread();
                     pipe->mStatus = PIPE_MGR_TIMEOUT;
                 }
@@ -539,10 +605,9 @@ void piping_manager_thread_func(PipingManagerData* data)
     data->mThreadRunning = false;
 }
 
-int PipingManager::createNamedPipe(std::string path, pipe_type_t type)
+int PipingManager::createNamedPipe(std::string path, pipe_type_t type, bool client)
 {
-    PipeData* pipe_data = new PipeData(path, mData->mBufferSize, type, mData->mLastId);
-
+    PipeData* pipe_data = new PipeData(path, mData->mBufferSize, type, mData->mLastId, client);
     if (pipe_data->mId == -1)
     {
         delete pipe_data;
@@ -576,7 +641,7 @@ piping_status_t PipingManager::destroyNamedPipe(int pipe_id)
     }
 }
 
-piping_status_t PipingManager::closePipe(int pipe_id)
+piping_status_t PipingManager::closePipe(int pipe_id, bool blocking)
 {
     std::map<int, PipeData*>::iterator it = mData->mPipes.find(pipe_id);
     if (it == mData->mPipes.end())
@@ -586,6 +651,11 @@ piping_status_t PipingManager::closePipe(int pipe_id)
     else
     {
         it->second->mCloseIfEmpty = true;
+        if (blocking) {
+            while (it->second->mThreadRunning) {
+                std::this_thread::sleep_for (std::chrono::seconds(1));
+            }
+        }
         return PIPE_MGR_OK;
     }
 }
@@ -634,6 +704,8 @@ piping_status_t PipingManager::writeToPipe(int pipe_id, void* buffer, size_t dat
             pipe->mInBuf.Append((char*)buffer, data_to_write);
             bytes_written = data_to_write;
         }
+
+        status = pipe->mTimeout ? PIPE_MGR_TIMEOUT : status;
     }
 
     return status;
@@ -665,7 +737,7 @@ piping_status_t PipingManager::readFromPipe(int pipe_id, void* buffer, size_t bu
             bytes_read = data_to_read;
         }
 
-        status = pipe->mStatus;
+        status = pipe->mTimeout ? PIPE_MGR_TIMEOUT : pipe->mStatus;
     }
 
     return status;
@@ -726,7 +798,17 @@ piping_status_t PipingManager::getPipeStatus(int pipe_id)
 
 void PipingManager::setTimeout(int timeout)
 {
+    if (0 == timeout)
+        timeout = std::numeric_limits<int>::max();
     mData->mPipeTimeout = timeout;
+}
+
+void PipingManager::setTimeout(int pipe_id, bool enable) {
+    std::map<int, PipeData*>::iterator it = mData->mPipes.find(pipe_id);
+    if (it != mData->mPipes.end()) {
+        it->second->mKillTimerActive = enable;
+        it->second->mKillTimer = 0;
+    }
 }
 
 void PipingManager::setMaxbuf(size_t maxbuf)

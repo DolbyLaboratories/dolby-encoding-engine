@@ -40,10 +40,12 @@
 
 #include <Windows.h>
 #include <WinBase.h>
+#include <codecvt>
+#include "stringapiset.h"
 
 struct ProcessData
 {
-    STARTUPINFO startupInfo;
+    STARTUPINFOW startupInfo;
     PROCESS_INFORMATION processInfo;
 };
 
@@ -69,47 +71,78 @@ struct ProcessData
 #define LOOP_WAIT 100
 #define TEMP_BUF 1024
 
+template<typename Out>
+void split(const std::string& s, const std::string delim, Out result) {
+    std::stringstream ss;
+    ss.str(s);
+    std::string item;
+
+    std::string tempString = s;
+    for (;;) {
+        auto pos = tempString.find(delim);
+
+        if (!tempString.substr(0, pos).empty())
+            *(result++) = tempString.substr(0, pos);
+
+        if (std::string::npos == pos)
+            break;
+        tempString = tempString.substr(pos + delim.size(), std::string::npos);
+    }
+}
+
 static
 inline
-std::vector<std::string> splitQuotedString(const std::string &s, char delim)
-{
-    std::stringstream item;
+std::vector<std::string> split(const std::string& s, const std::string& delim) {
     std::vector<std::string> elems;
+    split(s, delim, std::back_inserter(elems));
+    return elems;
+}
 
-    for (unsigned int i = 0; i < s.length(); i++)
+
+static
+inline
+std::vector<std::string> splitQuotedString(const std::string &in, std::string delimiter) {
+    std::vector<std::string> items;
+    std::vector<std::string> items_delim = split(in, delimiter);
+
+    std::string cur_item;
+    for (auto i : items_delim)
     {
-        char c = s[i];
-        if (c == delim)
+        if (cur_item.size())
         {
-            if (item.str() != "")
-            {
-                elems.push_back(item.str());
-                item.str("");
-            }
-        }
-        else if (c == '\"')
-        {
-            do
-            {
-                item << s[i];
-                i++;
-            }
-            while (s[i] != '\"');
-            
-            item << s[i];
-            elems.push_back(item.str());
-            item.str("");
+            cur_item += " ";
+            cur_item += i;
         }
         else
         {
-            item << c;
+            if (i.front() == '\"')
+            {
+                cur_item += i;
+            }
+            else
+            {
+                items.push_back(i);
+            }
+        }
+
+        if (cur_item.size())
+        {
+            if (cur_item.back() == '\"' && cur_item.size() > 1)
+            {
+                std::string sub = cur_item.substr(1, cur_item.size() - 2);
+                items.push_back(sub);
+                cur_item.clear();
+            }
         }
     }
-    
-    if (item.str() != "")
-        elems.push_back(item.str());
 
-    return elems;
+    if (cur_item.size())
+    {
+        items.push_back(cur_item);
+        cur_item.clear();
+    }
+
+    return items;
 }
 
 // remove leading and trailing whitespaces and quotes
@@ -121,6 +154,18 @@ std::string& trim(std::string& s, const char* t = "\"\n\t ")
     s.erase(0, s.find_first_not_of(t));
     return s;
 }
+
+#ifdef WIN32
+static
+bool isStringMultibyte(const std::string& str)
+{
+	for (unsigned int i = 0; i < str.size(); i++) {
+		if ((0x80 & str[i]) != 0)
+			return true;
+	}
+	return false;
+}
+#endif
 
 static
 system_call_status_t startProcess(std::string command, std::string logfile, ProcessData& processData)
@@ -156,13 +201,33 @@ system_call_status_t startProcess(std::string command, std::string logfile, Proc
         processData.startupInfo.hStdError = log_handle;
     }
 
-    BOOL status = CreateProcess(NULL, (LPSTR)(command_line.c_str()), NULL, NULL, TRUE, 0, NULL, NULL, &processData.startupInfo, &processData.processInfo);
+	LPWSTR command_line_wide = NULL;
+	int wideLength;
+
+	if (isStringMultibyte(command_line) == false) {
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
+		std::wstring wide_str = myconv.from_bytes(command_line);
+		wide_str.push_back(NULL); // need to manually null-terminate the string
+		command_line_wide = new WCHAR[wide_str.length()];
+		memcpy(command_line_wide, wide_str.c_str(), wide_str.length() * sizeof(wchar_t));
+	}
+	else {
+		wideLength = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, command_line.c_str(), (int)command_line.size() + 1, command_line_wide, 0);
+		if (wideLength != 0) {
+			command_line_wide = new WCHAR[wideLength];
+			MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, command_line.c_str(), (int)command_line.size() + 1, command_line_wide, wideLength);
+		}
+	}
+	
+    BOOL status = CreateProcessW(NULL, command_line_wide, NULL, NULL, TRUE, 0, NULL, NULL, &processData.startupInfo, &processData.processInfo);
     // closing unneeded handles
     CloseHandle(processData.processInfo.hThread);
     CloseHandle(processData.startupInfo.hStdInput);
     CloseHandle(log_handle);
-    if (status == 0)
-    {
+	if (command_line_wide != NULL)
+		delete[] command_line_wide;
+	
+    if (status == 0) {
         return SYSCALL_STATUS_CALL_ERROR;
     }
 
@@ -178,7 +243,7 @@ system_call_status_t startProcess(std::string command, std::string logfile, Proc
     else if (processData.pid == 0)
     {
         // parsing the command into binary and a table of arguments
-        std::vector<std::string> split_command = splitQuotedString(command, ' ');
+        std::vector<std::string> split_command = splitQuotedString(command, " ");
 
         if (split_command.empty()) exit(-1);
 
