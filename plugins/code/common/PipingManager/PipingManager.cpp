@@ -37,9 +37,11 @@
 #include <atomic>
 #include <vector>
 #include <iostream>
+#include <limits>
 #include <PipingManager.h>
 
 #ifdef WIN32
+#define NOMINMAX
 #include <Windows.h>
 #else
 #include <signal.h>
