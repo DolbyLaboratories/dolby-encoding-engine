@@ -206,7 +206,7 @@ static std::map<std::string, hevc_modifiers_e> modifier2int = {
     {"hdr", HEVC_MOD_HDR},
     {"gpu", HEVC_MOD_GPU},
     {"hlg", HEVC_MOD_HLG},
-    {"vmaf", HEVC_MOD_TUNE_VMAF},
+    {"tune_vmaf", HEVC_MOD_TUNE_VMAF},
     {"low_bitrate", HEVC_MOD_LOW_BITRATE}, 
 };
 
@@ -333,7 +333,6 @@ void Encoder::init(PluginCtrl& ctrl) {
     settings.gop.flags |= HEVC_GOP_ADD_AUD | HEVC_GOP_SPS_FOR_EACH_IDR;
     settings.gop.flags &= ~HEVC_GOP_NO_IDR_ON_SCENE_CHANGE;
     settings.stream[0].rc.flags |= HEVC_RC_FORCE_HRD_INFO;
-    settings.stream[0].modifier |= 0x20;
 
     if (ctrl.uhd_bd) {
         message("Forcing UHD-BD/Dolby Vision profile 7 params.");
