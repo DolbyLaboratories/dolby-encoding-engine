@@ -96,7 +96,7 @@ static const PropertyInfo propertyInfo[] = {
      ACCESS_TYPE_USER},
     {"modifier", PROPERTY_TYPE_STRING,
      "One or more modifiers combined with '+' sign. Supported modifiers: low_delay, tune_psnr, realtime, cinema, "
-     "blueray, hdr, gpu, hlg, tune_vmaf, low_bitrate.",
+     "bluray, hdr10, hlg, tune_vmaf, low_bitrate.",
      NULL, NULL, 0, 1, ACCESS_TYPE_USER},
     {"gop_intra_period", PROPERTY_TYPE_INTEGER, "GOP length.", "32", "0:65535", 0, 1, ACCESS_TYPE_USER},
     {"gop_idr_period", PROPERTY_TYPE_INTEGER, "Frequency of IDR frames / I frames.", "1", "0:65535", 0, 1,
@@ -263,7 +263,7 @@ static Status init(HevcEncHandle handle, const HevcEncInitParams* init_params) {
                 else if ("modifier" == name) {
                     state->ctrl->modifier = parseStringList(
                         name, value, "+",
-                        "low_delay:tune_psnr:realtime:cinema:blueray:hdr:gpu:hlg:tune_vmaf:low_bitrate");
+                        "low_delay:tune_psnr:realtime:cinema:bluray:hdr10:hlg:tune_vmaf:low_bitrate");
                 }
                 else if ("gop_intra_period" == name) {
                     state->ctrl->gop_intra_period = (uint16_t)parseInt(name, value, schema, count);

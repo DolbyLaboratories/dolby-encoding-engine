@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<ItemGroup>
+<Filter Include="code">
+<UniqueIdentifier>{cf162038-ec02-32ca-94b6-8c927f3cfc25}</UniqueIdentifier></Filter>
+<Filter Include="code\common">
+<UniqueIdentifier>{58e986a2-7e7e-314b-93a5-53c87fc426e3}</UniqueIdentifier></Filter>
+<Filter Include="code\hevc_enc">
+<UniqueIdentifier>{0ee6e19f-aa96-38d6-997f-98e0dbc14753}</UniqueIdentifier></Filter>
+<Filter Include="code\hevc_enc\beamr">
+<UniqueIdentifier>{522de15c-25ad-3824-a380-9ae5b3362252}</UniqueIdentifier></Filter>
+<Filter Include="code\hevc_enc\beamr\make">
+<UniqueIdentifier>{66ca4c8a-ed76-3d93-8b0a-1b646b99b05a}</UniqueIdentifier></Filter>
+<Filter Include="code\hevc_enc\beamr\make\$(BEAMR_SDK)">
+<UniqueIdentifier>{c8eccdc8-8553-3d8e-ab24-1201543e6470}</UniqueIdentifier></Filter>
+<Filter Include="code\hevc_enc\beamr\make\$(BEAMR_SDK)\common_primitives">
+<UniqueIdentifier>{61c30211-a913-3b6d-b0e6-97b9b86d7380}</UniqueIdentifier></Filter>
+<Filter Include="code\hevc_enc\beamr\make\$(BEAMR_SDK)\common_primitives\src">
+<UniqueIdentifier>{5785ea40-8276-3fd5-94ff-cc1ef78c4018}</UniqueIdentifier></Filter>
+<Filter Include="code\hevc_enc\beamr\src">
+<UniqueIdentifier>{049d5ac4-0a97-3e72-8403-18af964f4150}</UniqueIdentifier></Filter></ItemGroup>
+<ItemGroup>
+<ClCompile Include="..\..\$(BEAMR_SDK)\common_primitives\src\AllocationPool.cpp">
+<Filter>code\hevc_enc\beamr\make\$(BEAMR_SDK)\common_primitives\src</Filter></ClCompile>
+<ClCompile Include="..\..\$(BEAMR_SDK)\common_primitives\src\vh3_default_callbacks.cpp">
+<Filter>code\hevc_enc\beamr\make\$(BEAMR_SDK)\common_primitives\src</Filter></ClCompile>
+<ClCompile Include="..\..\$(BEAMR_SDK)\common_primitives\src\vh3_thread_manager.cpp">
+<Filter>code\hevc_enc\beamr\make\$(BEAMR_SDK)\common_primitives\src</Filter></ClCompile>
+<ClCompile Include="..\..\..\src\hevc_enc_beamr.cpp">
+<Filter>code\hevc_enc\beamr\src</Filter></ClCompile>
+<ClCompile Include="..\..\..\src\hevc_enc_beamr_impl.cpp">
+<Filter>code\hevc_enc\beamr\src</Filter></ClCompile>
+<ClCompile Include="..\..\..\src\hevc_enc_beamr_utils.cpp">
+<Filter>code\hevc_enc\beamr\src</Filter></ClCompile></ItemGroup>
+<ItemGroup>
+<ClInclude Include="..\..\..\..\..\common\common.h">
+<Filter>code\common</Filter></ClInclude>
+<ClInclude Include="..\..\..\src\hevc_enc_beamr_impl.h">
+<Filter>code\hevc_enc\beamr\src</Filter></ClInclude>
+<ClInclude Include="..\..\..\src\hevc_enc_beamr_utils.h">
+<Filter>code\hevc_enc\beamr\src</Filter></ClInclude>
+<ClInclude Include="..\..\..\..\hevc_enc_api.h">
+<Filter>code\hevc_enc</Filter></ClInclude></ItemGroup>
+<ItemGroup />
+<ItemGroup />
+<ItemGroup />
+<ItemGroup /></Project>

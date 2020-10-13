@@ -45,7 +45,9 @@
         <disable_md_postproc>false</disable_md_postproc>    <!-- boolean: true or false -->
         <decoder>
           <j2k_dec>
-            <kakadu_dlb/>    <!-- If plugin 'kakadu_dlb' is not available use the other one, e.g. 'base'. -->
+            <kakadu_dlb>    <!-- If plugin 'kakadu_dlb' is not available use the other one, e.g. 'base'. -->
+              <thread_num>4</thread_num>    <!-- integer: from 0 to 255 -->
+            </kakadu_dlb>
           </j2k_dec>
         </decoder>
         <scaling>
@@ -64,7 +66,7 @@
         <hevc_enc>
           <beamr>
             <preset>slow</preset>    <!-- One of: insanely_slow, ultra_slow, very_slow, slower, slow, medium, medium_plus, fast, faster, ultra_fast, insanely_fast -->
-            <modifier>cinema+hdr</modifier>    <!-- One or more modifiers combined with '+' sign. Supported modifiers: low_delay, tune_psnr, realtime, cinema, blueray, hdr, gpu, hlg, tune_vmaf, low_bitrate. -->
+            <modifier>cinema+hdr10</modifier>    <!-- One or more modifiers combined with '+' sign. Supported modifiers: low_delay, tune_psnr, realtime, cinema, bluray, hdr10, hlg, tune_vmaf, low_bitrate. -->
             <gop_intra_period>48</gop_intra_period>    <!-- integer: from 0 to 65535 -->
             <gop_idr_period>1</gop_idr_period>    <!-- integer: from 0 to 65535 -->
             <gop_min_intra_period>48</gop_min_intra_period>    <!-- integer: from 0 to 255 -->

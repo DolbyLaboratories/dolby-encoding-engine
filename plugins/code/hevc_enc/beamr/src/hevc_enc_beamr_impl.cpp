@@ -184,8 +184,6 @@ static std::map<std::string, hevc_presets_e> preset2int = {
     {"broadcast", HEVC_PRESET_BROADCAST},
     {"vod", HEVC_PRESET_VOD},
     {"ultralow_bitrate", HEVC_PRESET_ULTRALOW_BITRATE},
-    {"gpu1", HEVC_PRESET_GPU1},
-    {"gpu2", HEVC_PRESET_GPU2},
 };
 
 uint16_t Encoder::presetValue(const std::string& str) {
@@ -202,12 +200,11 @@ static std::map<std::string, hevc_modifiers_e> modifier2int = {
     {"tune_psnr", HEVC_MOD_TUNE_PSNR},
     {"realtime", HEVC_MOD_REALTIME},
     {"cinema", HEVC_MOD_CINEMA},
-    {"blueray", HEVC_MOD_BLUERAY},
-    {"hdr", HEVC_MOD_HDR},
-    {"gpu", HEVC_MOD_GPU},
+    {"bluray", HEVC_MOD_BLURAY},
+    {"hdr10", HEVC_MOD_HDR10},
     {"hlg", HEVC_MOD_HLG},
     {"tune_vmaf", HEVC_MOD_TUNE_VMAF},
-    {"low_bitrate", HEVC_MOD_LOW_BITRATE}, 
+    {"low_bitrate", HEVC_MOD_LOW_BITRATE},
 };
 
 uint32_t Encoder::modifierValue(const std::string& str) {
@@ -433,7 +430,7 @@ void Encoder::feed(const HevcEncPicture* in) {
         vh3_Picture* pic;
         FUNCTION_T_RETVAL(pic, cbTable.pic_alloc, cbTable.app_context, settings.input.width, settings.input.height,
                           settings.input.luma_bytes_per_pel, settings.input.chroma_bytes_per_pel,
-                          settings.input.bit_depth_luma, settings.input.bit_depth_chroma, VH3_YUV_420);
+                          settings.input.bit_depth_luma, settings.input.bit_depth_chroma, VH3_YUV_420, HEVC_PIC_FLAG_DEFAULT);
         if (pic == nullptr)
             error("pic is nullptr");
 

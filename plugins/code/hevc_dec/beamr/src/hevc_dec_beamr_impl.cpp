@@ -178,7 +178,9 @@ void Decoder::init(PluginCtrl& ctrl) {
     checkErrorCode(errCode);
 
     settings.mt.disable = ctrl.mt_disable ? 1 : 0;
-    settings.mt.num_threads = (uint8_t)nthreads;
+    settings.mt.num_groups = 1;
+    settings.mt.group[0].numa_node = 0;
+    settings.mt.group[0].num_threads = (uint8_t)nthreads;
     settings.mt.num_wf_lines = (uint8_t)ctrl.mt_num_wf_lines;
     settings.mt.num_frames = (uint8_t)ctrl.mt_num_frames;
     settings.mt.num_input_units = (uint8_t)ctrl.mt_num_input_units;
@@ -187,7 +189,7 @@ void Decoder::init(PluginCtrl& ctrl) {
     // Bitmasks
     settings.flags = ctrl.flags;
     settings.mt.flags = ctrl.mt_flags;
-    settings.mt.aff_masks[0] = ctrl.mt_aff_mask;
+    settings.mt.group[0].aff_masks[0] = ctrl.mt_aff_mask;
     settings.disable_cpu_extensions = ctrl.disable_cpu_extensions;
 
     errCode = hevcd_check_settings(&settings);

@@ -3,7 +3,7 @@
   <input>
     <video>
       <hevc version="1">
-        <frame_rate>24</frame_rate>    <!-- One of: 23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60 -->
+        <frame_rate>24</frame_rate>    <!-- One of: unspecified, 23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60 -->
         <dv_profile>none</dv_profile>    <!-- Must be none when transcoding SDR video. -->
         <file_name>FILE_NAME</file_name>    <!-- string -->
         <storage>
@@ -55,7 +55,7 @@
         <hevc_enc>
           <beamr>
             <preset>slow</preset>    <!-- One of: insanely_slow, ultra_slow, very_slow, slower, slow, medium, medium_plus, fast, faster, ultra_fast, insanely_fast -->
-            <modifier>cinema</modifier>    <!-- One or more modifiers combined with '+' sign. Supported modifiers: low_delay, tune_psnr, realtime, cinema, blueray, hdr, gpu, hlg, tune_vmaf, low_bitrate. -->
+            <modifier>cinema</modifier>    <!-- One or more modifiers combined with '+' sign. Supported modifiers: low_delay, tune_psnr, realtime, cinema, bluray, hdr10, hlg, tune_vmaf, low_bitrate. -->
             <gop_intra_period>48</gop_intra_period>    <!-- integer: from 0 to 65535 -->
             <gop_idr_period>1</gop_idr_period>    <!-- integer: from 0 to 65535 -->
             <gop_min_intra_period>48</gop_min_intra_period>    <!-- integer: from 0 to 255 -->

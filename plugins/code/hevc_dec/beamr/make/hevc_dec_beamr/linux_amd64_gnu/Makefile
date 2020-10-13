@@ -9,13 +9,13 @@ CXXFLAGS = -std=c++11 -O3 -ftree-vectorize -fPIC -m64 -c -Wall
 DEFINES = -DNDEBUG=1
 INCLUDES = -I$(BASE)code/common -I$(BEAMR_SDK)/common_primitives/include -I$(BEAMR_SDK)/inc -I$(BASE)code/hevc_dec/beamr/src -I$(BASE)code/hevc_dec
 LD = $(CC)
-LDFLAGS = -Wl,--as-needed -Wl,-O1 -fPIC -shared -m64
-LDLIBS = ${BEAMR_SDK}/lib/libhevc-dec-l64ie.a ${BEAMR_SDK}/lib/libhevc-cmn-l64ie.a ${BEAMR_SDK}/lib/libvpl-l64ie.a ${BEAMR_SDK}/lib/libvsl-l64ie.a ${BEAMR_SDK}/lib64/libimf.a ${BEAMR_SDK}/lib64/libippcore.a ${BEAMR_SDK}/lib64/libippcv.a ${BEAMR_SDK}/lib64/libippi.a ${BEAMR_SDK}/lib64/libipps.a ${BEAMR_SDK}/lib64/libirc.a ${BEAMR_SDK}/lib64/libsvml.a -ldl -lpthread -lm -Wl,-rpath,\$${ORIGIN}
+LDFLAGS = -O2 -fPIC -shared -m64
+LDLIBS = -ldl -Wl,-rpath,\$${ORIGIN} ${BEAMR_SDK}/lib/libhevc-cmn-l64ie.a ${BEAMR_SDK}/lib/libhevc-dec-l64ie.a ${BEAMR_SDK}/lib/libvpl-l64ie.a ${BEAMR_SDK}/lib/libvsl-l64ie.a ${BEAMR_SDK}/lib64/libimf.a ${BEAMR_SDK}/lib64/libirc.a ${BEAMR_SDK}/lib64/libsvml.a
 
 
-INPUTS_LINK_release = $(BEAMR_SDK)/common_primitives/src/AllocationPool.hevc_dec_beamr_linux_amd64_gnu_release.o\
-                      $(BEAMR_SDK)/common_primitives/src/vh3_default_callbacks.hevc_dec_beamr_linux_amd64_gnu_release.o\
-                      $(BEAMR_SDK)/common_primitives/src/vh3_thread_manager.hevc_dec_beamr_linux_amd64_gnu_release.o\
+INPUTS_LINK_release = $(TMP)code/hevc_dec/beamr/make/$(BEAMR_SDK)/common_primitives/src/AllocationPool.hevc_dec_beamr_linux_amd64_gnu_release.o\
+                      $(TMP)code/hevc_dec/beamr/make/$(BEAMR_SDK)/common_primitives/src/vh3_default_callbacks.hevc_dec_beamr_linux_amd64_gnu_release.o\
+                      $(TMP)code/hevc_dec/beamr/make/$(BEAMR_SDK)/common_primitives/src/vh3_thread_manager.hevc_dec_beamr_linux_amd64_gnu_release.o\
                       $(TMP)code/hevc_dec/beamr/src/hevc_dec_beamr.hevc_dec_beamr_linux_amd64_gnu_release.o $(TMP)code/hevc_dec/beamr/src/hevc_dec_beamr_impl.hevc_dec_beamr_linux_amd64_gnu_release.o\
                       $(TMP)code/hevc_dec/beamr/src/hevc_dec_beamr_utils.hevc_dec_beamr_linux_amd64_gnu_release.o $(TMP)code/hevc_dec/hevc_dec_common.hevc_dec_beamr_linux_amd64_gnu_release.o
 
@@ -26,14 +26,12 @@ hevc_dec_beamr_release.so: $(INPUTS_LINK_release)
 	$(LD) $(LDFLAGS) -o $@ $+ $(LDLIBS)
 
 $(TMP)%.hevc_dec_beamr_linux_amd64_gnu_release.o: $(BASE)%.cpp | $(TMP)%/..
-	$(CXX) $(CXXFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
-    
-$(BEAMR_SDK)%.hevc_dec_beamr_linux_amd64_gnu_release.o: $(BEAMR_SDK)%.cpp | $(TMP)%/..
+	$(CXXDEP) -MM $(DEFINES) $(INCLUDES) -MT $@ -o $(patsubst %.o,%.d,$@) $<
 	$(CXX) $(CXXFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 
-CLEAN_COMPILE_release = $(BEAMR_SDK)/common_primitives/src/AllocationPool.hevc_dec_beamr_linux_amd64_gnu_release.d\
-                        $(BEAMR_SDK)/common_primitives/src/vh3_default_callbacks.hevc_dec_beamr_linux_amd64_gnu_release.d\
-                        $(BEAMR_SDK)/common_primitives/src/vh3_thread_manager.hevc_dec_beamr_linux_amd64_gnu_release.d\
+CLEAN_COMPILE_release = $(TMP)code/hevc_dec/beamr/make/$(BEAMR_SDK)/common_primitives/src/AllocationPool.hevc_dec_beamr_linux_amd64_gnu_release.d\
+                        $(TMP)code/hevc_dec/beamr/make/$(BEAMR_SDK)/common_primitives/src/vh3_default_callbacks.hevc_dec_beamr_linux_amd64_gnu_release.d\
+                        $(TMP)code/hevc_dec/beamr/make/$(BEAMR_SDK)/common_primitives/src/vh3_thread_manager.hevc_dec_beamr_linux_amd64_gnu_release.d\
                         $(TMP)code/hevc_dec/beamr/src/hevc_dec_beamr.hevc_dec_beamr_linux_amd64_gnu_release.d $(TMP)code/hevc_dec/beamr/src/hevc_dec_beamr_impl.hevc_dec_beamr_linux_amd64_gnu_release.d\
                         $(TMP)code/hevc_dec/beamr/src/hevc_dec_beamr_utils.hevc_dec_beamr_linux_amd64_gnu_release.d $(TMP)code/hevc_dec/hevc_dec_common.hevc_dec_beamr_linux_amd64_gnu_release.d
 
@@ -59,9 +57,9 @@ help:
 	@echo " cleandeps"
 	@echo " help"
 
-include $(wildcard $(BEAMR_SDK)/common_primitives/src/AllocationPool.hevc_dec_beamr_linux_amd64_gnu_release.d)
-include $(wildcard $(BEAMR_SDK)/common_primitives/src/vh3_default_callbacks.hevc_dec_beamr_linux_amd64_gnu_release.d)
-include $(wildcard $(BEAMR_SDK)/common_primitives/src/vh3_thread_manager.hevc_dec_beamr_linux_amd64_gnu_release.d)
+include $(wildcard $(TMP)code/hevc_dec/beamr/make/$(BEAMR_SDK)/common_primitives/src/AllocationPool.hevc_dec_beamr_linux_amd64_gnu_release.d)
+include $(wildcard $(TMP)code/hevc_dec/beamr/make/$(BEAMR_SDK)/common_primitives/src/vh3_default_callbacks.hevc_dec_beamr_linux_amd64_gnu_release.d)
+include $(wildcard $(TMP)code/hevc_dec/beamr/make/$(BEAMR_SDK)/common_primitives/src/vh3_thread_manager.hevc_dec_beamr_linux_amd64_gnu_release.d)
 include $(wildcard $(TMP)code/hevc_dec/beamr/src/hevc_dec_beamr.hevc_dec_beamr_linux_amd64_gnu_release.d)
 include $(wildcard $(TMP)code/hevc_dec/beamr/src/hevc_dec_beamr_impl.hevc_dec_beamr_linux_amd64_gnu_release.d)
 include $(wildcard $(TMP)code/hevc_dec/beamr/src/hevc_dec_beamr_utils.hevc_dec_beamr_linux_amd64_gnu_release.d)
