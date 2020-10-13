@@ -26,7 +26,9 @@ hevc_dec_beamr_release.so: $(INPUTS_LINK_release)
 	$(LD) $(LDFLAGS) -o $@ $+ $(LDLIBS)
 
 $(TMP)%.hevc_dec_beamr_linux_amd64_gnu_release.o: $(BASE)%.cpp | $(TMP)%/..
-	$(CXXDEP) -MM $(DEFINES) $(INCLUDES) -MT $@ -o $(patsubst %.o,%.d,$@) $<
+	$(CXX) $(CXXFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+	
+$(BEAMR_SDK)%.hevc_dec_beamr_linux_amd64_gnu_release.o: $(BEAMR_SDK)%.cpp | $(TMP)%/..
 	$(CXX) $(CXXFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 
 CLEAN_COMPILE_release = $(BEAMR_SDK)/common_primitives/src/AllocationPool.hevc_dec_beamr_linux_amd64_gnu_release.d\
