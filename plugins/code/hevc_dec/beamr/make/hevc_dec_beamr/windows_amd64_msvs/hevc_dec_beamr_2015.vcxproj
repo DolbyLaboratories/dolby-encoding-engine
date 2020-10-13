@@ -50,7 +50,7 @@
 <AdditionalLibraryDirectories>$(BEAMR_SDK)\lib\msc19;$(BEAMR_SDK)\lib64</AdditionalLibraryDirectories>
 <EnableCOMDATFolding>true</EnableCOMDATFolding>
 <GenerateDebugInformation>false</GenerateDebugInformation>
-<IgnoreSpecificDefaultLibraries />
+<IgnoreSpecificDefaultLibraries>libirc.lib;libm.lib;svml_disp.lib</IgnoreSpecificDefaultLibraries>
 <ModuleDefinitionFile />
 <OptimizeReferences>true</OptimizeReferences>
 <OutputFile>$(OutDir)$(ProjectName).dll</OutputFile>
@@ -58,9 +58,9 @@
 <TargetMachine>MachineX64</TargetMachine>
 <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers></Link></ItemDefinitionGroup>
 <ItemGroup>
-<ClCompile Include="..\..\$(BEAMR_SDK)\common_primitives\src\AllocationPool.cpp" />
-<ClCompile Include="..\..\$(BEAMR_SDK)\common_primitives\src\vh3_default_callbacks.cpp" />
-<ClCompile Include="..\..\$(BEAMR_SDK)\common_primitives\src\vh3_thread_manager.cpp" />
+<ClCompile Include="$(BEAMR_SDK)\common_primitives\src\AllocationPool.cpp" />
+<ClCompile Include="$(BEAMR_SDK)\common_primitives\src\vh3_default_callbacks.cpp" />
+<ClCompile Include="$(BEAMR_SDK)\common_primitives\src\vh3_thread_manager.cpp" />
 <ClCompile Include="..\..\..\src\hevc_dec_beamr.cpp" />
 <ClCompile Include="..\..\..\src\hevc_dec_beamr_impl.cpp" />
 <ClCompile Include="..\..\..\src\hevc_dec_beamr_utils.cpp" />
