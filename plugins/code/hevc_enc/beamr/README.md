@@ -1,6 +1,6 @@
 # Beamr HEVC encoder plugin for Dolby Encoding Engine
 
-Provided source code was built and tested using Beamr5x-4.5.0.3.
+Provided source code was built and tested using Beamr5x-4.6.0.7.
 
 ## Build tools
 
@@ -11,7 +11,7 @@ Provided source code was built and tested using Beamr5x-4.5.0.3.
 
 The build must be performed within the complete `dolby-encoding-engine` code tree. Download the whole repository, even if you plan to build only selected plugins.
 
-To build the plugin, Beamr5x SDK is required and environment variable `BEAMR_SDK` pointing to the kit folder.
+To build the plugin, Beamr5x SDK is required, and the environment variable `BEAMR_SDK` pointing to the kit folder.
 The typical structure of the kit folder is presented below.
 
 ```bash
@@ -51,8 +51,6 @@ make
 
 Copy `hevc_enc_beamr_release.so` to DEE installation folder. The file can be renamed, but the extension must be `.so`.
 
-Additionally, copy `$BEAMR_SDK/lib64/libtbb.so.2` to DEE installation folder. The name of that file cannot be changed.
-
 ## Build instructions (Windows)
 
 Extract the kit folder from the archive.
@@ -62,8 +60,6 @@ Set environment variable BEAMR_SDK.
 Build the plugin using Visual Studio solution in `make\hevc_enc_beamr\windows_amd64_msvs\hevc_enc_beamr_2015.sln`.
 
 Copy `hevc_enc_beamr.dll` to DEE installation folder. The file can be renamed, but the extension must be `.dll`.
-
-Additionally, copy `$BEAMR_SDK/bin/Intel_IPP_Win64/tbb.dll` to DEE installation folder. The name of that file cannot be changed.
 
 ## Tuning encoder settings
 
