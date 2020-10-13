@@ -82,24 +82,29 @@ bool ProresDecApple::convertDecodedPicture()
             return false;
         }
 
-        uint8_t *r = scratchMem;
-        uint8_t *g = scratchMem + (bufferSize / 4);
-        uint8_t *b = scratchMem + (bufferSize / 2);
+        int bytesToSkipPerRow = bytesPerRow - (width*8);
+        int planeBytes = width*height*2;
 
+        uint8_t *r = scratchMem;
+        uint8_t *g = r + planeBytes;
+        uint8_t *b = g + planeBytes;
         uint8_t *d = (uint8_t*)outBuffer;
-        for (int i = 0; i < bufferSize; i += 8)
-        {
-            // switching bytes from big endian to little endian, ommiting bytes 0 and 1 (alpha channel)
-            *r++ = d[i + 3];
-            *r++ = d[i + 2];
-            *g++ = d[i + 5];
-            *g++ = d[i + 4];
-            *b++ = d[i + 7];
-            *b++ = d[i + 6];
+
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                // switching bytes from big endian to little endian, ommiting bytes 0 and 1 (alpha channel) 
+                *r++ = d[3];
+                *r++ = d[2];
+                *g++ = d[5];
+                *g++ = d[4];
+                *b++ = d[7];
+                *b++ = d[6];
+                d += 8;
+            }
+            d += bytesToSkipPerRow;
         }
 
-        bufferSize = bufferSize * 3 / 4;
-
+        bufferSize = width*height*6;
         memcpy(outBuffer, scratchMem, bufferSize);
         return true;
     }
@@ -111,21 +116,26 @@ bool ProresDecApple::convertDecodedPicture()
             return false;
         }
 
-        const int components = bufferSize / 2;
+        int wordsToSkipPerRow = (bytesPerRow - (width*4)) / sizeof(uint16_t);
+        int lumaPixels = width*height;
+        int chromaPixels = height*width/2;
 
         uint16_t *y = (uint16_t*)scratchMem;
-        uint16_t *u = (uint16_t*)scratchMem + (components / 2);
-        uint16_t *v = (uint16_t*)scratchMem + ((components / 2) + (components / 4));
-
+        uint16_t *u = y + lumaPixels;
+        uint16_t *v = u + chromaPixels;
         uint16_t *d = (uint16_t*)outBuffer;
-        for (int i = 0; i < components; i += 4)
-        {
-            *u++ = d[i];
-            *y++ = d[i + 1];
-            *v++ = d[i + 2];
-            *y++ = d[i + 3];
+
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width/2; j++) {
+                *u++ = *d++;
+                *y++ = *d++;
+                *v++ = *d++;
+                *y++ = *d++;
+            }
+            d += wordsToSkipPerRow;
         }
 
+        bufferSize = width*height*4;
         memcpy(outBuffer, scratchMem, bufferSize);
         return true;
     }
