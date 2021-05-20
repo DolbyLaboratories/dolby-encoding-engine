@@ -10,7 +10,7 @@ DEFINES = -DNDEBUG=1
 INCLUDES = -I$(BASE)code/common -I$(BEAMR_SDK)/common_primitives/include -I$(BEAMR_SDK)/inc -I$(BASE)code/hevc_enc/beamr/src -I$(BASE)code/hevc_enc
 LD = $(CC)
 LDFLAGS = -O2 -fPIC -shared -m64
-LDLIBS = -ldl -Wl,-rpath,\$${ORIGIN} ${BEAMR_SDK}/lib/libhevc-cmn-l64ie.a ${BEAMR_SDK}/lib/libhevc-enc-l64ie.a ${BEAMR_SDK}/lib/libvpl-l64ie.a ${BEAMR_SDK}/lib/libvsl-l64ie.a ${BEAMR_SDK}/lib64/libimf.a ${BEAMR_SDK}/lib64/libirc.a ${BEAMR_SDK}/lib64/libsvml.a
+LDLIBS = -ldl -Wl,-rpath,\$${ORIGIN}  ${BEAMR_SDK}/lib/libhevc-enc-l64ie.a ${BEAMR_SDK}/lib/libhevc-cmn-l64ie.a ${BEAMR_SDK}/lib/libvpl-l64ie.a ${BEAMR_SDK}/lib/libvsl-l64ie.a ${BEAMR_SDK}/lib64/libimf.a ${BEAMR_SDK}/lib64/libirc.a ${BEAMR_SDK}/lib64/libsvml.a
 
 
 INPUTS_LINK_release = $(BEAMR_SDK)/common_primitives/src/AllocationPool.hevc_enc_beamr_linux_amd64_gnu_release.o\
