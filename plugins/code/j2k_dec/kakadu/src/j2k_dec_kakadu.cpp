@@ -75,7 +75,7 @@ PropertyInfo j2k_dec_kakadu_info[] =
     { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "width", PROPERTY_TYPE_INTEGER, "Picture width", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "height", PROPERTY_TYPE_INTEGER, "Picture height", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
-    { "thread_num", PROPERTY_TYPE_INTEGER, "Number of threads to be used by decoder instance. Value 0 disables multi-threading.", "4", "0:255", 0, 1, ACCESS_TYPE_USER }
+    { "thread_num", PROPERTY_TYPE_INTEGER, "Number of threads to be used by decoder instance. Value '0' disables multi-threading.", "4", "0:255", 0, 1, ACCESS_TYPE_USER }
 };
 
 size_t
@@ -184,9 +184,8 @@ kakadu_init
 {
     j2k_dec_kakadu_t* state = (j2k_dec_kakadu_t*)handle;
     state->data = new j2k_dec_kakadu_data_t;
-   
+    
     init_data(state->data);
-
     for (size_t i = 0; i < init_params->count; i++)
     {
         std::string name(init_params->properties[i].name);
@@ -215,7 +214,7 @@ kakadu_init
             }
             else
             {
-                state->data->msg += "Unknown XML property: " + name;
+                state->data->msg += "Unknown property: " + name;
                 return STATUS_ERROR;
             }
         } catch(std::exception&){
@@ -263,6 +262,7 @@ kakadu_close
     )
 {
     j2k_dec_kakadu_t* state = (j2k_dec_kakadu_t*)handle;
+    state->data->msg.clear();
 
     if (state->data)
     {
@@ -300,7 +300,8 @@ kakadu_process
     )
 {
     j2k_dec_kakadu_t* state = (j2k_dec_kakadu_t*)handle;
-    
+    state->data->msg.clear();
+
     j2k_buffer input;
     input.open(in->buffer, (kdu_long)in->size);
     kdu_codestream codestream; codestream.create(&input);

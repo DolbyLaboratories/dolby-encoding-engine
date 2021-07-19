@@ -176,7 +176,7 @@ ffmpeg_init
         }
         else
         {
-            state->data->msg += "\nUnknown XML property: " + name;
+            state->data->msg += "\nUnknown property: " + name;
             return STATUS_ERROR;
         }
     }
@@ -237,6 +237,7 @@ ffmpeg_close
     )
 {
     j2k_dec_ffmpeg_t* state = (j2k_dec_ffmpeg_t*)handle;
+    state->data->msg.clear();
 
     cur_instance_idx = 0;
 
@@ -289,6 +290,7 @@ ffmpeg_process
     )
 {
     j2k_dec_ffmpeg_t* state = (j2k_dec_ffmpeg_t*)handle;
+    state->data->msg.clear();
     FILE* file_in;
     FILE* file_out;
     

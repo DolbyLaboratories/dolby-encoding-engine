@@ -1,6 +1,6 @@
 # Beamr HEVC decoder plugin for Dolby Encoding Engine
 
-Provided source code was built and tested using Beamr5x-4.6.0.7.
+Provided source code was built and tested using Beamr5x-4.7.2.2.
 
 ## Build tools
 

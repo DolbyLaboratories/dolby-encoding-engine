@@ -46,7 +46,9 @@
         <encode_pass_num>2</encode_pass_num>    <!-- integer -->
         <decoder>
           <j2k_dec>
-            <kakadu_dlb/>    <!-- If plugin 'kakadu_dlb' is not available use the other one, e.g. 'base'. -->
+            <kakadu_dlb>    <!-- If plugin 'kakadu_dlb' is not available use the other one, e.g. 'base'. -->
+              <thread_num>4</thread_num>    <!-- integer: from 0 to 255 -->
+            </kakadu_dlb>
           </j2k_dec>
         </decoder>
         <scaling>

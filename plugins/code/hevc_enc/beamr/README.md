@@ -1,6 +1,6 @@
 # Beamr HEVC encoder plugin for Dolby Encoding Engine
 
-Provided source code was built and tested using Beamr5x-4.6.0.7.
+Provided source code was built and tested using Beamr5x-4.7.2.2.
 
 ## Build tools
 
@@ -73,7 +73,3 @@ The presented XML interface contains only basic encoder parameters. Other parame
 
 These elements allow configuring encoder using native Beamr parameters, which can be found in Beamr SDK documentation and sample configs in `$BEAMR_SDK\samples\*.cfg`.
 
-## Known issues
-
-- When encoding Enhancement layer for Dolby Vision profile 7, encoder forces tier Main instead fo High.
-  - This issue shall be fixed with the next release of Beamr SDK.

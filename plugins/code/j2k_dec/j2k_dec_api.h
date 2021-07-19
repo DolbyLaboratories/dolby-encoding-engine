@@ -49,7 +49,7 @@ extern "C" {
 *      temp_file_num : integer : n/a : j2k_dec_get_property : accessed before j2k_dec_init, optional, should be used if plugin needs some temp files
 *      temp_file : string : n/a : j2k_dec_init : occurs multiple times, according to value retrieved from 'temp_file_num'
 *
-* Additionally, j2k_dec_init_params_t structure will contain all plugin-specific properties set via XML interface (ACCESS_TYPE_USER).
+* Additionally, j2k_dec_init_params_t structure will contain all plugin-specific properties set via user's configuration (ACCESS_TYPE_USER).
 *
 */
 

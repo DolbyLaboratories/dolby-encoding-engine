@@ -303,6 +303,8 @@ static Status libtiff_get_property(TiffDecHandle handle, Property* property) {
 
 static const char* libtiff_get_message(TiffDecHandle handle) {
     tiff_dec_libtiff_t* state = (tiff_dec_libtiff_t*)handle;
+    if (!state->data)
+        return NULL;
     return state->data->msg.empty() ? NULL : state->data->msg.c_str();
 }
 

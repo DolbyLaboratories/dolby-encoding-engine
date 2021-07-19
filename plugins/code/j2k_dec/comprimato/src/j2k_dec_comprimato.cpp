@@ -126,7 +126,7 @@ comprimato_init
         }
         else
         {
-            state->data->msg += "\nUnknown XML property: " + name;
+            state->data->msg += "\nUnknown property: " + name;
             return STATUS_ERROR;
         }
     }
@@ -161,6 +161,7 @@ comprimato_close
 )
 {
     j2k_dec_comprimato_t* state = (j2k_dec_comprimato_t*)handle;
+    state->data->msg.clear();
 
     CHECK_API_OK(cmpto_j2k_dec_ctx_destroy(state->data->cmpto_ctx));
     delete[] state->data->output_buffer;
@@ -177,6 +178,7 @@ comprimato_process
 )
 {
     j2k_dec_comprimato_t* state = (j2k_dec_comprimato_t*)handle;
+    state->data->msg.clear();
 
     cmpto_j2k_dec_img* img;
     cmpto_j2k_dec_img* decoded_img;
