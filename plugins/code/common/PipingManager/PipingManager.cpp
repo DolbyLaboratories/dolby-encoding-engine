@@ -41,7 +41,9 @@
 #include <PipingManager.h>
 
 #ifdef WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #else
 #include <signal.h>
@@ -81,7 +83,12 @@ public:
     void SetSize(size_t size)
     {
         mSize = size;
-        mBuffer.resize(size);
+        try {
+            mBuffer.reserve(size);
+        }
+        catch (std::exception&) {
+            throw std::runtime_error("Failed to allocate pipe buffer.");
+        }
         mFree = size;
     }
     int Append(char* buffer, size_t size)
@@ -428,7 +435,12 @@ PipeData::PipeData(std::string name, size_t maxbuf, pipe_type_t type, int id, bo
     mClient = client;
     mTimeout = false;
 
-    mTempBuf.resize(mBufferSize);
+    try {
+        mTempBuf.reserve(mBufferSize);
+    }
+    catch (std::exception&) {
+        throw std::runtime_error("Failed to allocate pipe buffer.");
+    }
     if (type == INPUT_PIPE || type == DUPLEX_PIPE) mInBuf.SetSize(mBufferSize);
     if (type == OUTPUT_PIPE || type == DUPLEX_PIPE) mOutBuf.SetSize(mBufferSize);
 

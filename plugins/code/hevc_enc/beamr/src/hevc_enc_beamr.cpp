@@ -90,7 +90,7 @@ static const PropertyInfo propertyInfo[] = {
      "false", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT},
     {"uhd_bd", PROPERTY_TYPE_BOOLEAN, "Indicates UHD-BD encoding.", "false", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT},
 
-    // Properties visible in XML interface
+    // Properties visible in the interface
     {"preset", PROPERTY_TYPE_STRING, "Encoder preset (initial state of encoder configuration).", "medium",
      "insanely_slow:ultra_slow:very_slow:slower:slow:medium:medium_plus:fast:faster:ultra_fast:insanely_fast", 0, 1,
      ACCESS_TYPE_USER},
@@ -307,8 +307,11 @@ static Status init(HevcEncHandle handle, const HevcEncInitParams* init_params) {
                 else if ("debug_level" == name) {
                     state->ctrl->debug_level = (int)parseInt(name, value, schema, count);
                 }
+                else if ("color_space" == name) {
+                    continue; //hardcoded to i420 anyways
+                }
                 else {
-                    state->ctrl->msg += "\nUnknown XML property: " + name;
+                    state->ctrl->msg += "\nUnknown property: " + name;
                 }
             }
             catch (std::exception& e) {
@@ -316,8 +319,9 @@ static Status init(HevcEncHandle handle, const HevcEncInitParams* init_params) {
             }
         }
 
-        if (state->ctrl->msg.size())
+        if (state->ctrl->msg.size()) {
             return STATUS_ERROR;
+        }
 
         state->encoder->init(*state->ctrl);
 

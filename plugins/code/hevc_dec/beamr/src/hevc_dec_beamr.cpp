@@ -145,7 +145,7 @@ static HevcDecStatus init(HevcDecHandle handle, const HevcDecInitParams* init_pa
                     state->ctrl->debug_level = string2int(name, value, 0, 2);
                 }
                 else {
-                    state->ctrl->msg += "\nUnknown XML property: " + name;
+                    state->ctrl->msg += "\nUnknown property: " + name;
                 }
             }
             catch (std::exception& e) {

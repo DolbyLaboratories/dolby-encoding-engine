@@ -66,7 +66,7 @@ int64_t parseInt(const std::string& name, const std::string& value, const Proper
             return string2int(name, value, minVal, maxVal);
         }
     }
-    throw std::runtime_error("Unknown XML property: " + name);
+    throw std::runtime_error("Unknown property: " + name);
 }
 
 std::string parseString(const std::string& name, const std::string& value, const PropertyInfo* schema, size_t count) {
@@ -82,7 +82,7 @@ std::string parseString(const std::string& name, const std::string& value, const
             return value;
         }
     }
-    throw std::runtime_error("Unknown XML property: " + name);
+    throw std::runtime_error("Unknown property: " + name);
 }
 
 std::string parseStringList(const std::string& name,
@@ -106,7 +106,7 @@ bool parseBool(const std::string& name, const std::string& value, const Property
             return string2bool(name, value);
         }
     }
-    throw std::runtime_error("Unknown XML property: " + name);
+    throw std::runtime_error("Unknown property: " + name);
 }
 
 FramePeriod string2FramePeriod(const std::string& s) {
