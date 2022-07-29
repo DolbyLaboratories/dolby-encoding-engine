@@ -40,6 +40,7 @@
 #include <limits>
 #include <PipingManager.h>
 
+
 #ifdef WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -56,10 +57,11 @@
 
 #define DEFAULT_TIMEOUT (10000)
 #define DEFAULT_BUFFER (1024*128)
-#define NAMED_PIPE_BUFFER (1024*64)
-#define WRITE_SIZE (16*1024)
-#define READ_SIZE (16*1024)
+#define NAMED_PIPE_BUFFER (128*1024)
+#define WRITE_SIZE (64*1024)
+#define READ_SIZE (64*1024)
 
+static const auto cvtimeout = std::chrono::milliseconds(50);
 
 using namespace std::chrono;
 using std::vector;
@@ -188,6 +190,11 @@ struct PipeData
     bool                mConnected;
 #endif
 
+    std::condition_variable mInBufHasData;
+    std::condition_variable mInBufHasRoom;
+    std::condition_variable mOutBufHasData;
+    std::condition_variable mOutBufHasRoom;
+
     PipeData(std::string name, size_t maxbuf, pipe_type_t type, int id, bool client = false);
     ~PipeData();
     void closeThread();
@@ -212,41 +219,53 @@ int get_flag(pipe_type_t type)
 }
 #endif
 
+
+static bool stopWaitingForIQAvailable(PipeData* p) {
+    return (p->mInBuf.Taken() > 0);
+}
+
 static
 int pipe_write_func(PipeData* data)
 {
     piping_status_t status = PIPE_MGR_OK;
+    std::unique_lock<std::mutex> lck(data->mMutex);
+    data->mInBufHasData.wait_for(lck, cvtimeout, std::bind(stopWaitingForIQAvailable, data));
 
-    data->mMutex.lock();
     size_t writeSize = data->mInBuf.Taken();
     if (writeSize > WRITE_SIZE) writeSize = WRITE_SIZE;
     data->mInBuf.PeekFront(data->mTempBuf.data(), writeSize);
-    data->mMutex.unlock();
+    lck.unlock();
 
 #ifdef WIN32
     DWORD bytes_written = 0;
-    if (WriteFile(data->mHandle, data->mTempBuf.data(), (DWORD)writeSize, &bytes_written, NULL) == FALSE)
-    {
-        DWORD last_error = GetLastError();
-        data->mErrorString = std::to_string(last_error);
-        status = PIPE_MGR_WRITE_ERROR;
-    }
-#else
-    int bytes_written = write(data->mHandle, data->mTempBuf.data(), writeSize);
-    if (bytes_written < 0)
-    {
-        if (errno != EAGAIN)
+    if (writeSize > 0) {
+        if (WriteFile(data->mHandle, data->mTempBuf.data(), (DWORD)writeSize, &bytes_written, NULL) == FALSE)
         {
-            data->mErrorString = "write returned " + std::to_string(bytes_written) + " (errno=" + std::to_string((int)errno) + ").";
+            DWORD last_error = GetLastError();
+            data->mErrorString = std::to_string(last_error);
             status = PIPE_MGR_WRITE_ERROR;
         }
-        bytes_written = 0;
+    }
+#else
+    int bytes_written = 0;
+    if (writeSize > 0) {
+        bytes_written = write(data->mHandle, data->mTempBuf.data(), writeSize);
+        if (bytes_written < 0)
+        {
+            if (errno != EAGAIN)
+            {
+                data->mErrorString = "write returned " + std::to_string(bytes_written) + " (errno=" + std::to_string((int)errno) + ").";
+                status = PIPE_MGR_WRITE_ERROR;
+            }
+            bytes_written = 0;
+        }
     }
 #endif
     if (bytes_written > 0)
     {
         data->mMutex.lock();
         data->mInBuf.PopFront(bytes_written);
+        data->mInBufHasRoom.notify_all();
         data->mMutex.unlock();
         data->mTotalDataWritten += bytes_written;
     }
@@ -258,11 +277,18 @@ int pipe_write_func(PipeData* data)
         return -1;
 }
 
+static bool stopWaitingForOQFree(PipeData* p) {
+    return (p->mOutBuf.Free() > 0);
+}
+
 static
 int pipe_read_func(PipeData* data)
 {
     piping_status_t status = PIPE_MGR_OK;
+    std::unique_lock<std::mutex> lck(data->mMutex);
+    data->mOutBufHasRoom.wait_for(lck, cvtimeout, std::bind(stopWaitingForOQFree, data));
     size_t readSize = data->mOutBuf.Free();
+    lck.unlock();
     if (readSize > READ_SIZE) readSize = READ_SIZE;
     if (readSize == 0) return 0;
 
@@ -301,6 +327,7 @@ int pipe_read_func(PipeData* data)
     {
         data->mMutex.lock();
         data->mOutBuf.Append(data->mTempBuf.data(), bytes_read);
+        data->mOutBufHasData.notify_all();
         data->mMutex.unlock();
     }
 
@@ -354,7 +381,6 @@ void pipe_thread_func(PipeData* data)
     int written_bytes = 0;
     int read_bytes = 0;
     bool success= true;
-
     // run main thread loop
     while (data->mStop == false)
     {
@@ -386,9 +412,11 @@ void pipe_thread_func(PipeData* data)
             break;
         }
         
+#if 1
         if (written_bytes == 0 && read_bytes == 0) {
             std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
+#endif
     }
 
 #ifdef WIN32
@@ -688,6 +716,11 @@ piping_status_t PipingManager::getPipePath(int pipe_id, std::string& path)
     }
 }
 
+
+static bool stopWaitingForIQFree(PipeData* p) {
+    return (p->mInBuf.Free() > 0);
+}
+
 piping_status_t PipingManager::writeToPipe(int pipe_id, void* buffer, size_t data_size, size_t& bytes_written)
 {
     piping_status_t status = PIPE_MGR_OK;
@@ -701,7 +734,9 @@ piping_status_t PipingManager::writeToPipe(int pipe_id, void* buffer, size_t dat
     else
     {
         PipeData* pipe = it->second;
-        std::lock_guard<std::mutex> lock(pipe->mMutex);
+
+        std::unique_lock<std::mutex> lck(pipe->mMutex);
+        pipe->mInBufHasRoom.wait_for(lck, cvtimeout, std::bind(stopWaitingForIQFree, pipe));
 
         size_t data_to_write = data_size;
         if (data_to_write > pipe->mInBuf.Free())
@@ -717,12 +752,17 @@ piping_status_t PipingManager::writeToPipe(int pipe_id, void* buffer, size_t dat
         {
             pipe->mInBuf.Append((char*)buffer, data_to_write);
             bytes_written = data_to_write;
+            pipe->mInBufHasData.notify_all();
         }
 
         status = pipe->mTimeout ? PIPE_MGR_TIMEOUT : status;
     }
 
     return status;
+}
+
+static bool stopWaitingForOQAvailable(PipeData* p) {
+    return (p->mOutBuf.Taken() > 0);
 }
 
 piping_status_t PipingManager::readFromPipe(int pipe_id, void* buffer, size_t buffer_size, size_t& bytes_read)
@@ -737,7 +777,9 @@ piping_status_t PipingManager::readFromPipe(int pipe_id, void* buffer, size_t bu
     else
     {
         PipeData* pipe = it->second;
-        std::lock_guard<std::mutex> lock(pipe->mMutex);
+
+        std::unique_lock<std::mutex> lck(pipe->mMutex);
+        pipe->mOutBufHasData.wait_for(lck, cvtimeout, std::bind(stopWaitingForOQAvailable, pipe));
 
         size_t data_to_read = buffer_size;
         if (data_to_read > pipe->mOutBuf.Taken())
@@ -749,6 +791,7 @@ piping_status_t PipingManager::readFromPipe(int pipe_id, void* buffer, size_t bu
         {
             pipe->mOutBuf.PopFront((char*)buffer, data_to_read);
             bytes_read = data_to_read;
+            pipe->mOutBufHasRoom.notify_all();
         }
 
         status = pipe->mTimeout ? PIPE_MGR_TIMEOUT : pipe->mStatus;

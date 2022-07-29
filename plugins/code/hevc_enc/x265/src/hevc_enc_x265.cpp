@@ -48,7 +48,7 @@ PropertyInfo hevc_enc_x265_info[] =
     ,{"width", PROPERTY_TYPE_INTEGER, NULL, NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"height", PROPERTY_TYPE_INTEGER, NULL, NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"color_space", PROPERTY_TYPE_STRING, NULL, "i420", "i400:i420:i422:i444", 0, 1, ACCESS_TYPE_WRITE_INIT}
-    ,{"frame_rate", PROPERTY_TYPE_DECIMAL, NULL, NULL, "23.976:24:25:29.97:30:48:50:59.94:60", 1, 1, ACCESS_TYPE_WRITE_INIT}
+    ,{"frame_rate", PROPERTY_TYPE_DECIMAL, NULL, NULL, "23.976:24:25:29.97:30:48:50:59.94:60:119.88:120", 1, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"data_rate", PROPERTY_TYPE_INTEGER, "Average data rate in kbps.", "15000", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"max_vbv_data_rate", PROPERTY_TYPE_INTEGER, "Max VBV data rate in kbps.", "15000", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"vbv_buffer_size", PROPERTY_TYPE_INTEGER, "VBV buffer size in kb.", "30000", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT}
@@ -80,7 +80,7 @@ PropertyInfo hevc_enc_x265_info[] =
     ,{ "force_slice_type", PROPERTY_TYPE_BOOLEAN, "Indicates that framework will try to force specific slice type.", "false", NULL, 0, 1, ACCESS_TYPE_WRITE_INIT }
 
     // Only properties below (ACCESS_TYPE_USER) can be modified 
-    ,{"preset", PROPERTY_TYPE_STRING, "Sets parameters to preselected values.", "medium", "ultrafast:superfast:veryfast:faster:fast:medium:slow:slower:veryslow:placebo", 0, 1, ACCESS_TYPE_USER}
+    ,{"preset", PROPERTY_TYPE_STRING, "Sets parameters to preselected values.", "medium", "placebo:veryslow:slower:slow:medium:fast:faster:veryfast:superfast:ultrafast", 0, 1, ACCESS_TYPE_USER}
     ,{"tune", PROPERTY_TYPE_STRING, "Tune the settings for a particular type of source or situation.", "none", "none:psnr:ssim:grain:fastdecode:zerolatency", 0, 1, ACCESS_TYPE_USER}
     ,{"open_gop", PROPERTY_TYPE_BOOLEAN, "Allows I-slices to be non-IDR.", "false", NULL, 0, 1, ACCESS_TYPE_USER}
     ,{"max_intra_period", PROPERTY_TYPE_INTEGER, "Max intra period in frames.", "25", "1:65535", 0, 1, ACCESS_TYPE_USER}

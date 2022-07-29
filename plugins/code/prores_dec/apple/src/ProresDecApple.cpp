@@ -351,7 +351,7 @@ void ProresDecApple::fillProperties()
         propVector.push_back({ "output_format", PROPERTY_TYPE_STRING, "Desired format of decoded data", "rgb48le", "yuv422p16le:rgb48le", 1, 1, ACCESS_TYPE_WRITE_INIT });
         propVector.push_back({ "width",  PROPERTY_TYPE_INTEGER, "Source picture width", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT });
         propVector.push_back({ "height", PROPERTY_TYPE_INTEGER, "Source picture height", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT });
-        propVector.push_back({ "multithread", PROPERTY_TYPE_INTEGER, "Number of threads used for decoding. '0' means \"configure automatically\".", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT });
+        propVector.push_back({ "multithread", PROPERTY_TYPE_INTEGER, "Number of threads used for decoding. '0' means \"configure automatically\".", "0", NULL, 1, 1, ACCESS_TYPE_WRITE_INIT });
     }
 }
 

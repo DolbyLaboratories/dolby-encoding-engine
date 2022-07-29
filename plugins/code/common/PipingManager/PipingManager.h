@@ -31,6 +31,7 @@
 */
 
 #include <string>
+#include <condition_variable>
 
 struct PipingManagerData;
 

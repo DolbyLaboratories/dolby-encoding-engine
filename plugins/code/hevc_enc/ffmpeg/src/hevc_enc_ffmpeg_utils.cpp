@@ -817,6 +817,7 @@ fps_to_num_denom
     if ("23.976" == fps) return "24000/1001";
     else if ("29.97" == fps) return "30000/1001";
     else if ("59.94" == fps) return "60000/1001";
+    else if ("119.88" == fps) return "120000/1001";
     return std::to_string(std::stoi(fps))+"/1";
 }
 

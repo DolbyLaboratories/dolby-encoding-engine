@@ -75,7 +75,7 @@ PropertyInfo j2k_dec_kakadu_info[] =
     { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "width", PROPERTY_TYPE_INTEGER, "Picture width", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "height", PROPERTY_TYPE_INTEGER, "Picture height", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
-    { "thread_num", PROPERTY_TYPE_INTEGER, "Number of threads to be used by decoder instance. Value '0' disables multi-threading.", "4", "0:255", 0, 1, ACCESS_TYPE_USER }
+    { "thread_num", PROPERTY_TYPE_INTEGER, "Number of threads used for decoding. Value '0' disables multi-threading.", "4", "0:255", 0, 1, ACCESS_TYPE_USER }
 };
 
 size_t

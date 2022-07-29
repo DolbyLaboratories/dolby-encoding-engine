@@ -148,6 +148,14 @@ FramePeriod string2FramePeriod(const std::string& s) {
         fp.timeScale = 60;
         fp.numUnitsInTick = 1;
     }
+    else if ("119.88" == s) {
+        fp.timeScale = 120000;
+        fp.numUnitsInTick = 1001;
+    }
+    else if ("120" == s) {
+        fp.timeScale = 120;
+        fp.numUnitsInTick = 1;
+    }
     return fp;
 }
 

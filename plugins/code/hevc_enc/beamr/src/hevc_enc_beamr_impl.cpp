@@ -642,7 +642,7 @@ void Encoder::parseGopStructureFile() {
                 continue;
             }
 
-            if (s.type != VH3_SLICE_B && s.type != VH3_SLICE_P && s.type != VH3_SLICE_I && s.type != -1) {
+            if (s.type != VH3_SLICE_B && s.type != VH3_SLICE_P && s.type != VH3_SLICE_I && s.type != VH3_SLICE_UNKNOWN) {
                 message("gop_structure_in_file: Ignoring line %llu. Invalid 'type' value.", lineNum);
                 continue;
             }
