@@ -357,8 +357,15 @@ static Status close(HevcEncHandle handle) {
         if (state->encoder)
             state->encoder->close();
 
-        if (state->ctrl)
+        if (state->ctrl) {
             delete state->ctrl;
+            state->ctrl = nullptr;
+        }
+
+        if (state->encoder) {
+            delete state->encoder;
+            state->encoder = nullptr;
+        }
     }
     catch (std::exception& e) {
         state->ctrl->msg = std::string(e.what());

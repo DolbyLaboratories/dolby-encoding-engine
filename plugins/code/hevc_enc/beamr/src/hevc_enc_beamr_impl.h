@@ -44,6 +44,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <memory>
 
 #include "debugger.h"
 #include "hevc_enc_api.h"
@@ -146,6 +147,7 @@ protected:
     hevce_settings_t settings;
     std::deque<vh3_Nal> qMS;
     std::vector<HevcEncNal> nal;
+    std::unique_ptr<uint8_t[]> outBufferMem;
     uint8_t* outBuffer{nullptr};
     uint64_t outBufferSize{0};
     uint64_t nalUnitsToRelease{0};

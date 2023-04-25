@@ -116,8 +116,6 @@ Encoder::Encoder()
 
 Encoder::~Encoder() {
     FUNCTIONV_T(close);
-    if (outBuffer)
-        delete[] outBuffer;
 }
 
 std::string Encoder::getVersion() {
@@ -586,9 +584,8 @@ void Encoder::getNal(HevcEncOutput* out, uint64_t maxSize) {
         return;
 
     if (maxSize > outBufferSize) {
-        if (outBuffer)
-            delete[] outBuffer;
-        outBuffer = new uint8_t[maxSize];
+        outBufferMem.reset(new uint8_t[maxSize]);
+        outBuffer = outBufferMem.get();
         outBufferSize = maxSize;
     }
 
