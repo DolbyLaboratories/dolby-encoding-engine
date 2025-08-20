@@ -39,8 +39,6 @@
 static const std::string pluginName{"beamr"};
 
 static const PropertyInfo propertyInfo[] = {
-    {"plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT},
-    {"config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT},
     {"max_pass_num", PROPERTY_TYPE_INTEGER, "Indicates how many passes encoder can perform (0 = unlimited).", "3", NULL,
      0, 1, ACCESS_TYPE_READ},
     {"absolute_pass_num", PROPERTY_TYPE_INTEGER, NULL, NULL, NULL, 0, 1, ACCESS_TYPE_WRITE_INIT},
@@ -118,6 +116,8 @@ static const PropertyInfo propertyInfo[] = {
      0, 1, ACCESS_TYPE_USER},
     {"native_config_file", PROPERTY_TYPE_STRING, "File with encoder configuration in native Beamr syntax.", NULL, NULL,
      0, 1, ACCESS_TYPE_USER},
+    { "temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.", "1", NULL, 0, 1, ACCESS_TYPE_READ},
+    { "temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     {"param", PROPERTY_TYPE_STRING,
      "Native Beamr parameter using syntax \"name=value\". Use ':' separator to enter multiple parameters under single "
      "tag.",
@@ -156,13 +156,7 @@ static Status init(HevcEncHandle handle, const HevcEncInitParams* init_params) {
             std::string value(init_params->properties[i].value);
 
             try {
-                if ("plugin_path" == name) {
-                    continue;
-                }
-                else if ("config_path" == name) {
-                    state->ctrl->config_path = value;
-                }
-                else if ("temp_file" == name) {
+                if ("temp_file" == name) {
                     state->ctrl->temp_file.push_back(value);
                 }
                 else if ("absolute_pass_num" == name) {
@@ -419,12 +413,13 @@ static Status flush(HevcEncHandle handle, HevcEncOutput* output, int* isEmpty) {
 
 static Status setProperty(HevcEncHandle handle, const Property* property) {
     PluginContext* state = (PluginContext*)handle;
-    if (state->ctrl)
-        state->ctrl->msg.clear();
 
-    if (property->name == std::string("max_output_data")) {
-        state->ctrl->max_output_data = atoi(property->value);
-        return STATUS_OK;
+    if (state->ctrl) {
+        state->ctrl->msg.clear();
+        if (property->name == std::string("max_output_data")) {
+            state->ctrl->max_output_data = atoi(property->value);
+            return STATUS_OK;
+        }
     }
 
     return STATUS_ERROR;
@@ -451,7 +446,10 @@ static Status getProperty(HevcEncHandle handle, Property* property) {
 
 static const char* getMessage(HevcEncHandle handle) {
     PluginContext* state = (PluginContext*)handle;
-    return state->ctrl->msg.empty() ? NULL : state->ctrl->msg.c_str();
+    if (state && state->ctrl)
+        return state->ctrl->msg.empty() ? NULL : state->ctrl->msg.c_str();
+    else
+        return NULL;
 }
 
 static HevcEncApi beamrPluginApi = {pluginName.c_str(), getInfo,     getSize,   init, close, process, flush,

@@ -46,7 +46,6 @@
 #include <vector>
 #include <memory>
 
-#include "debugger.h"
 #include "hevc_enc_api.h"
 #include "hevc_enc_beamr_utils.h"
 
@@ -56,7 +55,6 @@
 struct PluginCtrl {
     std::string msg;
 
-    std::string config_path;
     std::deque<std::string> temp_file;
     uint64_t max_output_data{0};
     uint8_t bit_depth;

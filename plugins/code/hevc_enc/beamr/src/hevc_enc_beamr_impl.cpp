@@ -32,6 +32,7 @@
 
 #include "hevc_enc_beamr_impl.h"
 #include "hevc_enc_beamr_utils.h"
+#include "plugins_debugger.h"
 #include <algorithm>
 #include <cstdarg>
 #include <cstdio>
@@ -368,9 +369,8 @@ void Encoder::init(PluginCtrl& ctrl) {
     }
 
     if (ctrl.native_config_file.size()) {
-        std::string path = abspath(ctrl.native_config_file, ctrl.config_path);
-        checkFileReadable(path);
-        FUNCTION_T_RETVAL(errCode, hevce_read_config_file, &settings, path.c_str());
+        checkFileReadable(ctrl.native_config_file);
+        FUNCTION_T_RETVAL(errCode, hevce_read_config_file, &settings, ctrl.native_config_file.c_str());
         checkErrorCode(errCode);
     }
 
@@ -404,16 +404,14 @@ void Encoder::init(PluginCtrl& ctrl) {
     }
 
     if (ctrl.gop_structure_in_file.size()) {
-        std::string path = abspath(ctrl.gop_structure_in_file, ctrl.config_path);
-        checkFileReadable(path);
-        gopStructureIn.open(path, std::ifstream::in);
+        checkFileReadable(ctrl.gop_structure_in_file);
+        gopStructureIn.open(ctrl.gop_structure_in_file, std::ifstream::in);
         parseGopStructureFile();
     }
 
     if (ctrl.gop_structure_out_file.size()) {
-        std::string path = abspath(ctrl.gop_structure_out_file, ctrl.config_path);
-        checkFileWritable(path);
-        gopStructureOut.open(path, std::ofstream::out);
+        checkFileWritable(ctrl.gop_structure_out_file);
+        gopStructureOut.open(ctrl.gop_structure_out_file, std::ofstream::out);
     }
 }
 
@@ -579,7 +577,7 @@ void Encoder::getNal(HevcEncOutput* out, uint64_t maxSize) {
     checkPendingErrors();
     std::lock_guard<std::mutex> lck(dataLock);
     FUNCTIONV_T(releaseNalUnits);
-    
+
     if (qMS.empty())
         return;
 

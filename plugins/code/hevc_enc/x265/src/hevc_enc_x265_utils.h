@@ -3,10 +3,10 @@
 *
 * Copyright (c) 2017-2019, Dolby Laboratories
 * All rights reserved.
-* 
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
-* 
+*
 * * Redistributions of source code must retain the above copyright notice, this
 *   list of conditions and the following disclaimer.
 *
@@ -17,7 +17,7 @@
 * * Neither the name of the copyright holder nor the names of its
 *   contributors may be used to endorse or promote products derived from
 *   this software without specific prior written permission.
-* 
+*
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,10 +32,6 @@
 
 #ifndef __DEE_PLUGINS_HEVC_ENC_X265_UTILS_H__
 #define __DEE_PLUGINS_HEVC_ENC_X265_UTILS_H__
-
-#ifdef WIN32
-#define X265_API_IMPORTS
-#endif
 
 #include "hevc_enc_api.h"
 #include "x265.h"
@@ -77,7 +73,7 @@ typedef struct
     int                 max_intra_period;
     int                 min_intra_period;
     bool                intra_refresh;
-    int                 max_bframes;  
+    int                 max_bframes;
     int                 lookahead_frames;
     int                 frame_threads;
     int                 nr_inter;
@@ -127,15 +123,12 @@ typedef struct
     std::vector<HevcEncNal>                     output;
     std::list<std::pair<std::string,std::string>>   internal_params;
 
-    std::string         plugin_path;
-    std::string         config_path;
-
 } hevc_enc_x265_data_t;
 
 /* This structure can contain only pointers and simple types */
 typedef struct
 {
-    
+
     const x265_api*         api;
     x265_param*             param;
     x265_encoder*           encoder;

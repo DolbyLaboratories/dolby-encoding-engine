@@ -29,6 +29,7 @@
 * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#include "j2k_dec_kakadu.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -39,29 +40,24 @@
 #include <string>
 #include <exception>
 
-#ifdef _WIN32
-#pragma warning(push, 0)
-#else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
+#ifdef _WIN32 // suppress windows kdu warnings
+    #pragma warning(push)
+    #pragma warning(disable: 4458) // declaration of '...' hides class member 
+    #pragma warning(disable: 4100) // '...': unreferenced formal parameter 
+#endif  //_WIN32
 // Kakadu core includes
 #include "kdu_elementary.h"
 #include "kdu_messaging.h"
 #include "kdu_params.h"
-#include "kdu_compressed.h"
 #include "kdu_sample_processing.h"
+#include "kdu_compressed.h"
+
 // Kakadu support includes
 #include "kdu_stripe_decompressor.h"
-
 #ifdef _WIN32
-#pragma warning(pop)
-#else
-#pragma GCC diagnostic pop
+    #pragma warning(pop)
 #endif
 
-#include "j2k_dec_kakadu.h"
 
 using namespace kdu_supp;
 
@@ -71,11 +67,9 @@ static
 const
 PropertyInfo j2k_dec_kakadu_info[] =
 {
-    { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
-    { "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "width", PROPERTY_TYPE_INTEGER, "Picture width", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
     { "height", PROPERTY_TYPE_INTEGER, "Picture height", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT },
-    { "thread_num", PROPERTY_TYPE_INTEGER, "Number of threads used for decoding. Value '0' disables multi-threading.", "4", "0:255", 0, 1, ACCESS_TYPE_USER }
+    { "thread_num", PROPERTY_TYPE_INTEGER, "Number of threads used for decoding. Value '0' disables multi-threading.", "8", "0:255", 0, 1, ACCESS_TYPE_USER }
 };
 
 size_t
@@ -86,7 +80,7 @@ kakadu_get_info
     return sizeof(j2k_dec_kakadu_info) / sizeof(PropertyInfo);
 }
 
-typedef struct
+struct j2k_dec_kakadu_data_t
 {
     std::string         msg;
     size_t              width;
@@ -95,13 +89,13 @@ typedef struct
     kdu_int16*          output_buffer;
     short*              reorder_buffer;
     kdu_thread_env      env;
-} j2k_dec_kakadu_data_t;
+};
 
 /* This structure can contain only pointers and simple types */
-typedef struct
+struct j2k_dec_kakadu_t
 {
     j2k_dec_kakadu_data_t* data;
-} j2k_dec_kakadu_t;
+};
 
 
 class j2k_buffer : public kdu_compressed_source 
@@ -172,7 +166,7 @@ init_data
     data->reorder_buffer = NULL;
     data->width = 0;
     data->height = 0;
-    data->thread_num = 4;
+    data->thread_num = 8;
     data->msg.clear();
 }
 
@@ -203,14 +197,6 @@ kakadu_init
             else if ("thread_num" == name)
             {
                 state->data->thread_num = std::stoi(value);
-            }
-            else if ("plugin_path" == name)
-            {
-                continue;
-            }
-            else if ("config_path" == name)
-            {
-                continue;
             }
             else
             {
@@ -272,7 +258,10 @@ kakadu_close
 
         if (state->data->output_buffer) delete [] state->data->output_buffer;
         if (state->data->reorder_buffer) delete [] state->data->reorder_buffer;
-        delete state->data;
+        if(state->data) {
+            delete state->data;
+            state->data = nullptr;
+        }
     }
 
     return STATUS_OK;
@@ -364,6 +353,9 @@ kakadu_get_message
     )
 {
     j2k_dec_kakadu_t* state = (j2k_dec_kakadu_t*)handle;
-    return state->data->msg.empty() ? NULL :state->data->msg.c_str();
+    if (state && state->data)
+        return state->data->msg.empty() ? NULL : state->data->msg.c_str();
+    else
+        return NULL;
 }
 

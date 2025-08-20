@@ -59,9 +59,6 @@ int color_primaries2int(const std::string& s);
 int transfer_characteristics2int(const std::string& s);
 int matrix_coefficients2int(const std::string& s);
 
-// If path is not absolute, returns joined head+path.
-std::string abspath(const std::string& path, const std::string& head);
-
 void checkFileReadable(const std::string& path);
 void checkFileWritable(const std::string& path);
 

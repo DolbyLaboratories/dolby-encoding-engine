@@ -3,10 +3,10 @@
 *
 * Copyright (c) 2017-2019, Dolby Laboratories
 * All rights reserved.
-* 
+*
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
-* 
+*
 * * Redistributions of source code must retain the above copyright notice, this
 *   list of conditions and the following disclaimer.
 *
@@ -17,7 +17,7 @@
 * * Neither the name of the copyright holder nor the names of its
 *   contributors may be used to endorse or promote products derived from
 *   this software without specific prior written permission.
-* 
+*
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -66,16 +66,16 @@ std::map<std::string, int> matrix_coefficients_map = {
 
 template<typename T>
 static
-void 
+void
 split_string
     (const std::string &s
     ,char delimiter
-    ,T result) 
+    ,T result)
 {
     std::stringstream ss;
     ss.str(s);
     std::string item;
-    while (std::getline(ss, item, delimiter)) 
+    while (std::getline(ss, item, delimiter))
     {
         *(result++) = item;
     }
@@ -163,7 +163,7 @@ init_defaults(hevc_enc_x265_t* state)
     state->data->width = 0;             /**< Must be set by caller */
     state->data->height = 0;            /**< Must be set by caller */
     state->data->frame_rate.clear();    /**< Must be set by caller */
-    state->data->color_space = "i420";       
+    state->data->color_space = "i420";
     state->data->multi_pass = "off";
     state->data->data_rate = 15000;
     state->data->max_vbv_data_rate = 15000;
@@ -221,9 +221,6 @@ init_defaults(hevc_enc_x265_t* state)
     state->data->force_slice_type = false;
     state->data->uhd_bd = false;
     state->data->concatenation_flag = false;
-
-    state->data->plugin_path.clear();
-    state->data->config_path.clear();
 }
 
 bool
@@ -269,7 +266,7 @@ parse_init_params
         }
         else if ("color_space" == name)
         {
-            if (value != "i400" 
+            if (value != "i400"
                 && value != "i420"
                 && value != "i422"
                 && value != "i444"
@@ -387,7 +384,7 @@ parse_init_params
         }
         else if ("multi_pass" == name)
         {
-            if (value != "off" 
+            if (value != "off"
                 && value != "1st"
                 && value != "nth"
                 && value != "last"
@@ -434,7 +431,7 @@ parse_init_params
         }
         else if ("preset" == name)
         {
-            if (value != "ultrafast" 
+            if (value != "ultrafast"
                 && value != "superfast"
                 && value != "veryfast"
                 && value != "faster"
@@ -453,7 +450,7 @@ parse_init_params
         }
         else if ("tune" == name)
         {
-            if (value != "none" 
+            if (value != "none"
                 && value != "psnr"
                 && value != "ssim"
                 && value != "grain"
@@ -837,7 +834,7 @@ parse_init_params
         {
             auto items = split_string(value, ':');
             for (auto item : items)
-            {  
+            {
                 std::string param_name, param_value;
                 std::size_t found = item.find("=");
                 if (found == std::string::npos)
@@ -852,14 +849,6 @@ parse_init_params
                 }
                 state->data->internal_params.push_back({param_name, param_value});
             }
-        }
-        else if ("plugin_path" == name)
-        {
-            state->data->plugin_path = value;
-        }
-        else if ("config_path" == name)
-        {
-            state->data->config_path = value;
         }
         else
         {
@@ -883,7 +872,7 @@ parse_init_params
     {
         state->data->msg += "\nMissing 'height' property.";
     }
-    
+
     if (state->data->frame_rate.empty())
     {
         state->data->msg += "\nMissing 'frame_rate' property.";
@@ -950,7 +939,7 @@ cast_nal_type(const uint32_t type)
     else if (type == NAL_UNIT_SUFFIX_SEI) out = HEVC_ENC_NAL_UNIT_SUFFIX_SEI;
     else if (type == NAL_UNIT_INVALID) out = HEVC_ENC_NAL_UNIT_OTHER;
     else  out = HEVC_ENC_NAL_UNIT_OTHER;
-    
+
     return out;
 }
 
@@ -1004,7 +993,7 @@ get_config_msg
     msg += "\n  psy_rd=" + state->data->psy_rd;
     msg += "\n  wpp=" + bool2string(state->data->wpp);
     msg += "\n  profile=" + state->data->profile;
-    
+
     msg += "\n  color_primaries=" + state->data->color_primaries;
     msg += "\n  transfer_characteristics=" + state->data->transfer_characteristics;
 

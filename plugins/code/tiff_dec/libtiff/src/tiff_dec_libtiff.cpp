@@ -40,18 +40,13 @@
 #include <string>
 #include <vector>
 
-#include "GenericPlugin.h"
-#include "SystemCalls.h"
 #include "tiff_dec_api.h"
 #include "tiffio.h"
-#include "tiffio.hxx"
 
 static const int temp_file_num = 0;
 static std::string temp_file_num_str = std::to_string(temp_file_num);
 
 static const PropertyInfo tiff_dec_libtiff_info[] = {
-    {"plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT},
-    {"config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT},
     {"temp_file_num", PROPERTY_TYPE_INTEGER, "Indicates how many temp files this plugin requires.",
      temp_file_num_str.c_str(), NULL, 0, 1, ACCESS_TYPE_READ},
     {"temp_file", PROPERTY_TYPE_INTEGER, "Path to temp file.", NULL, NULL, temp_file_num, temp_file_num,
@@ -68,7 +63,6 @@ typedef struct {
     uint16_t* outputBuffer;
     uint16_t* lineBuffer;
     std::vector<std::string> tempFile;
-    GenericPlugin genericPlugin;
 } tiff_dec_libtiff_data_t;
 
 /* This structure can contain only pointers and simple types */
@@ -96,9 +90,6 @@ static Status libtiff_init(TiffDecHandle handle, const TiffDecInitParams* init_p
     for (uint64_t i = 0; i < init_params->count; i++) {
         std::string name(init_params->properties[i].name);
         std::string value(init_params->properties[i].value);
-
-        if (state->data->genericPlugin.setProperty(&init_params->properties[i]) == STATUS_OK)
-            continue;
 
         if ("temp_file" == name) {
             state->data->tempFile.push_back(value);
@@ -301,11 +292,13 @@ static Status libtiff_get_property(TiffDecHandle handle, Property* property) {
     return STATUS_ERROR;
 }
 
+
 static const char* libtiff_get_message(TiffDecHandle handle) {
     tiff_dec_libtiff_t* state = (tiff_dec_libtiff_t*)handle;
-    if (!state->data)
+    if (state && state->data)
+        return state->data->msg.empty() ? NULL : state->data->msg.c_str();
+    else
         return NULL;
-    return state->data->msg.empty() ? NULL : state->data->msg.c_str();
 }
 
 static TiffDecApi libtiff_plugin_api = {

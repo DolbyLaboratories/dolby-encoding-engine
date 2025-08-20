@@ -1,0 +1,6 @@
+add_subdirectory(api)
+add_subdirectory(common)
+add_subdirectory(hevc_enc)
+add_subdirectory(image_transformer)
+add_subdirectory(j2k_dec)
+add_subdirectory(tiff_dec)

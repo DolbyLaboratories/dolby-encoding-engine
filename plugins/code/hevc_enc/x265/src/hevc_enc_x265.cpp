@@ -40,9 +40,7 @@ const
 PropertyInfo hevc_enc_x265_info[] = 
 {
 
-     { "plugin_path", PROPERTY_TYPE_STRING, "Path to this plugin.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
-    ,{ "config_path", PROPERTY_TYPE_STRING, "Path to DEE config file.", NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT }
-    ,{"max_pass_num", PROPERTY_TYPE_INTEGER, "Indicates how many passes encoder can perform (0 = unlimited).", "3", NULL, 0, 1, ACCESS_TYPE_READ}
+     {"max_pass_num", PROPERTY_TYPE_INTEGER, "Indicates how many passes encoder can perform (0 = unlimited).", "3", NULL, 0, 1, ACCESS_TYPE_READ}
     ,{"max_output_data", PROPERTY_TYPE_INTEGER, "Limits number of output bytes (0 = unlimited).", "0", NULL, 0, 1, ACCESS_TYPE_WRITE}
     ,{"bit_depth", PROPERTY_TYPE_STRING, NULL, NULL, "8:10", 1, 1, ACCESS_TYPE_WRITE_INIT}
     ,{"width", PROPERTY_TYPE_INTEGER, NULL, NULL, NULL, 1, 1, ACCESS_TYPE_WRITE_INIT}
@@ -367,7 +365,10 @@ x265_close
         std::remove(cutree_file.c_str());
     }
 
-    if (state->data) delete state->data;
+    if (state->data) {
+        delete state->data;
+        state->data = nullptr;
+    }
     if (state->param) state->api->param_free(state->param);
 
   
@@ -608,7 +609,10 @@ x265_get_message
     )
 {
     hevc_enc_x265_t* state = (hevc_enc_x265_t*)handle;
-    return state->data->msg.empty() ? NULL : state->data->msg.c_str();
+    if (state && state->data)
+        return state->data->msg.empty() ? NULL : state->data->msg.c_str();
+    else
+        return NULL;
 }
 
 static 
