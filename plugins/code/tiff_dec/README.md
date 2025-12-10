@@ -3,8 +3,8 @@
 The provided source code was built and tested using the libtiff version 4.7.0.
 
 ## Build tools:
-- Visual Studio 2019
-- gcc 9.4.0
+- Visual Studio 2022
+- gcc 11.5
 
 ## Prerequisites:
 

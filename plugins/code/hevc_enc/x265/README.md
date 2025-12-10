@@ -1,20 +1,20 @@
 # x265 HEVC encoder plugin for Dolby Encoding Engine
 
-The provided source code was built and tested using the x265 library version 3.5.
+The provided source code was built and tested using the x265 library version 4.1.
 
 ## Requirements:
 - Windows:
-  - Visual Studio 2019
+  - Visual Studio 2022
   - [NASM](https://nasm.us/pub/nasm/releasebuilds/?C=M;O=D)
   - [CMake](https://github.com/Kitware/CMake/releases/tag/v3.31.8) 
 - Linux:
-  - gcc 9.4.0
+  - gcc 11.5
   - [NASM](https://nasm.us/pub/nasm/releasebuilds/?C=M;O=D)
   - [CMake](https://github.com/Kitware/CMake/releases/tag/v3.31.8) 
 
 ## Building x265 library
  The x265 library has to be build with multi-bitdepth (8/10/12-bit) support and in shared format.  
- - Navigate to [x265 git repository](https://bitbucket.org/multicoreware/x265_git/src/3.5/build/) and locate `multilib` file for your platform.
+ - Navigate to [x265 git repository](https://bitbucket.org/multicoreware/x265_git/src/4.1/build/) and locate `multilib` file for your platform.
  - Execute `multilib` file to build `x265` library.
  - Multi-bitdepth library will be located in newly created `8bit` directory
 
