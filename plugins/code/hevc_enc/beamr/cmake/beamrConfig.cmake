@@ -21,9 +21,9 @@ target_link_libraries(beamr::common
         $<$<PLATFORM_ID:Windows>:beamr::ircmt>
         $<$<PLATFORM_ID:Windows>:beamr::svml_dispmt>
         $<$<PLATFORM_ID:Windows>:beamr::mmt>
-        $<$<PLATFORM_ID:Linux>:beamr::irc>
-        $<$<PLATFORM_ID:Linux>:beamr::imf>
-        $<$<PLATFORM_ID:Linux>:beamr::svml>
+        $<$<BOOL:${BEAMR_IRC_LIBNAME}>:beamr::irc>
+        $<$<BOOL:${BEAMR_IMF_LIBNAME}>:beamr::imf>
+        $<$<BOOL:${BEAMR_SVML_LIBNAME}>:beamr::svml>
         beamr::common_primitives
 )
 
@@ -69,13 +69,22 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(BEAMR_SVML_DISPMT_LIBNAME "svml_dispmt.lib")
     set(BEAMR_MMT_LIBNAME "libmmt.lib")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(BEAMR_HEVC_ENC_LIBNAME "libhevc-enc-l64i.a")
-    set(BEAMR_HEVC_CMN_LIBNAME "libhevc-cmn-l64i.a")
-    set(BEAMR_VPL_LIBNAME "libvpl-l64i.a")
-    set(BEAMR_VSL_LIBNAME "libvsl-l64i.a")
-    set(BEAMR_IRC_LIBNAME "libirc.a")
-    set(BEAMR_IMF_LIBNAME "libimf.a")
-    set(BEAMR_SVML_LIBNAME "libsvml.a")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)")
+        set(BEAMR_HEVC_ENC_LIBNAME "libhevc-enc-l64i.a")
+        set(BEAMR_HEVC_CMN_LIBNAME "libhevc-cmn-l64i.a")
+        set(BEAMR_VPL_LIBNAME "libvpl-l64i.a")
+        set(BEAMR_VSL_LIBNAME "libvsl-l64i.a")
+        set(BEAMR_IRC_LIBNAME "libirc.a")
+        set(BEAMR_IMF_LIBNAME "libimf.a")
+        set(BEAMR_SVML_LIBNAME "libsvml.a")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|aarch64)")
+        set(BEAMR_HEVC_ENC_LIBNAME "libhevc-enc-larm64g.a")
+        set(BEAMR_HEVC_CMN_LIBNAME "libhevc-cmn-larm64g.a")
+        set(BEAMR_VPL_LIBNAME "libvpl-larm64g.a")
+        set(BEAMR_VSL_LIBNAME "libvsl-larm64g.a")
+    else()
+        message(FATAL_ERROR "Unsupported linux architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
 else()
     message(FATAL_ERROR "Not supported OS/architecture")
 endif()

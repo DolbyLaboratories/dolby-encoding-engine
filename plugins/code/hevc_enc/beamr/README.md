@@ -1,11 +1,11 @@
 # Beamr HEVC encoder plugin for Dolby Encoding Engine
 
-Provided source code was built and tested using Beamr5x-4.7.3.4.
+Provided source code was built and tested using Beamr5x-4.7.5.6.
 
 ## Build tools
 
-- Visual Studio 2019
-- gcc 9.4.0 (or higher)
+- Visual Studio 2022
+- gcc 11.5 (or higher)
 
 ## Prerequisites
 

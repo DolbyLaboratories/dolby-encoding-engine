@@ -1,7 +1,7 @@
 # Prerequisites
 
 - CMake 3.24 or newer
-- gcc 9.4.0 or Visual Studio 2019
+- gcc 11.5 or Visual Studio 2022
 
 # Instructions
 

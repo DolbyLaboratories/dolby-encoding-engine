@@ -9,6 +9,13 @@ target_compile_features(dee_plugin_hevc_enc_beamr
         cxx_std_11
 )
 
+if(MSVC AND MSVC_VERSION GREATER_EQUAL 1930)
+    # libmmt.lib conflicts with libucrt.lib in MSVC >= 19.3x
+    # with the following error: "libucrt.lib(frexp.obj) : error LNK2005: frexp already defined in libmmt.lib(frexp_iface_c99.obj)"
+    # most likely caused by libmmt.lib being too old and no longer fully compatibile with new libcurt.lib
+    target_link_options(dee_plugin_hevc_enc_beamr PRIVATE "/FORCE:MULTIPLE")
+endif()
+
 target_link_libraries(dee_plugin_hevc_enc_beamr
     PRIVATE
         dee_plugins::plugins_debugger
