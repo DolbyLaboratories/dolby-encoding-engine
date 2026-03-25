@@ -13,7 +13,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         set(MACOS_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
     endif()
 
-    set(KAKADU_LIBNAME "libkdu_v84R.so")
+    set(KAKADU_LIBNAME "libkdu_v86R.so")
     if(MACOS_ARCH STREQUAL "arm64")
         set(KAKADU_LIBDIR "lib/Mac-arm-64-gcc")
     elseif(MACOS_ARCH STREQUAL "x86_64")
@@ -23,9 +23,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(KAKADU_LIBDIR "../bin_x64")
-    set(KAKADU_LIBNAME "kdu_v84R.dll")
+    set(KAKADU_LIBNAME "kdu_v86R.dll")
     set(KAKADU_IMPLIBDIR "../lib_x64")
-    set(KAKADU_IMPLIBNAME "kdu_v84R.lib")
+    set(KAKADU_IMPLIBNAME "kdu_v86R.lib")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|aarch64)")
         set(KAKADU_LIBDIR "lib/Linux-arm-64-gcc")
@@ -34,22 +34,26 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     else()
         message(FATAL_ERROR "Unsupported Linux architecture")
     endif()
-    set(KAKADU_LIBNAME "libkdu_v84R.so") 
+    set(KAKADU_LIBNAME "libkdu_v86R.so")
 else()
     message(FATAL_ERROR "Not supported OS/architecture")
 endif()
 
-add_library(kakadu::kdu SHARED IMPORTED)
-set_target_properties(kakadu::kdu
-    PROPERTIES
-        IMPORTED_LOCATION "$ENV{KDUROOT}/${KAKADU_LIBDIR}/${KAKADU_LIBNAME}"
-        INTERFACE_INCLUDE_DIRECTORIES "$ENV{KDUROOT}/coresys/common"
-)
-
-if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+if (UNIX)
+    add_library(kakadu::kdu INTERFACE IMPORTED)
     set_target_properties(kakadu::kdu
         PROPERTIES
+            INTERFACE_LINK_DIRECTORIES "$ENV{KDUROOT}/${KAKADU_LIBDIR}"
+            INTERFACE_LINK_LIBRARIES "${KAKADU_LIBNAME}"
+            INTERFACE_INCLUDE_DIRECTORIES "$ENV{KDUROOT}/coresys/common"
+    )
+else()
+    add_library(kakadu::kdu SHARED IMPORTED)
+    set_target_properties(kakadu::kdu
+        PROPERTIES
+            IMPORTED_LOCATION "$ENV{KDUROOT}/${KAKADU_LIBDIR}/${KAKADU_LIBNAME}"
             IMPORTED_IMPLIB "$ENV{KDUROOT}/${KAKADU_IMPLIBDIR}/${KAKADU_IMPLIBNAME}"
+            INTERFACE_INCLUDE_DIRECTORIES "$ENV{KDUROOT}/coresys/common"
     )
 endif()
 
@@ -78,3 +82,22 @@ target_link_libraries(kakadu::kakadu
         kakadu::kdu
         kakadu::support
 )
+
+# Function to fix Kakadu library references in a target on macOS
+function(kakadu_fix_install_name target)
+    if(NOT APPLE OR NOT KAKADU_LIBNAME OR NOT KAKADU_LIBDIR)
+        return()
+    endif()
+
+    set(_libdir "${KAKADU_LIBDIR}")
+    set(_libname "${KAKADU_LIBNAME}")
+
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND install_name_tool -change
+            "../../${_libdir}/${_libname}"
+            "@loader_path/${_libname}"
+            "$<TARGET_FILE:${target}>"
+        COMMENT "Fixing Kakadu library reference in ${target}"
+        VERBATIM
+    )
+endfunction()

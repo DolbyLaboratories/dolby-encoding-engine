@@ -38,4 +38,4 @@ The build uses files in following folders:
 
 Extract the kit folder from the archive and set the `BEAMR_SDK` environment variable.
 
-Build the plugin (see [BUILDING.md](../../../BUILDING.md)), then copy `libdee_plugin_hevc_enc_beamr.so` or `libdee_plugin_hevc_enc_beamr.dll` (depending on your operating system) to the DEE installation folder. The file can be renamed, but the extension must remain unchanged.
+Build and install the plugin (see [BUILDING.md](../../../BUILDING.md)), then copy `libdee_plugin_hevc_enc_beamr.so` or `libdee_plugin_hevc_enc_beamr.dll` (depending on your operating system) to the DEE installation folder. The file can be renamed, but the extension must remain unchanged.

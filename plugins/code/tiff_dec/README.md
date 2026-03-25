@@ -11,7 +11,7 @@ The provided source code was built and tested using the libtiff version 4.7.0.
 To build the plugin, you must first build and install the [libtiff 4.7.0](https://gitlab.com/libtiff/libtiff/-/releases/v4.7.0) `tiff` shared library.
 Use `cmake` to build and install libtiff libraries. Navigate to the extracted directory in terminal and invoke:
 - See all available configuration options:
-  - `cmake -h` 
+  - `cmake -h`
 - Generate project with specific install prefix (and other options):
   - `cmake -B build -S . --install-prefix <INSTALL_PATH> [other options]`
 - Build project:
@@ -45,7 +45,7 @@ LIBTIFFROOT
 
 ## Build instructions
 
-Build the plugin (see [BUILDING.md](../../BUILDING.md)), then copy the `tiff` shared library and plugin library:
+Build and install the plugin (see [BUILDING.md](../../BUILDING.md)), then copy the `tiff` shared library and plugin library:
 - on Linux: `LIBTIFFROOT/lib/libtiff.so` and `libdee_plugin_tiff_dec_libtiff.so`
 - on Windows: `LIBTIFFROOT/bin/tiff.dll` and `libdee_plugin_tiff_dec_libtiff.dll`
 

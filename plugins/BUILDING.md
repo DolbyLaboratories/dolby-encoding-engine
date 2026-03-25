@@ -25,12 +25,15 @@ Specifying an option that is unsupported on a given platform will simply be igno
 cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded" -DCMAKE_POSITION_INDEPENDENT_CODE=ON
 ```
 
+To specify custom installation folder, please pass `-DCMAKE_INSTALL_PREFIX=<install_dir>` to the command above.
+
 Please refer to [CMakeLists.txt](CMakeLists.txt) for more build options.
 
-## Build
+## Build and install
 
-To build the project, run:
+To build and install the project, run:
 
 ```bash
 cmake --build build --config Release -j
+cmake --install build --config Release
 ```

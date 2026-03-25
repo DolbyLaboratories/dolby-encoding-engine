@@ -36,6 +36,11 @@ target_link_libraries(dee_plugin_j2k_dec_kakadu
         dee_plugins::dee_plugin_j2k_dec_kakadu_base
 )
 
+if(COMMAND kakadu_fix_install_name)
+    # Changes kakadu relative path reference to @loader_path/<libname> in the plugin library on macOS
+    kakadu_fix_install_name(dee_plugin_j2k_dec_kakadu)
+endif()
+
 install(TARGETS dee_plugin_j2k_dec_kakadu
     EXPORT dee_plugin_j2k_dec_kakaduTargets
 )

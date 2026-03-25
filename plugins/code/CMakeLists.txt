@@ -1,3 +1,10 @@
+if(APPLE)
+    set(CMAKE_INSTALL_RPATH "@loader_path")
+    set(CMAKE_INSTALL_NAME_DIR "@loader_path")
+elseif(UNIX)
+    set(CMAKE_INSTALL_RPATH "$ORIGIN")
+endif()
+
 add_subdirectory(api)
 add_subdirectory(common)
 add_subdirectory(hevc_enc)

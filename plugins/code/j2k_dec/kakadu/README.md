@@ -1,6 +1,6 @@
 # Kakadu JPEG2000 decoder plugin for Dolby Encoding Engine
 
-The provided source code was built and tested using the Kakadu SDK version 8.4.
+The provided source code was built and tested using the Kakadu SDK version 8.6.0.
 
 ## Build tools:
 - Visual Studio 2022
@@ -64,19 +64,19 @@ A typical Kakadu SDK directory structure is shown below. Note that, in addition 
 │   │   └── ...
 │   ├── lib
 │   │   ├── Linux-x86-64-gcc
-│   │   │   └── libkdu_v84R.so
+│   │   │   └── libkdu_v86R.so
 │   │   ├── Mac-x86-64-gcc
-│   │   │   └── libkdu_v84R.so
+│   │   │   └── libkdu_v86R.so
 │   │   └── ...
 │   └── ...
 ├── bin_x64
-│   └── kdu_v84R.dll
+│   └── kdu_v86R.dll
 └── lib_x64
-    └── kdu_v84R.lib
+    └── kdu_v86R.lib
 ```
 
 ## Build instructions
 
 Set up the Kakadu directory as described above, and set the `KDUROOT` environment variable to point to that folder. Note that on Windows, the binaries are located outside the `KDUROOT` folder, as this is where Kakadu build files place them by default.
 
-Build the plugin (see [BUILDING.md](../../../BUILDING.md)), then copy the Kakadu shared libraries (e.g., `libkdu_v84R.so` or `kdu_v84R.dll`) and the plugin library (e.g., `libdee_plugin_j2k_dec_kakadu.so` or `dee_plugin_j2k_dec_kakadu.dll`) to the DEE installation folder. The plugin library file may be renamed, but its file extension must remain unchanged.
+Build and install the plugin (see [BUILDING.md](../../../BUILDING.md)), then copy the Kakadu shared libraries (e.g., `libkdu_v86R.so` or `kdu_v86R.dll`) and the plugin library (e.g., `libdee_plugin_j2k_dec_kakadu.so` or `dee_plugin_j2k_dec_kakadu.dll`) to the DEE installation folder. The plugin library file may be renamed, but its file extension must remain unchanged.
