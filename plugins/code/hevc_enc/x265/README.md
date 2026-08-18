@@ -1,6 +1,6 @@
 # x265 HEVC encoder plugin for Dolby Encoding Engine
 
-The provided source code was built and tested using the x265 library version 4.1.
+The provided source code was built and tested using the x265 library version 4.2.
 
 ## Requirements:
 - Windows:
@@ -14,7 +14,7 @@ The provided source code was built and tested using the x265 library version 4.1
 
 ## Building x265 library
  The x265 library has to be build with multi-bitdepth (8/10/12-bit) support and in shared format.
- - Navigate to [x265 git repository](https://bitbucket.org/multicoreware/x265_git/src/4.1/build/) and locate `multilib` file for your platform.
+ - Navigate to [x265 git repository](https://bitbucket.org/multicoreware/x265_git/src/4.2/build/) and locate `multilib` file for your platform.
  - Execute `multilib` file to build `x265` library.
  - Multi-bitdepth library will be located in newly created `8bit` directory
 
